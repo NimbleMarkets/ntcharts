@@ -1,0 +1,4 @@
+# bubbletea-charts .gitignore
+
+.task
+.DS_Store
