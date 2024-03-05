@@ -71,10 +71,10 @@ func (g *BrailleGrid) GridPoint(f canvas.Float64Point) canvas.Point {
 		sf.X = (f.X - g.minX) * xs
 	}
 	if dy > 0 {
-		ys := float64(g.gHeight) / dy
+		ys := float64(g.gHeight-1) / dy
 		sf.Y = (f.Y - g.minY) * ys
 	}
-	return canvas.CanvasPointFromFloat64Point(canvas.Point{X: 0, Y: g.gHeight}, sf)
+	return canvas.CanvasPointFromFloat64Point(canvas.Point{X: 0, Y: g.gHeight - 1}, sf)
 }
 
 // Set will set point on grid from given canvas Point.
@@ -361,9 +361,9 @@ func (m *Model) scalePoint(f canvas.Float64Point, w, h int) (r canvas.Float64Poi
 // ScaleFloat64Point returns a Float64Point scaled to the graph size
 // of the linechart from a Float64Point data point.
 func (m *Model) ScaleFloat64Point(f canvas.Float64Point) (r canvas.Float64Point) {
-	// if rounded to the nearest integer would be between 0 to graph width,
+	// if rounded to the nearest integer would be between 0 to graph width/height,
 	// and indexing the full graph width/height would be outside of the canvas
-	return m.scalePoint(f, m.graphWidth-1, m.graphHeight)
+	return m.scalePoint(f, m.graphWidth-1, m.graphHeight-1)
 }
 
 // ScaleFloat64PointForLine returns a Float64Point scaled to the graph size
@@ -380,6 +380,13 @@ func (m *Model) ScaleFloat64PointForLine(f canvas.Float64Point) (r canvas.Float6
 func (m *Model) DrawRune(f canvas.Float64Point, r rune, s lipgloss.Style) {
 	sf := m.ScaleFloat64Point(f) // scale Cartesian coordinates data point to graphing area
 	p := canvas.CanvasPointFromFloat64Point(m.origin, sf)
+	// draw rune avoiding the axes
+	if m.yStep > 0 {
+		p.X++
+	}
+	if m.xStep > 0 {
+		p.Y--
+	}
 	m.Canvas.SetCell(p, canvas.NewCell(r, s))
 }
 
@@ -392,14 +399,19 @@ func (m *Model) DrawRuneLine(f1 canvas.Float64Point, f2 canvas.Float64Point, r r
 	sf2 := m.ScaleFloat64Point(f2)
 
 	// convert scaled points to canvas points
-	orig := canvas.Point{X: m.origin.X, Y: m.origin.Y}
-	p1 := canvas.CanvasPointFromFloat64Point(orig, sf1)
-	p2 := canvas.CanvasPointFromFloat64Point(orig, sf2)
+	p1 := canvas.CanvasPointFromFloat64Point(m.origin, sf1)
+	p2 := canvas.CanvasPointFromFloat64Point(m.origin, sf2)
 
 	// draw rune on all canvas coordinates between
 	// the two canvas points that approximates a line
 	points := graph.GetLinePoints(p1, p2)
 	for _, p := range points {
+		if m.yStep > 0 {
+			p.X++
+		}
+		if m.xStep > 0 {
+			p.Y--
+		}
 		m.Canvas.SetCell(p, canvas.NewCell(r, s))
 	}
 }
@@ -418,7 +430,15 @@ func (m *Model) DrawRuneCircle(c canvas.Float64Point, f float64, r rune, s lipgl
 		// convert scaled points to canvas points
 		p := canvas.CanvasPointFromFloat64Point(m.origin, sf)
 		// draw rune while avoiding drawing outside of graphing area
-		if (p.X >= m.origin.X) && (p.Y <= m.origin.Y) {
+		// or on the X and Y axes
+		ok := (p.X >= m.origin.X) && (p.Y <= m.origin.Y)
+		if (m.yStep > 0) && (p.X == m.origin.X) {
+			ok = false
+		}
+		if (m.xStep > 0) && (p.Y == m.origin.Y) {
+			ok = false
+		}
+		if ok {
 			m.Canvas.SetCell(p, canvas.NewCell(r, s))
 		}
 	}
@@ -448,7 +468,7 @@ func (m *Model) DrawLine(f1 canvas.Float64Point, f2 canvas.Float64Point, ls rune
 // such that there is an approximate straight line between the two given Float64Point data points.
 // Braille runes will not overlap the axes.
 func (m *Model) DrawBrailleLine(f1 canvas.Float64Point, f2 canvas.Float64Point, s lipgloss.Style) {
-	bGrid := NewBrailleGrid(m.graphWidth-1, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
+	bGrid := NewBrailleGrid(m.graphWidth, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
 
 	// get braille grid points from two Float64Point data points
 	p1 := bGrid.GridPoint(f1)
@@ -461,8 +481,12 @@ func (m *Model) DrawBrailleLine(f1 canvas.Float64Point, f2 canvas.Float64Point, 
 	}
 
 	// get all rune patterns for braille grid and draw them on to the canvas
+	startX := 0
+	if m.yStep > 0 {
+		startX = m.origin.X + 1
+	}
 	patterns := bGrid.BraillePatterns()
-	graph.DrawBraillePatterns(&m.Canvas, canvas.Point{X: m.origin.X + 1, Y: 0}, patterns, s)
+	graph.DrawBraillePatterns(&m.Canvas, canvas.Point{X: startX, Y: 0}, patterns, s)
 }
 
 // DrawBrailleCircle draws braille line runes of a given LineStyle and style on to the linechart
@@ -474,15 +498,19 @@ func (m *Model) DrawBrailleCircle(p canvas.Float64Point, f float64, s lipgloss.S
 	r := int(math.Round(f))                                       // round radius to nearest integer
 
 	// set braille grid points from computed circle points around center
-	bGrid := NewBrailleGrid(m.graphWidth-1, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
+	bGrid := NewBrailleGrid(m.graphWidth, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
 	points := graph.GetCirclePoints(c, r)
 	for _, p := range points {
 		bGrid.Set(bGrid.GridPoint(canvas.NewFloat64PointFromPoint(p)))
 	}
 
 	// get all rune patterns for braille grid and draw them on to the canvas
+	startX := 0
+	if m.yStep > 0 {
+		startX = m.origin.X + 1
+	}
 	patterns := bGrid.BraillePatterns()
-	graph.DrawBraillePatterns(&m.Canvas, canvas.Point{X: m.origin.X + 1, Y: 0}, patterns, s)
+	graph.DrawBraillePatterns(&m.Canvas, canvas.Point{X: startX, Y: 0}, patterns, s)
 }
 
 // getBraillePoint returns a Point for a braille map from a given Point for a canvas.
