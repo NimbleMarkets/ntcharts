@@ -4,6 +4,7 @@ package linechart
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/graph"
@@ -403,6 +404,26 @@ func (m *Model) DrawRuneLine(f1 canvas.Float64Point, f2 canvas.Float64Point, r r
 	}
 }
 
+// DrawRuneCircle draws the rune with style on to the linechart
+// such that there is an approximate circle of float64 radious around
+// the center of a circle at Float64Point data point.
+func (m *Model) DrawRuneCircle(c canvas.Float64Point, f float64, r rune, s lipgloss.Style) {
+	center := canvas.Point{int(math.Round(c.X)), int(math.Round(c.Y))} // round center to nearest integer
+	radius := int(math.Round(f))                                       // round radius to nearest integer
+
+	points := graph.GetCirclePoints(center, radius)
+	for _, v := range points {
+		// scale Cartesian coordinates data point to graphing area
+		sf := m.ScaleFloat64Point(canvas.NewFloat64PointFromPoint(v))
+		// convert scaled points to canvas points
+		p := canvas.CanvasPointFromFloat64Point(m.origin, sf)
+		// draw rune while avoiding drawing outside of graphing area
+		if (p.X >= m.origin.X) && (p.Y <= m.origin.Y) {
+			m.Canvas.SetCell(p, canvas.NewCell(r, s))
+		}
+	}
+}
+
 // DrawLine draws line runes of a given LineStyle and style on to the linechart
 // such that there is an approximate straight line between the two given Float64Point data points.
 func (m *Model) DrawLine(f1 canvas.Float64Point, f2 canvas.Float64Point, ls runes.LineStyle, s lipgloss.Style) {
@@ -437,6 +458,26 @@ func (m *Model) DrawBrailleLine(f1 canvas.Float64Point, f2 canvas.Float64Point, 
 	points := graph.GetLinePoints(p1, p2)
 	for _, p := range points {
 		bGrid.Set(p)
+	}
+
+	// get all rune patterns for braille grid and draw them on to the canvas
+	patterns := bGrid.BraillePatterns()
+	graph.DrawBraillePatterns(&m.Canvas, canvas.Point{X: m.origin.X + 1, Y: 0}, patterns, s)
+}
+
+// DrawBrailleCircle draws braille line runes of a given LineStyle and style on to the linechart
+// such that there is an approximate circle of given float64 radius
+// around the center of a circle at Float64Point data point.
+// Braille runes will not overlap the axes.
+func (m *Model) DrawBrailleCircle(p canvas.Float64Point, f float64, s lipgloss.Style) {
+	c := canvas.Point{int(math.Round(p.X)), int(math.Round(p.Y))} // round center to nearest integer
+	r := int(math.Round(f))                                       // round radius to nearest integer
+
+	// set braille grid points from computed circle points around center
+	bGrid := NewBrailleGrid(m.graphWidth-1, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
+	points := graph.GetCirclePoints(c, r)
+	for _, p := range points {
+		bGrid.Set(bGrid.GridPoint(canvas.NewFloat64PointFromPoint(p)))
 	}
 
 	// get all rune patterns for braille grid and draw them on to the canvas

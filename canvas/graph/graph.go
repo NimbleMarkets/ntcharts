@@ -10,6 +10,7 @@ import (
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -398,6 +399,9 @@ func abs(i int) int {
 // GetFullCirclePoints returns a []canvas.Point containing points
 // that approximates a filled circle of radius r for center Point c.
 func GetFullCirclePoints(c canvas.Point, r int) (p []canvas.Point) {
+	if r <= 0 {
+		return
+	}
 	// sort points
 	cPoints := GetCirclePoints(c, r)
 	sort.Slice(cPoints, func(i, j int) bool {
@@ -428,6 +432,9 @@ func GetFullCirclePoints(c canvas.Point, r int) (p []canvas.Point) {
 // GetCirclePoints returns a []canvas.Point containing points
 // that approximates a circle of radius r for center Point c.
 func GetCirclePoints(c canvas.Point, r int) (p []canvas.Point) {
+	if r <= 0 {
+		return
+	}
 	t1 := r / 16
 	t2 := 0
 	x := r
