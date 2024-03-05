@@ -2,7 +2,111 @@ version: '3'
 
 tasks:
   default:
+    deps:
+      - build
+
+  list:
+    desc: 'Lists available tasks'
     cmds:
       - task --list-all
-    desc: 'Lists available tasks'
 
+###############################################################################
+
+  go-tidy:
+    desc: 'Go tidy all the things'
+    cmds:
+      - go mod tidy
+
+  go-update:
+    desc: 'Go update all the dependencies'
+    cmds:
+      - go get -u ./...
+
+  build:
+    desc: 'Build all'
+    deps:
+      - build-examples
+  
+  clean:
+    desc: 'Clean all'
+    deps:
+      - clean-examples
+
+###############################################################################
+# Examples
+
+  build-examples:
+    desc: 'Build all examples'
+    deps:
+      - build-ex-canvas
+      - build-ex-graph
+      - build-ex-linechart
+      - build-ex-sparkline
+
+  build-ex-canvas:
+    desc: 'Build canvas example'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/btcharts-canvas examples/canvas/*.go
+    sources:
+      - examples/canvas/*.go
+      - canvas/**/*.go
+    generates:
+      - bin/btcharts-ex-canvas
+
+  build-ex-graph:
+    desc: 'Build graph examples'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/btcharts-graph-braille examples/graph/braille/*.go
+      - go build -o bin/btcharts-graph-circles examples/graph/circles/*.go
+      - go build -o bin/btcharts-graph-columns examples/graph/columns/*.go
+      - go build -o bin/btcharts-graph-lines examples/graph/lines/*.go
+    sources:
+      - canvas/**/*.go
+      - examples/graph/**/*.go
+    generates:
+      - bin/btcharts-graph-braille
+      - bin/btcharts-graph-circles
+      - bin/btcharts-graph-columns
+      - bin/btcharts-graph-lines
+
+  build-ex-linechart:
+    desc: 'Build linechart examples'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/btcharts-linechart-circles examples/linechart/circles/*.go
+      - go build -o bin/btcharts-linechart-lines examples/linechart/lines/*.go
+      - go build -o bin/btcharts-linechart-scatter examples/linechart/scatterchart/*.go
+      - go build -o bin/btcharts-linechart-streaming examples/linechart/streaming/*.go
+      - go build -o bin/btcharts-linechart-wavelines examples/linechart/wavelines/*.go
+    sources:
+      - canvas/**/*.go
+      - examples/linechart/**/*.go
+      - linechart/**/*.go
+    generates:
+      - bin/btcharts-linechart-circles
+      - bin/btcharts-linechart-lines
+      - bin/btcharts-linechart-scatter
+      - bin/btcharts-linechart-streaming
+      - bin/btcharts-linechart-wavelines
+
+  build-ex-sparkline:
+    desc: 'Build sparkline example'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/btcharts-sparkline examples/sparkline/*.go
+    sources:
+      - canvas/**/*.go
+      - examples/sparkline/*.go
+      - sparkline/**/*.go
+    generates:
+      - bin/btcharts-sparkline
+
+  clean-examples:
+    desc: 'Removes all examples from bin'
+    cmds:
+      - rm -f bin/btcharts-ex-canvas
+      - rm -f bin/btcharts-graph-braille bin/btcharts-graph-circles bin/btcharts-graph-columns bin/btcharts-graph-lines bin/btcharts-linechart-circles
+      - rm -f bin/btcharts-linechart-lines bin/btcharts-linechart-scatter bin/btcharts-linechart-streaming bin/btcharts-linechart-wavelines bin/btcharts-sparkline
+      - rm -f bin/btcharts-sparkline
