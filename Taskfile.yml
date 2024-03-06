@@ -47,9 +47,9 @@ tasks:
     desc: 'Build canvas example'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/btcharts-canvas examples/canvas/*.go
+      - go build -o bin/btcharts-canvas-logo examples/canvas/logo/*.go
     sources:
-      - examples/canvas/*.go
+      - examples/canvas/logo/*.go
       - canvas/**/*.go
     generates:
       - bin/btcharts-ex-canvas
