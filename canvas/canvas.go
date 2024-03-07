@@ -126,6 +126,66 @@ func NewCellWithStyle(r rune, s lipgloss.Style) Cell {
 
 type CellLine []Cell
 
+// UpdateMsgHandler callback invoked during an Update()
+// and passes in the canvas *Model and bubbletea Msg.
+type UpdateMsgHandler func(*Model, tea.Msg)
+
+// DefaultUpdateMsgHandler is used by canvas chart to enable
+// moving viewing window using the mouse wheel,
+// holding down mouse left button and moving,
+// and with the arrow keys.
+func DefaultUpdateMsgHandler(m *Model, tm tea.Msg) {
+	switch msg := tm.(type) {
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.KeyMap.Up):
+			m.MoveUp()
+		case key.Matches(msg, m.KeyMap.Down):
+			m.MoveDown()
+		case key.Matches(msg, m.KeyMap.Left):
+			m.MoveLeft()
+		case key.Matches(msg, m.KeyMap.Right):
+			m.MoveRight()
+		}
+	case tea.MouseMsg:
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			m.MoveUp()
+		case tea.MouseButtonWheelDown:
+			m.MoveDown()
+		case tea.MouseButtonWheelRight:
+			m.MoveRight()
+		case tea.MouseButtonWheelLeft:
+			m.MoveLeft()
+		}
+
+		switch msg.Action {
+		case tea.MouseActionPress:
+			zInfo := m.zoneManager.Get(m.zoneID)
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				m.zoneLastPos = Point{X: x, Y: y} // set position of last click
+			}
+		case tea.MouseActionMotion: // event occurs when mouse is pressed
+			zInfo := m.zoneManager.Get(m.zoneID)
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				if x > m.zoneLastPos.X {
+					m.MoveRight()
+				} else if x < m.zoneLastPos.X {
+					m.MoveLeft()
+				}
+				if y > m.zoneLastPos.Y {
+					m.MoveDown()
+				} else if y < m.zoneLastPos.Y {
+					m.MoveUp()
+				}
+				m.zoneLastPos = Point{X: x, Y: y} // update last mouse position
+			}
+		}
+	}
+}
+
 type KeyMap struct {
 	Up    key.Binding
 	Down  key.Binding
@@ -173,6 +233,7 @@ type Model struct {
 	zoneManager *zone.Manager
 	zoneID      string
 	zoneLastPos Point // tracks zone position of last zone mouse position
+	msgHandler  UpdateMsgHandler
 }
 
 // New returns a canvas Model initialized with given width and height.
@@ -180,11 +241,12 @@ type Model struct {
 // and optional mouse functionality with bubblezone module.
 func New(w, h int) Model {
 	m := Model{
+		KeyMap:     DefaultKeyMap,
 		area:       image.Rect(0, 0, w, h),
 		ViewWidth:  w,
 		ViewHeight: h,
-		KeyMap:     DefaultKeyMap,
 		content:    make([]CellLine, h),
+		msgHandler: DefaultUpdateMsgHandler,
 	}
 	for i, _ := range m.content {
 		m.content[i] = make(CellLine, w)
@@ -383,11 +445,8 @@ func (m *Model) SetStyle(s lipgloss.Style) {
 
 // SetZoneManager enables mouse functionality
 // by setting a bubblezone.Manager to the canvas.
-// If canvas.Focused() and bubblezone.Manager is set, the
-// following mouse functionality will be enabled:
-//  1. Scrolling mouse wheel to move canvas viewing window up and down
-//  2. Mouse left click and drag to move canvas viewing window around
-//
+// The bubblezone.Manager can check bubbletea mouse event Msgs
+// passed to the UpdateMsgHandler handler during an Update().
 // The root bubbletea model must wrap the View() string with
 // bubblezone.Manager.Scan() to enable mouse functionality.
 // To disable mouse functionality after enabling, call SetZoneManager on nil.
@@ -406,6 +465,11 @@ func (m *Model) GetZoneManager() *zone.Manager {
 // GetZoneID will return canvas zone ID used by zone Manager.
 func (m *Model) GetZoneID() string {
 	return m.zoneID
+}
+
+// SetUpdateMsgHandler will replace the existing Update() bubbletea Msg handler.
+func (m *Model) SetUpdateMsgHandler(f UpdateMsgHandler) {
+	m.msgHandler = f
 }
 
 // ShiftUp moves all Cells up once.
@@ -464,60 +528,13 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// Update processes tea.Msg to move viewport around if canvas is focused.
+// Update processes bubbletea Msg to by invoking
+// UpdateMsgHandlerFunc callback if canvas is focused.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.focus {
 		return m, nil
 	}
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, m.KeyMap.Up):
-			m.MoveUp()
-		case key.Matches(msg, m.KeyMap.Down):
-			m.MoveDown()
-		case key.Matches(msg, m.KeyMap.Left):
-			m.MoveLeft()
-		case key.Matches(msg, m.KeyMap.Right):
-			m.MoveRight()
-		}
-	case tea.MouseMsg:
-		switch msg.Button {
-		case tea.MouseButtonWheelUp:
-			m.MoveUp()
-		case tea.MouseButtonWheelDown:
-			m.MoveDown()
-		case tea.MouseButtonWheelRight:
-			m.MoveRight()
-		case tea.MouseButtonWheelLeft:
-			m.MoveLeft()
-		}
-
-		switch msg.Action {
-		case tea.MouseActionPress:
-			zInfo := m.zoneManager.Get(m.zoneID)
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				m.zoneLastPos = Point{X: x, Y: y} // set position of last click
-			}
-		case tea.MouseActionMotion: // event occurs when mouse is pressed
-			zInfo := m.zoneManager.Get(m.zoneID)
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				if x > m.zoneLastPos.X {
-					m.MoveRight()
-				} else if x < m.zoneLastPos.X {
-					m.MoveLeft()
-				}
-				if y > m.zoneLastPos.Y {
-					m.MoveDown()
-				} else if y < m.zoneLastPos.Y {
-					m.MoveUp()
-				}
-				m.zoneLastPos = Point{X: x, Y: y} // update last mouse position
-			}
-		}
-	}
+	m.msgHandler(&m, msg)
 	return m, nil
 }
 
