@@ -11,8 +11,60 @@ import (
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/graph"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
 	"github.com/NimbleMarkets/bubbletea-charts/linechart"
+
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// UpdateMsgHandler callback invoked during an Update()
+// and passes in the wavelinechart Model and bubbletea Msg.
+type UpdateMsgHandler func(*Model, tea.Msg)
+
+// DefaultUpdateMsgHandler is used by steamlinechart to enable
+// zooming in and out with the mouse wheels,
+// moving the viewing window with mouse left hold and movement,
+// and moving the viewing window with the arrow keys.
+// There is only movement along the Y axis.
+func DefaultUpdateMsgHandler(m *Model, tm tea.Msg) {
+	switch msg := tm.(type) {
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.Canvas.KeyMap.Up):
+			m.MoveUp(1)
+		case key.Matches(msg, m.Canvas.KeyMap.Down):
+			m.MoveDown(1)
+		}
+	case tea.MouseMsg:
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			// zoom in limited values cannot cross
+			m.ZoomIn(0, 1)
+		case tea.MouseButtonWheelDown:
+			// zoom out limited by max values
+			m.ZoomOut(0, 1)
+		}
+		switch msg.Action {
+		case tea.MouseActionPress:
+			zInfo := m.GetZoneManager().Get(m.GetZoneID())
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				m.zoneLastPos = canvas.Point{X: x, Y: y} // set position of last click
+			}
+		case tea.MouseActionMotion: // event occurs when mouse is pressed
+			zInfo := m.GetZoneManager().Get(m.GetZoneID())
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				if y > m.zoneLastPos.Y {
+					m.MoveDown(1)
+				} else if y < m.zoneLastPos.Y {
+					m.MoveUp(1)
+				}
+				m.zoneLastPos = canvas.Point{X: x, Y: y} // update last mouse position
+			}
+		}
+	}
+}
 
 const DefaultDataSetName = "default"
 
@@ -33,6 +85,9 @@ type Model struct {
 	dLineStyle runes.LineStyle     // default data set LineStyletype
 	dStyle     lipgloss.Style      // default data set Style
 	dSets      map[string]*dataSet // maps names to data sets
+
+	msgHandler  UpdateMsgHandler // handlers update events
+	zoneLastPos canvas.Point     // tracks zone position of last zone mouse position
 }
 
 // New returns a streamlinechart Model initialized with given linechart.Model.
@@ -48,27 +103,29 @@ func NewWithStyle(lc linechart.Model, ls runes.LineStyle, s lipgloss.Style) Mode
 		dLineStyle: ls,
 		dStyle:     s,
 		dSets:      make(map[string]*dataSet),
+		msgHandler: DefaultUpdateMsgHandler,
 	}
+	m.dSets[DefaultDataSetName] = m.newDataSet()
 	return m
 }
 
 // newDataSet returns a new initialize *dataSet.
 func (m *Model) newDataSet() *dataSet {
-	ys := float64(m.Origin().Y) / (m.MaxY() - m.MinY()) // y scale factor
+	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	return &dataSet{
 		LineStyle: m.dLineStyle,
 		Style:     m.dStyle,
-		sBuf:      buffer.NewFloat64ScaleRingBuffer(m.Width()-m.Origin().X, m.MinY(), ys),
+		sBuf:      buffer.NewFloat64ScaleRingBuffer(m.Width()-m.Origin().X, m.ViewMinY(), ys),
 	}
 }
 
 // rescaleData will scale all internally stored data with new scale factor.
 func (m *Model) rescaleData() {
 	// rescale stream buffer
-	sf := float64(m.Origin().Y) / (m.MaxY() - m.MinY()) // scale factor
+	sf := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // scale factor
 	for _, ds := range m.dSets {
 		ds.sBuf.SetScale(sf)
-		ds.sBuf.SetOffset(m.MinY())
+		ds.sBuf.SetOffset(m.ViewMinY())
 	}
 }
 
@@ -98,6 +155,28 @@ func (m *Model) SetXRange(min, max float64) {
 // Existing data will be rescaled.
 func (m *Model) SetYRange(min, max float64) {
 	m.Model.SetYRange(min, max)
+	m.rescaleData()
+}
+
+// SetViewXRange updates the displayed minimum and maximum X values.
+// Existing data will be rescaled.
+func (m *Model) SetViewXRange(min, max float64) {
+	m.Model.SetViewXRange(min, max)
+	m.rescaleData()
+}
+
+// SetViewYRange updates the displayed minimum and maximum Y values.
+// Existing data will be rescaled.
+func (m *Model) SetViewYRange(min, max float64) {
+	m.Model.SetViewYRange(min, max)
+	m.rescaleData()
+}
+
+// SetViewXYRange updates the displayed minimum and maximum X and Y values.
+// Existing data will be rescaled.
+func (m *Model) SetViewXYRange(minX, maxX, minY, maxY float64) {
+	m.Model.SetViewXRange(minX, maxX)
+	m.Model.SetViewYRange(minY, maxY)
 	m.rescaleData()
 }
 
@@ -169,17 +248,37 @@ func (m *Model) DrawDataSets(names []string) {
 		if ds, ok := m.dSets[n]; ok {
 			s := ds.sBuf.ReadAll()
 			startX := m.Canvas.Width() - len(s)
-			// round float64 to nearest integer to fit onto the canvas
+			// round float64 data value to nearest integer to fit onto the canvas
 			l := make([]int, 0, len(s))
 			for _, v := range s {
 				l = append(l, int(math.Round(v)))
 			}
+			// convert to canvas coordinates and avoid drawing below X axis
+			yCoords := canvas.CanvasYCoordinates(m.Origin().Y, l)
+			if m.XStep() > 0 {
+				for i, v := range yCoords {
+					if v > m.Origin().Y {
+						yCoords[i] = m.Origin().Y
+					}
+				}
+			}
 			graph.DrawLineSequence(&m.Canvas,
 				(startX == m.Origin().X),
 				startX,
-				canvas.CanvasYCoordinates(m.Origin().Y, l), // convert to canvas coordinates
+				yCoords,
 				ds.LineStyle,
 				ds.Style)
 		}
 	}
+}
+
+// Update processes bubbletea Msg to by invoking
+// UpdateMsgHandlerFunc callback if linechart is focused.
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	if !m.Focused() {
+		return m, nil
+	}
+	m.msgHandler(&m, msg)
+	m.rescaleData()
+	return m, nil
 }

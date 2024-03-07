@@ -9,8 +9,11 @@ import (
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/graph"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
+
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 var defaultStyle = lipgloss.NewStyle()
@@ -90,6 +93,63 @@ func (g *BrailleGrid) BraillePatterns() [][]rune {
 	return g.grid.BraillePatterns()
 }
 
+// UpdateMsgHandler callback invoked during an Update()
+// and passes in the wavelinechart Model and bubbletea Msg.
+type UpdateMsgHandler func(*Model, tea.Msg)
+
+// DefaultUpdateMsgHandler is used by waveline chart to enable
+// zooming in and out with the mouse wheels,
+// moving the viewing window with mouse left hold and movement,
+// and moving the viewing window with the arrow keys.
+func DefaultUpdateMsgHandler(m *Model, tm tea.Msg) {
+	switch msg := tm.(type) {
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.Canvas.KeyMap.Up):
+			m.MoveUp(1)
+		case key.Matches(msg, m.Canvas.KeyMap.Down):
+			m.MoveDown(1)
+		case key.Matches(msg, m.Canvas.KeyMap.Left):
+			m.MoveLeft(1)
+		case key.Matches(msg, m.Canvas.KeyMap.Right):
+			m.MoveRight(1)
+		}
+	case tea.MouseMsg:
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			// zoom in limited values cannot cross
+			m.ZoomIn(1, 1)
+		case tea.MouseButtonWheelDown:
+			// zoom out limited by max values
+			m.ZoomOut(1, 1)
+		}
+		switch msg.Action {
+		case tea.MouseActionPress:
+			zInfo := m.GetZoneManager().Get(m.GetZoneID())
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				m.zoneLastPos = canvas.Point{X: x, Y: y} // set position of last click
+			}
+		case tea.MouseActionMotion: // event occurs when mouse is pressed
+			zInfo := m.GetZoneManager().Get(m.GetZoneID())
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				if x > m.zoneLastPos.X {
+					m.MoveRight(1)
+				} else if x < m.zoneLastPos.X {
+					m.MoveLeft(1)
+				}
+				if y > m.zoneLastPos.Y {
+					m.MoveDown(1)
+				} else if y < m.zoneLastPos.Y {
+					m.MoveUp(1)
+				}
+				m.zoneLastPos = canvas.Point{X: x, Y: y} // update last mouse position
+			}
+		}
+	}
+}
+
 // Model contains state of a linechart with an embedded canvas.Model
 type Model struct {
 	Canvas     canvas.Model
@@ -97,16 +157,28 @@ type Model struct {
 	LabelStyle lipgloss.Style // style applied when drawing X and Y number value
 	xStep      int            // number of steps when displaying X axis values
 	yStep      int            // number of steps when displaying Y axis values
+	focus      bool
 
-	// data set and the expected min and max values
+	// the expected min and max values
 	minX float64
 	maxX float64
 	minY float64
 	maxY float64
 
+	// current min and max axes values to display
+	viewMinX float64
+	viewMaxX float64
+	viewMinY float64
+	viewMaxY float64
+
 	origin      canvas.Point // start of X and Y axes lines on canvas for graphing area
 	graphWidth  int          // width of graphing area - excludes X axis and labels
 	graphHeight int          // height of graphing area - excludes Y axis and labels
+
+	zoneManager *zone.Manager // provides mouse functionality
+	zoneID      string
+	zoneLastPos canvas.Point // tracks zone position of last zone mouse position
+	msgHandler  UpdateMsgHandler
 }
 
 // New returns a linechart Model initialized with given width, height,
@@ -124,6 +196,33 @@ func New(w, h int, minX, maxX, minY, maxY float64, xStep, yStep int) Model {
 // If xStep is 0, then will not draw X axis or values below X axis.
 // If yStep is 0, then will not draw Y axis or values left of Y axis.
 func NewWithStyle(w, h int, minX, maxX, minY, maxY float64, xStep, yStep int, as lipgloss.Style, ls lipgloss.Style) Model {
+	// graph width and height exclude area used by axes
+	// origin point is canvas coordinates of where axes are drawn
+	origin, gWidth, gHeight := getGraphSizeAndOrigin(w, h, minY, maxY, xStep, yStep)
+	m := Model{
+		Canvas:      canvas.New(w, h),
+		AxisStyle:   as,
+		LabelStyle:  ls,
+		yStep:       yStep,
+		xStep:       xStep,
+		minX:        minX,
+		maxX:        maxX,
+		minY:        minY,
+		maxY:        maxY,
+		viewMinX:    minX,
+		viewMaxX:    maxX,
+		viewMinY:    minY,
+		viewMaxY:    maxY,
+		origin:      origin,
+		graphWidth:  gWidth,
+		graphHeight: gHeight,
+		msgHandler:  DefaultUpdateMsgHandler,
+	}
+	return m
+}
+
+// getGraphSizeAndOrigin calculates and returns the linechart origin and graph width and height
+func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int) (canvas.Point, int, int) {
 	// graph width and height exclude area used by axes
 	// origin point is canvas coordinates of where axes are drawn
 	origin := canvas.Point{X: 0, Y: h - 1}
@@ -145,41 +244,22 @@ func NewWithStyle(w, h int, minX, maxX, minY, maxY float64, xStep, yStep int, as
 		origin.Y -= 1
 		gHeight -= 2
 	}
-	m := Model{
-		Canvas:      canvas.New(w, h),
-		AxisStyle:   as,
-		LabelStyle:  ls,
-		yStep:       yStep,
-		xStep:       xStep,
-		minX:        minX,
-		maxX:        maxX,
-		minY:        minY,
-		maxY:        maxY,
-		origin:      origin,
-		graphWidth:  gWidth,
-		graphHeight: gHeight,
-	}
-	return m
+	return origin, gWidth, gHeight
 }
 
 // resetGraphWidthHeight resets the Model GraphWidth and GraphHeight
 func (m *Model) resetGraphWidthHeight() {
-	m.graphWidth = m.Canvas.Width()
-	m.graphHeight = m.Canvas.Height()
-	if m.yStep > 0 {
-		// find out how many spaces left of the Y axis
-		// to reserve for axis tick value
-		nOffset := len(fmt.Sprintf("%.0f", m.maxY))
-		lenMinY := len(fmt.Sprintf("%.0f", m.minY))
-		if lenMinY > nOffset {
-			nOffset = lenMinY
-		}
-		m.graphWidth -= nOffset
-	}
-	if m.xStep > 0 {
-		// use last 2 rows of canvas to plot X axis and tick values
-		m.graphHeight -= 1
-	}
+	origin, gWidth, gHeight := getGraphSizeAndOrigin(
+		m.Canvas.Width(),
+		m.Canvas.Height(),
+		m.viewMinY,
+		m.viewMaxY,
+		m.xStep,
+		m.yStep,
+	)
+	m.origin = origin
+	m.graphWidth = gWidth
+	m.graphHeight = gHeight
 }
 
 // Width returns linechart width.
@@ -220,6 +300,26 @@ func (m *Model) MinY() float64 {
 // MaxY returns linechart expected maximum Y value.
 func (m *Model) MaxY() float64 {
 	return m.maxY
+}
+
+// ViewMinX returns linechart displayed minimum X value.
+func (m *Model) ViewMinX() float64 {
+	return m.viewMinX
+}
+
+// ViewMaxX returns linechart displayed maximum X value.
+func (m *Model) ViewMaxX() float64 {
+	return m.viewMaxX
+}
+
+// ViewMinY returns linechart displayed minimum Y value.
+func (m *Model) ViewMinY() float64 {
+	return m.viewMinY
+}
+
+// ViewMaxY returns linechart displayed maximum Y value.
+func (m *Model) ViewMaxY() float64 {
+	return m.viewMaxY
 }
 
 // XStep returns number of steps when displaying Y axis values.
@@ -267,6 +367,39 @@ func (m *Model) SetYRange(min, max float64) {
 	m.maxY = max
 }
 
+// SetXRange updates the displayed minimum and maximum X values.
+// Zoom out display values bound by the expected X values.
+// Zoom in display min X value must be less than display max X value.
+func (m *Model) SetViewXRange(min, max float64) {
+	vMin := math.Max(m.minX, min)
+	vMax := math.Min(m.maxX, max)
+	if vMin < vMax {
+		m.viewMinX = vMin
+		m.viewMaxX = vMax
+		m.resetGraphWidthHeight()
+	}
+}
+
+// SetYRange updates the displayed minimum and maximum Y values.
+// Zoom out display values bound by the expected Y values.
+// Zoom in display min Y value must be less than display max Y value.
+func (m *Model) SetViewYRange(min, max float64) {
+	vMin := math.Max(m.minY, min)
+	vMax := math.Min(m.maxY, max)
+	if vMin < vMax {
+		m.viewMinY = vMin
+		m.viewMaxY = vMax
+	}
+}
+
+// SetViewXYRange updates the displayed minimum and maximum X and Y values.
+// Zoom out display values bound by the expected values.
+// Zoom in display min values must be less than display max values.
+func (m *Model) SetViewXYRange(minX, maxX, minY, maxY float64) {
+	m.SetViewXRange(minX, maxX)
+	m.SetViewYRange(minY, maxY)
+}
+
 // Resize will change linechart display width and height.
 // Existing runes on the linechart will not be redrawn.
 func (m *Model) Resize(w, h int) {
@@ -274,6 +407,35 @@ func (m *Model) Resize(w, h int) {
 	m.Canvas.ViewWidth = w
 	m.Canvas.ViewHeight = h
 	m.resetGraphWidthHeight()
+}
+
+// SetZoneManager enables mouse functionality
+// by setting a bubblezone.Manager to the linechart.
+// The bubblezone.Manager can check bubbletea mouse event Msgs
+// passed to the UpdateMsgHandler handler during an Update().
+// The root bubbletea model must wrap the View() string with
+// bubblezone.Manager.Scan() to enable mouse functionality.
+// To disable mouse functionality after enabling, call SetZoneManager on nil.
+func (m *Model) SetZoneManager(zm *zone.Manager) {
+	m.zoneManager = zm
+	if (zm != nil) && (m.zoneID == "") {
+		m.zoneID = zm.NewPrefix()
+	}
+}
+
+// GetZoneManager will return linechart zone Manager.
+func (m *Model) GetZoneManager() *zone.Manager {
+	return m.zoneManager
+}
+
+// GetZoneID will return linechart zone ID used by zone Manager.
+func (m *Model) GetZoneID() string {
+	return m.zoneID
+}
+
+// SetUpdateMsgHandler will replace the existing Update() bubbletea Msg handler.
+func (m *Model) SetUpdateMsgHandler(f UpdateMsgHandler) {
+	m.msgHandler = f
 }
 
 // drawYLabel draws Y axis values left of the Y axis every n step.
@@ -285,11 +447,11 @@ func (m *Model) drawYLabel(n int) {
 	if n <= 0 {
 		return
 	}
-	lastVal := fmt.Sprintf("%.0f", m.minY-1)
-	rangeSz := m.maxY - m.minY // number of possible expected values
+	lastVal := fmt.Sprintf("%.0f", m.viewMinY-1)
+	rangeSz := m.viewMaxY - m.viewMinY // number of possible expected values
 	increment := rangeSz / float64(m.graphHeight)
 	for i := 0; i <= m.graphHeight; {
-		v := m.minY + (increment * float64(i)) // value to set left of Y axis
+		v := m.viewMinY + (increment * float64(i)) // value to set left of Y axis
 		s := fmt.Sprintf("%.0f", v)
 		if lastVal != s {
 			m.Canvas.SetStringWithStyle(canvas.Point{m.origin.X - len(s), m.origin.Y - i}, s, m.LabelStyle)
@@ -307,13 +469,13 @@ func (m *Model) drawXLabel(n int) {
 	if n <= 0 {
 		return
 	}
-	lastVal := fmt.Sprintf("%.0f", m.minX-1)
-	rangeSz := m.maxX - m.minX // number of possible expected values
+	lastVal := fmt.Sprintf("%.0f", m.viewMinX-1)
+	rangeSz := m.viewMaxX - m.viewMinX // number of possible expected values
 	increment := rangeSz / float64(m.graphWidth)
 	for i := 0; i < m.graphWidth; {
 		// can only set if rune to the left of target coordinates is empty
 		if c := m.Canvas.Cell(canvas.Point{m.origin.X + i - 1, m.origin.Y + 1}); c.Rune == runes.Null {
-			v := m.minX + (increment * float64(i)) // value to set under X axis
+			v := m.viewMinX + (increment * float64(i)) // value to set under X axis
 			s := fmt.Sprintf("%.0f", v)
 			// dont display if number will be cut off or value repeats
 			if (lastVal != s) && ((len(s) + i) < m.graphWidth) {
@@ -347,15 +509,15 @@ func (m *Model) DrawXYAxisAndLabel() {
 // of the linechart from a Float64Point data point, width and height.
 func (m *Model) scalePoint(f canvas.Float64Point, w, h int) (r canvas.Float64Point) {
 	// scale factor is graph height/width over its value range
-	dx := m.maxX - m.minX
-	dy := m.maxY - m.minY
+	dx := m.viewMaxX - m.viewMinX
+	dy := m.viewMaxY - m.viewMinY
 	if dx > 0 {
 		xs := float64(w) / dx
-		r.X = (f.X - m.minX) * xs
+		r.X = (f.X - m.viewMinX) * xs
 	}
 	if dy > 0 {
 		ys := float64(h) / dy
-		r.Y = (f.Y - m.minY) * ys
+		r.Y = (f.Y - m.viewMinY) * ys
 	}
 	return
 }
@@ -561,19 +723,95 @@ func (m *Model) getBraillePoint(f canvas.Point) canvas.Point {
 	return canvas.Point{X: f.X * 2, Y: f.Y * 4} // braille runes have 4 height and 2 width
 }
 
+// Focused returns whether canvas is being focused.
+func (m *Model) Focused() bool {
+	return m.focus
+}
+
+// Focus enables Update events processing.
+func (m *Model) Focus() {
+	m.focus = true
+}
+
+// Blur disables Update events processing.
+func (m *Model) Blur() {
+	m.focus = false
+}
+
 // Init initializes the linechart.
 func (m Model) Init() tea.Cmd {
 	return m.Canvas.Init()
 }
 
-// Update processes tea.Msg.
+// Update processes bubbletea Msg to by invoking
+// UpdateMsgHandlerFunc callback if linechart is focused.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.Canvas, cmd = m.Canvas.Update(msg)
-	return m, cmd
+	if !m.focus {
+		return m, nil
+	}
+	m.msgHandler(&m, msg)
+	return m, nil
 }
 
 // View returns a string used by the bubbletea framework to display the linechart.
-func (m Model) View() string {
-	return m.Canvas.View()
+func (m Model) View() (r string) {
+	r = m.Canvas.View()
+	if m.zoneManager != nil {
+		r = m.zoneManager.Mark(m.zoneID, r)
+	}
+	return
+}
+
+// ZoomIn will update display X and Y values to simulate
+// zooming into the wavelinechart by given increments.
+func (m *Model) ZoomIn(x, y float64) {
+	m.SetViewXYRange(
+		m.viewMinX+x,
+		m.viewMaxX-x,
+		m.viewMinY+y,
+		m.viewMaxY-y,
+	)
+}
+
+// ZoomOut will update display X and Y values to simulate
+// zooming into the wavelinechart by given increments.
+func (m *Model) ZoomOut(x, y float64) {
+	m.SetViewXYRange(
+		m.viewMinX-x,
+		m.viewMaxX+x,
+		m.viewMinY-y,
+		m.viewMaxY+y,
+	)
+}
+
+// MoveLeft will update display Y values to simulate
+// moving left on the wavelinechart by given increment
+func (m *Model) MoveLeft(i float64) {
+	if (m.viewMinX - i) >= m.MinX() {
+		m.SetViewXRange(m.viewMinX-i, m.viewMaxX-i)
+	}
+}
+
+// MoveRight will update display Y values to simulate
+// moving right on the wavelinechart by given increment.
+func (m *Model) MoveRight(i float64) {
+	if (m.viewMaxX + i) <= m.MaxX() {
+		m.SetViewXRange(m.viewMinX+i, m.viewMaxX+i)
+	}
+}
+
+// MoveUp will update display X values to simulate
+// moving up on the wavelinechart chart by given increment.
+func (m *Model) MoveUp(i float64) {
+	if (m.viewMaxY + i) <= m.MaxY() {
+		m.SetViewYRange(m.viewMinY+i, m.viewMaxY+i)
+	}
+}
+
+// MoveDown will update display Y values to simulate
+// moving down on the wavelinechart chart by given increment.
+func (m *Model) MoveDown(i float64) {
+	if (m.viewMinY - i) >= m.MinY() {
+		m.SetViewYRange(m.viewMinY-i, m.viewMaxY-i)
+	}
 }

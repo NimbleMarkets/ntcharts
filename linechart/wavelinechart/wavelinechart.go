@@ -9,6 +9,8 @@ import (
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/graph"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
 	"github.com/NimbleMarkets/bubbletea-charts/linechart"
+
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -55,19 +57,20 @@ func NewWithStyle(lc linechart.Model, ls runes.LineStyle, s lipgloss.Style) Mode
 		dStyle:     s,
 		dSets:      make(map[string]*dataSet),
 	}
+	m.dSets[DefaultDataSetName] = m.newDataSet()
 	return m
 }
 
 // newDataSet returns a new initialize *dataSet.
 func (m *Model) newDataSet() *dataSet {
-	xs := float64(m.GraphWidth()) / (m.MaxX() - m.MinX()) // X scale factor
-	ys := float64(m.Origin().Y) / (m.MaxY() - m.MinY())   // y scale factor
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // X scale factor
+	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
 	ds := &dataSet{
 		LineStyle: m.dLineStyle,
 		Style:     m.dStyle,
 		seqY:      make([]int, m.Width(), m.Width()),
 		pBuf: buffer.NewFloat64PointScaleBuffer(
-			canvas.Float64Point{X: m.MinX(), Y: m.MinY()},
+			canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()},
 			canvas.Float64Point{X: xs, Y: ys}),
 	}
 	m.resetDataSetSeqY(ds)
@@ -75,30 +78,44 @@ func (m *Model) newDataSet() *dataSet {
 }
 
 // resetPoints will set graph sequence of Y coordinates of a data set
-// such that Draw will display each Y coordinate on the X axis
+// such that Draw will display each Y coordinate on Y = 0
 func (m *Model) resetDataSetSeqY(ds *dataSet) {
 	f := m.ScaleFloat64Point(canvas.Float64Point{X: 0.0, Y: 0.0})
 	ds.seqY = make([]int, m.Width(), m.Width())
 	for i, _ := range ds.seqY {
+		// avoid drawing below X axis
 		ds.seqY[i] = canvas.CanvasPointFromFloat64Point(m.Origin(), f).Y
+		if (m.XStep() > 0) && (ds.seqY[i] > m.Origin().Y) {
+			ds.seqY[i] = m.Origin().Y
+		}
+	}
+}
+
+// setDataSetSeqY will set a data set canvas row and column
+// from given scaled Float64Point data point
+func (m *Model) setDataSetSeqY(ds *dataSet, f canvas.Float64Point) {
+	p := canvas.CanvasPointFromFloat64Point(m.Origin(), f)
+	// avoid drawing outside graphing area
+	if (p.X >= 0) && (p.X < len(ds.seqY)) {
+		// avoid drawing below X axis
+		ds.seqY[p.X] = p.Y
+		if (m.XStep() > 0) && (ds.seqY[p.X] > m.Origin().Y) {
+			ds.seqY[p.X] = m.Origin().Y
+		}
 	}
 }
 
 // rescaleData will scale all internally stored data with new scale factor.
 func (m *Model) rescaleData() {
 	// rescale all data set graph points
-	origin := m.Origin()
-	xs := float64(m.GraphWidth()) / (m.MaxX() - m.MinX()) // X scale factor
-	ys := float64(m.Origin().Y) / (m.MaxY() - m.MinY())   // y scale factor
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // X scale factor
+	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
 	for _, ds := range m.dSets {
-		ds.pBuf.SetOffset(canvas.Float64Point{X: m.MinX(), Y: m.MinY()})
-		ds.pBuf.SetScale(canvas.Float64Point{X: xs, Y: ys})
+		ds.pBuf.SetOffset(canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()})
+		ds.pBuf.SetScale(canvas.Float64Point{X: xs, Y: ys}) // buffer rescales all raw data points
 		m.resetDataSetSeqY(ds)
 		for _, v := range ds.pBuf.ReadAll() {
-			p := canvas.CanvasPointFromFloat64Point(origin, v)
-			if (p.X >= 0) && (p.X < len(ds.seqY)) {
-				ds.seqY[p.X] = p.Y
-			}
+			m.setDataSetSeqY(ds, v)
 		}
 	}
 }
@@ -118,17 +135,25 @@ func (m *Model) ClearDataSet(n string) {
 	}
 }
 
-// SetXRange updates the minimum and maximum expected X values.
+// SetViewXRange updates the displayed minimum and maximum X values.
 // Existing data will be rescaled.
-func (m *Model) SetXRange(min, max float64) {
-	m.Model.SetXRange(min, max)
+func (m *Model) SetViewXRange(min, max float64) {
+	m.Model.SetViewXRange(min, max)
 	m.rescaleData()
 }
 
-// SetYRange updates the minimum and maximum expected Y values.
+// SetViewYRange updates the displayed minimum and maximum Y values.
 // Existing data will be rescaled.
-func (m *Model) SetYRange(min, max float64) {
-	m.Model.SetYRange(min, max)
+func (m *Model) SetViewYRange(min, max float64) {
+	m.Model.SetViewYRange(min, max)
+	m.rescaleData()
+}
+
+// SetViewXYRange updates the displayed minimum and maximum X and Y values.
+// Existing data will be rescaled.
+func (m *Model) SetViewXYRange(minX, maxX, minY, maxY float64) {
+	m.Model.SetViewXRange(minX, maxX)
+	m.Model.SetViewYRange(minY, maxY)
 	m.rescaleData()
 }
 
@@ -171,10 +196,7 @@ func (m *Model) PlotDataSet(n string, f canvas.Float64Point) {
 	ds := m.dSets[n]
 	ds.pBuf.Push(f)
 	s := ds.pBuf.At(ds.pBuf.Length() - 1)
-	p := canvas.CanvasPointFromFloat64Point(m.Origin(), s)
-	if (p.X >= 0) && (p.X < len(ds.seqY)) {
-		ds.seqY[p.X] = p.Y
-	}
+	m.setDataSetSeqY(ds, s)
 }
 
 // Draw will draw lines runes for each column
@@ -212,4 +234,15 @@ func (m *Model) DrawDataSets(names []string) {
 				ds.Style)
 		}
 	}
+}
+
+// Update processes bubbletea Msg to by invoking
+// UpdateMsgHandlerFunc callback if wavelinechart is focused.
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	if !m.Model.Focused() {
+		return m, nil
+	}
+	m.Model, _ = m.Model.Update(msg)
+	m.rescaleData() // rescale data points to new viewing window
+	return m, nil
 }
