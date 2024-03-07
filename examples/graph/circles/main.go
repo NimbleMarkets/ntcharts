@@ -70,14 +70,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.c1.Clear()
 	graph.DrawXYAxis(&m.c1, m.cursor, axisStyle)
 	for _, p := range graph.GetCirclePoints(m.cursor, 3) {
-		m.c1.SetCell(p, canvas.NewCell(runes.FullBlock, circleStyle1))
+		m.c1.SetCell(p, canvas.NewCellWithStyle(runes.FullBlock, circleStyle1))
 	}
 
 	// draw circle that is filled around the cursor
 	m.c2.Clear()
 	graph.DrawXYAxisDown(&m.c2, m.cursor, axisStyle)
 	for _, p := range graph.GetFullCirclePoints(m.cursor, 3) {
-		m.c2.SetCell(p, canvas.NewCell(runes.FullBlock, circleStyle1))
+		m.c2.SetCell(p, canvas.NewCellWithStyle(runes.FullBlock, circleStyle1))
 	}
 
 	// draw two circles left and right of the cursor
@@ -97,12 +97,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// only draw runes if a point from one circle is not in the other
 	for _, p := range leftCircle {
 		if _, ok := rightSet[p]; !ok {
-			m.c3.SetCell(p, canvas.NewCell(runes.FullBlock, circleStyle1))
+			m.c3.SetCell(p, canvas.NewCellWithStyle(runes.FullBlock, circleStyle1))
 		}
 	}
 	for _, p := range rightCircle {
 		if _, ok := leftSet[p]; !ok {
-			m.c3.SetCell(p, canvas.NewCell(runes.FullBlock, circleStyle2))
+			m.c3.SetCell(p, canvas.NewCellWithStyle(runes.FullBlock, circleStyle2))
 		}
 	}
 	return m, nil

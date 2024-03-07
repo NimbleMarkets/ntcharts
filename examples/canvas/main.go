@@ -92,7 +92,7 @@ func getExampleCanvas1() (c canvas.Model) {
 	c1.SetRunes(canvas.Point{1, 5}, []rune{'\u2588', ' ', 0x2588, ' ', ' ', ' ', 'M', 'A', 'R', 'K', 'E', 'T', 'S'}, defaultStyle)
 
 	// set specific Cell at coordinates (7, 4)
-	c1.SetCell(canvas.Point{7, 4}, canvas.NewCell('N', highlightStyle))
+	c1.SetCell(canvas.Point{7, 4}, canvas.NewCellWithStyle('N', highlightStyle))
 
 	// set specific Cell styles at coordinates (7, 5)
 	c1.SetCellStyle(canvas.Point{7, 5}, highlightStyle) // 'M'

@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // Point is alias for image.Point
@@ -105,13 +106,19 @@ func CanvasFloat64Point(origin Point, p Float64Point) (r Float64Point) {
 	return Float64Point{float64(origin.X) + p.X, float64(origin.Y) - p.Y}
 }
 
+var defaultStyle = lipgloss.NewStyle()
+
 // Cell contains a rune and lipgloss.Style for rendering
 type Cell struct {
 	Rune  rune
 	Style lipgloss.Style
 }
 
-func NewCell(r rune, s lipgloss.Style) Cell {
+func NewCell(r rune) Cell {
+	return Cell{Rune: r, Style: defaultStyle}
+}
+
+func NewCellWithStyle(r rune, s lipgloss.Style) Cell {
 	return Cell{Rune: r, Style: s}
 }
 
@@ -159,6 +166,11 @@ type Model struct {
 	// internal coordinates tracking viewport cursor
 	// 0,0 is top left of canvas
 	cursor Point
+
+	// manages mouse events
+	zoneManager *zone.Manager
+	zoneID      string
+	zoneLastPos Point // tracks zone position of last zone mouse position
 }
 
 // New returns a canvas Model initialized with given width and height.
@@ -344,6 +356,31 @@ func (m *Model) SetStyle(s lipgloss.Style) {
 	}
 }
 
+// SetZoneManager enables mouse functionality
+// by setting a bubblezone.Manager to the canvas.
+// If canvas.Focused() and bubblezone.Manager is set, the
+// following mouse functionality will be enabled:
+//  1. Scrolling mouse wheel to move canvas viewing window up and down
+//  2. Mouse left click and drag to move canvas viewing window around
+//
+// To disable mouse functionality after enabling, call SetZoneManager on nil.
+func (m *Model) SetZoneManager(zm *zone.Manager) {
+	m.zoneManager = zm
+	if (zm != nil) && (m.zoneID == "") {
+		m.zoneID = zm.NewPrefix()
+	}
+}
+
+// GetZoneManager will return canvas zone Manager.
+func (m *Model) GetZoneManager() *zone.Manager {
+	return m.zoneManager
+}
+
+// GetZoneID will return canvas zone ID used by zone Manager.
+func (m *Model) GetZoneID() string {
+	return m.zoneID
+}
+
 // ShiftUp moves all Cells up once.
 // Last CellLine will be set to a new CellLine.
 func (m *Model) ShiftUp() {
@@ -417,12 +454,48 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, m.KeyMap.Right):
 			m.MoveRight()
 		}
+	case tea.MouseMsg:
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			m.MoveUp()
+		case tea.MouseButtonWheelDown:
+			m.MoveDown()
+		case tea.MouseButtonWheelRight:
+			m.MoveRight()
+		case tea.MouseButtonWheelLeft:
+			m.MoveLeft()
+		}
+
+		switch msg.Action {
+		case tea.MouseActionPress:
+			zInfo := m.zoneManager.Get(m.zoneID)
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				m.zoneLastPos = Point{X: x, Y: y} // set position of last click
+			}
+		case tea.MouseActionMotion: // event occurs when mouse is pressed
+			zInfo := m.zoneManager.Get(m.zoneID)
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				if x > m.zoneLastPos.X {
+					m.MoveRight()
+				} else if x < m.zoneLastPos.X {
+					m.MoveLeft()
+				}
+				if y > m.zoneLastPos.Y {
+					m.MoveDown()
+				} else if y < m.zoneLastPos.Y {
+					m.MoveUp()
+				}
+				m.zoneLastPos = Point{X: x, Y: y} // update last mouse position
+			}
+		}
 	}
 	return m, nil
 }
 
 // View returns a string used by the bubbleatea framework to display the canvas.
-func (m Model) View() string {
+func (m Model) View() (r string) {
 	var sb strings.Builder
 	sb.Grow(m.area.Dx() * m.area.Dy())
 
@@ -447,7 +520,11 @@ func (m Model) View() string {
 			sb.WriteRune('\n')
 		}
 	}
-	return sb.String()
+	r = sb.String()
+	if m.zoneManager != nil {
+		r = m.zoneManager.Mark(m.zoneID, r)
+	}
+	return
 }
 
 // MoveUp moves cursor up if possible.

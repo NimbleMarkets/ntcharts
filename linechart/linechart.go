@@ -387,7 +387,7 @@ func (m *Model) DrawRune(f canvas.Float64Point, r rune, s lipgloss.Style) {
 	if m.xStep > 0 {
 		p.Y--
 	}
-	m.Canvas.SetCell(p, canvas.NewCell(r, s))
+	m.Canvas.SetCell(p, canvas.NewCellWithStyle(r, s))
 }
 
 // DrawRuneLine draws the rune with style on to the linechart
@@ -412,7 +412,7 @@ func (m *Model) DrawRuneLine(f1 canvas.Float64Point, f2 canvas.Float64Point, r r
 		if m.xStep > 0 {
 			p.Y--
 		}
-		m.Canvas.SetCell(p, canvas.NewCell(r, s))
+		m.Canvas.SetCell(p, canvas.NewCellWithStyle(r, s))
 	}
 }
 
@@ -439,7 +439,7 @@ func (m *Model) DrawRuneCircle(c canvas.Float64Point, f float64, r rune, s lipgl
 			ok = false
 		}
 		if ok {
-			m.Canvas.SetCell(p, canvas.NewCell(r, s))
+			m.Canvas.SetCell(p, canvas.NewCellWithStyle(r, s))
 		}
 	}
 }
