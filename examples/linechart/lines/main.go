@@ -8,6 +8,7 @@ import (
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
 	"github.com/NimbleMarkets/bubbletea-charts/linechart"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )

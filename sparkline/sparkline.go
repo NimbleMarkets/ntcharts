@@ -8,6 +8,7 @@ import (
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/buffer"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/graph"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -123,7 +124,7 @@ func (m Model) Init() tea.Cmd {
 	return m.Canvas.Init()
 }
 
-// Update processes tea.Msg.
+// Update forwards bubbletea Msg to underlying canvas.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.Canvas, cmd = m.Canvas.Update(msg)

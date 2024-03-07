@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"

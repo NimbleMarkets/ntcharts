@@ -6,6 +6,7 @@ import (
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/graph"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )

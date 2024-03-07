@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/NimbleMarkets/bubbletea-charts/sparkline"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
