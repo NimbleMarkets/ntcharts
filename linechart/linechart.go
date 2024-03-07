@@ -290,7 +290,7 @@ func (m *Model) drawYLabel(n int) {
 		v := m.minY + (increment * float64(i)) // value to set left of Y axis
 		s := fmt.Sprintf("%.0f", v)
 		if lastVal != s {
-			m.Canvas.SetString(canvas.Point{m.origin.X - len(s), m.origin.Y - i}, s, m.LabelStyle)
+			m.Canvas.SetStringWithStyle(canvas.Point{m.origin.X - len(s), m.origin.Y - i}, s, m.LabelStyle)
 			lastVal = s
 		}
 		i += n
@@ -315,7 +315,7 @@ func (m *Model) drawXLabel(n int) {
 			s := fmt.Sprintf("%.0f", v)
 			// dont display if number will be cut off or value repeats
 			if (lastVal != s) && ((len(s) + i) < m.graphWidth) {
-				m.Canvas.SetString(canvas.Point{m.origin.X + i, m.origin.Y + 1}, s, m.LabelStyle)
+				m.Canvas.SetStringWithStyle(canvas.Point{m.origin.X + i, m.origin.Y + 1}, s, m.LabelStyle)
 				lastVal = s
 			}
 		}
@@ -530,7 +530,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// View returns a string used by the bubbleatea framework to display the linechart.
+// View returns a string used by the bubbletea framework to display the linechart.
 func (m Model) View() string {
 	return m.Canvas.View()
 }

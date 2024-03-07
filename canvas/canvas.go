@@ -251,15 +251,22 @@ func (m *Model) Clear() {
 	}
 }
 
+// SetLines copies []string into canvas as contents.
+// Each string element represents a line in the canvas starting from top to bottom.
+// Truncates contents if contents are greater than canvas height and width.
+func (m *Model) SetLines(lines []string) bool {
+	return m.SetLinesWithStyle(lines, defaultStyle)
+}
+
 // SetLines copies []string into canvas as contents with style applied to all Cells.
 // Each string element represents a line in the canvas starting from top to bottom.
 // Truncates contents if contents are greater than canvas height and width.
-func (m *Model) SetLines(lines []string, s lipgloss.Style) bool {
+func (m *Model) SetLinesWithStyle(lines []string, s lipgloss.Style) bool {
 	for y, l := range lines {
 		if y >= m.area.Dy() {
 			break
 		}
-		if !m.SetString(Point{0, y}, l, s) {
+		if !m.SetStringWithStyle(Point{0, y}, l, s) {
 			return false // should not happen
 		}
 	}
@@ -267,16 +274,29 @@ func (m *Model) SetLines(lines []string, s lipgloss.Style) bool {
 }
 
 // SetString copies string as rune values into canvas CellLine starting at coordinates (X, Y).
+// Truncates values execeeding the canvas width.
+func (m *Model) SetString(p Point, l string) bool {
+	return m.SetStringWithStyle(p, l, defaultStyle)
+}
+
+// SetString copies string as rune values into canvas CellLine starting at coordinates (X, Y).
 // Style will be applied to all Cells.
 // Truncates values execeeding the canvas width.
-func (m *Model) SetString(p Point, l string, s lipgloss.Style) bool {
-	return m.SetRunes(p, []rune(l), s)
+func (m *Model) SetStringWithStyle(p Point, l string, s lipgloss.Style) bool {
+	return m.SetRunesWithStyle(p, []rune(l), s)
 }
 
 // SetRunes copies rune values into canvas CellLine starting at coordinates (X, Y).
 // Style will be applied to all Cells.
 // Truncates values execeeding the canvas width.
-func (m *Model) SetRunes(p Point, l []rune, s lipgloss.Style) bool {
+func (m *Model) SetRunes(p Point, l []rune) bool {
+	return m.SetRunesWithStyle(p, l, defaultStyle)
+}
+
+// SetRunes copies rune values into canvas CellLine starting at coordinates (X, Y).
+// Style will be applied to all Cells.
+// Truncates values execeeding the canvas width.
+func (m *Model) SetRunesWithStyle(p Point, l []rune, s lipgloss.Style) bool {
 	if !m.insideYBounds(p.Y) {
 		return false
 	}
@@ -494,7 +514,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// View returns a string used by the bubbleatea framework to display the canvas.
+// View returns a string used by the bubbletea framework to display the canvas.
 func (m Model) View() (r string) {
 	var sb strings.Builder
 	sb.Grow(m.area.Dx() * m.area.Dy())

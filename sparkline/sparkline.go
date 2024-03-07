@@ -130,7 +130,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// View returns a string used by the bubbleatea framework to display the sparkline.
+// View returns a string used by the bubbletea framework to display the sparkline.
 func (m Model) View() string {
 	return m.Canvas.View()
 }
