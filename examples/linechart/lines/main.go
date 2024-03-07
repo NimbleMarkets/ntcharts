@@ -68,14 +68,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	randomFloat64Point1 = canvas.Float64Point{X: xRand1, Y: yRand1}
 	randomFloat64Point2 = canvas.Float64Point{X: xRand2, Y: yRand2}
 
-	// linechart1 draws line with all runes as 'X'
-	m.lc1.DrawRuneLine(randomFloat64Point1, randomFloat64Point2, 'X', lineStyle)
+	// linechart1 draws line with all runes as 'X' with default lipgloss style
+	m.lc1.DrawRuneLineWithStyle(randomFloat64Point1, randomFloat64Point2, 'X', lineStyle)
 
 	// linechart2 draws line using ArcLineStyle
-	m.lc2.DrawLine(randomFloat64Point1, randomFloat64Point2, runes.ArcLineStyle, lineStyle)
+	m.lc2.DrawLineWithStyle(randomFloat64Point1, randomFloat64Point2, runes.ArcLineStyle, lineStyle)
 
 	// linechart3 draws braille line
-	m.lc3.DrawBrailleLine(randomFloat64Point1, randomFloat64Point2, lineStyle)
+	m.lc3.DrawBrailleLineWithStyle(randomFloat64Point1, randomFloat64Point2, lineStyle)
 	return m, nil
 }
 

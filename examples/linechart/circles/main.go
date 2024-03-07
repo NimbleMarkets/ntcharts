@@ -66,10 +66,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// linechart1 draws circle with all runes as 'X'
-	m.lc1.DrawRuneCircle(randomFloat64Point, radiusFloat64, 'X', lineStyle)
+	m.lc1.DrawRuneCircleWithStyle(randomFloat64Point, radiusFloat64, 'X', lineStyle)
 
 	// linechart2 draws braille circle
-	m.lc2.DrawBrailleCircle(randomFloat64Point, radiusFloat64, lineStyle)
+	m.lc2.DrawBrailleCircleWithStyle(randomFloat64Point, radiusFloat64, lineStyle)
 	return m, nil
 }
 

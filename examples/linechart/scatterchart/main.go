@@ -17,9 +17,6 @@ var defaultStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("63")) // purple
 
-var lineStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("4")) // blue
-
 var axisStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("3")) // yellow
 
@@ -60,11 +57,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	randomFloat64Point = canvas.Float64Point{X: xRand, Y: yRand}
 
 	// linechart1 draws point as 'X'
-	m.lc1.DrawRune(randomFloat64Point, 'X', lineStyle)
+	m.lc1.DrawRune(randomFloat64Point, 'X')
 
 	// linecharte2 draws point as braille rune
 	// (a line between the two identical points is a single point)
-	m.lc2.DrawBrailleLine(randomFloat64Point, randomFloat64Point, lineStyle)
+	m.lc2.DrawBrailleLine(randomFloat64Point, randomFloat64Point)
 	return m, nil
 }
 

@@ -114,10 +114,12 @@ type Cell struct {
 	Style lipgloss.Style
 }
 
+// NewCell returns Cell with given rune and default lipgloss.Style.
 func NewCell(r rune) Cell {
 	return Cell{Rune: r, Style: defaultStyle}
 }
 
+// NewCellWithStyle returns Cell with given rune and lipgloss.Style.
 func NewCellWithStyle(r rune, s lipgloss.Style) Cell {
 	return Cell{Rune: r, Style: s}
 }
@@ -174,6 +176,8 @@ type Model struct {
 }
 
 // New returns a canvas Model initialized with given width and height.
+// Canvases support optional visual styles with lipgloss module,
+// and optional mouse functionality with bubblezone module.
 func New(w, h int) Model {
 	m := Model{
 		area:       image.Rect(0, 0, w, h),
@@ -258,7 +262,7 @@ func (m *Model) SetLines(lines []string) bool {
 	return m.SetLinesWithStyle(lines, defaultStyle)
 }
 
-// SetLines copies []string into canvas as contents with style applied to all Cells.
+// SetLinesWithStyle copies []string into canvas as contents with style applied to all Cells.
 // Each string element represents a line in the canvas starting from top to bottom.
 // Truncates contents if contents are greater than canvas height and width.
 func (m *Model) SetLinesWithStyle(lines []string, s lipgloss.Style) bool {
@@ -279,7 +283,7 @@ func (m *Model) SetString(p Point, l string) bool {
 	return m.SetStringWithStyle(p, l, defaultStyle)
 }
 
-// SetString copies string as rune values into canvas CellLine starting at coordinates (X, Y).
+// SetStringWithStyle copies string as rune values into canvas CellLine starting at coordinates (X, Y).
 // Style will be applied to all Cells.
 // Truncates values execeeding the canvas width.
 func (m *Model) SetStringWithStyle(p Point, l string, s lipgloss.Style) bool {
@@ -293,7 +297,7 @@ func (m *Model) SetRunes(p Point, l []rune) bool {
 	return m.SetRunesWithStyle(p, l, defaultStyle)
 }
 
-// SetRunes copies rune values into canvas CellLine starting at coordinates (X, Y).
+// SetRunesWithStyle copies rune values into canvas CellLine starting at coordinates (X, Y).
 // Style will be applied to all Cells.
 // Truncates values execeeding the canvas width.
 func (m *Model) SetRunesWithStyle(p Point, l []rune, s lipgloss.Style) bool {
@@ -367,7 +371,8 @@ func (m *Model) FillLine(y int, c Cell) {
 	}
 }
 
-// SetStyle applies style to all Cells in canvas.
+// SetStyle applies a lipgloss.Style to all Cells to change
+// visual elements of each rune in the canvas.
 func (m *Model) SetStyle(s lipgloss.Style) {
 	for i, _ := range m.content {
 		for j, _ := range m.content[i] {
@@ -383,6 +388,8 @@ func (m *Model) SetStyle(s lipgloss.Style) {
 //  1. Scrolling mouse wheel to move canvas viewing window up and down
 //  2. Mouse left click and drag to move canvas viewing window around
 //
+// The root bubbletea model must wrap the View() string with
+// bubblezone.Manager.Scan() to enable mouse functionality.
 // To disable mouse functionality after enabling, call SetZoneManager on nil.
 func (m *Model) SetZoneManager(zm *zone.Manager) {
 	m.zoneManager = zm
