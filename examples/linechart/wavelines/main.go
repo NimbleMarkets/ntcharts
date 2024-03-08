@@ -76,7 +76,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			addPoint = true
 		}
 	case tea.MouseMsg:
-		if msg.Type == tea.MouseLeft {
+		if msg.Action == tea.MouseActionPress {
 			if m.zM.Get(m.wlc1.GetZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
 				m.wlc2.Blur()
 				m.wlc1.Focus()
@@ -177,7 +177,7 @@ func main() {
 			width, height,
 			minXValue, maxXValue,
 			minYValue, maxYValue,
-			xStep, xStep,
+			xStep, yStep,
 			axisStyle, labelStyle),
 		runes.ThinLineStyle,
 		graphLineStyle1,

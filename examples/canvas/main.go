@@ -51,7 +51,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.MouseMsg:
-		if msg.Type == tea.MouseLeft {
+		if msg.Action == tea.MouseActionPress {
 			if m.zM.Get(m.c1.GetZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
 				m.c2.Blur()
 				m.c1.Focus()

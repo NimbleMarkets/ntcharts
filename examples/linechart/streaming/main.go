@@ -70,7 +70,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			addPoint = true
 		}
 	case tea.MouseMsg:
-		if msg.Type == tea.MouseLeft {
+		if msg.Action == tea.MouseActionPress {
 			if m.zM.Get(m.slc1.GetZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
 				m.slc2.Blur()
 				m.slc1.Focus()
