@@ -93,58 +93,66 @@ func (g *BrailleGrid) BraillePatterns() [][]rune {
 	return g.grid.BraillePatterns()
 }
 
-// UpdateMsgHandler callback invoked during an Update()
+// UpdateHandler callback invoked during an Update()
 // and passes in the wavelinechart Model and bubbletea Msg.
-type UpdateMsgHandler func(*Model, tea.Msg)
+type UpdateHandler func(*Model, tea.Msg)
 
-// DefaultUpdateMsgHandler is used by waveline chart to enable
+// DefaultUpdateHandler is used by waveline chart to enable
 // zooming in and out with the mouse wheels,
 // moving the viewing window with mouse left hold and movement,
 // and moving the viewing window with the arrow keys.
-func DefaultUpdateMsgHandler(m *Model, tm tea.Msg) {
-	switch msg := tm.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, m.Canvas.KeyMap.Up):
-			m.MoveUp(1)
-		case key.Matches(msg, m.Canvas.KeyMap.Down):
-			m.MoveDown(1)
-		case key.Matches(msg, m.Canvas.KeyMap.Left):
-			m.MoveLeft(1)
-		case key.Matches(msg, m.Canvas.KeyMap.Right):
-			m.MoveRight(1)
-		}
-	case tea.MouseMsg:
-		switch msg.Button {
-		case tea.MouseButtonWheelUp:
-			// zoom in limited values cannot cross
-			m.ZoomIn(1, 1)
-		case tea.MouseButtonWheelDown:
-			// zoom out limited by max values
-			m.ZoomOut(1, 1)
-		}
-		switch msg.Action {
-		case tea.MouseActionPress:
-			zInfo := m.GetZoneManager().Get(m.GetZoneID())
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				m.zoneLastPos = canvas.Point{X: x, Y: y} // set position of last click
+// Uses Canvas Keymap for keyboard messages.
+func DefaultUpdateHandler() UpdateHandler {
+	var lastPos canvas.Point
+	return func(m *Model, tm tea.Msg) {
+		switch msg := tm.(type) {
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, m.Canvas.KeyMap.Up):
+				m.MoveUp(1)
+			case key.Matches(msg, m.Canvas.KeyMap.Down):
+				m.MoveDown(1)
+			case key.Matches(msg, m.Canvas.KeyMap.Left):
+				m.MoveLeft(1)
+			case key.Matches(msg, m.Canvas.KeyMap.Right):
+				m.MoveRight(1)
 			}
-		case tea.MouseActionMotion: // event occurs when mouse is pressed
-			zInfo := m.GetZoneManager().Get(m.GetZoneID())
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				if x > m.zoneLastPos.X {
-					m.MoveRight(1)
-				} else if x < m.zoneLastPos.X {
-					m.MoveLeft(1)
+		case tea.MouseMsg:
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				// zoom in limited values cannot cross
+				m.ZoomIn(1, 1)
+			case tea.MouseButtonWheelDown:
+				// zoom out limited by max values
+				m.ZoomOut(1, 1)
+			}
+
+			if m.GetZoneManager() == nil {
+				return
+			}
+			switch msg.Action {
+			case tea.MouseActionPress:
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					lastPos = canvas.Point{X: x, Y: y}
 				}
-				if y > m.zoneLastPos.Y {
-					m.MoveDown(1)
-				} else if y < m.zoneLastPos.Y {
-					m.MoveUp(1)
+			case tea.MouseActionMotion:
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					if x > lastPos.X {
+						m.MoveRight(1)
+					} else if x < lastPos.X {
+						m.MoveLeft(1)
+					}
+					if y > lastPos.Y {
+						m.MoveDown(1)
+					} else if y < lastPos.Y {
+						m.MoveUp(1)
+					}
+					lastPos = canvas.Point{X: x, Y: y}
 				}
-				m.zoneLastPos = canvas.Point{X: x, Y: y} // update last mouse position
 			}
 		}
 	}
@@ -152,12 +160,13 @@ func DefaultUpdateMsgHandler(m *Model, tm tea.Msg) {
 
 // Model contains state of a linechart with an embedded canvas.Model
 type Model struct {
-	Canvas     canvas.Model
-	AxisStyle  lipgloss.Style // style applied when drawing X and Y axes
-	LabelStyle lipgloss.Style // style applied when drawing X and Y number value
-	xStep      int            // number of steps when displaying X axis values
-	yStep      int            // number of steps when displaying Y axis values
-	focus      bool
+	UpdateHandler UpdateHandler
+	Canvas        canvas.Model
+	AxisStyle     lipgloss.Style // style applied when drawing X and Y axes
+	LabelStyle    lipgloss.Style // style applied when drawing X and Y number value
+	xStep         int            // number of steps when displaying X axis values
+	yStep         int            // number of steps when displaying Y axis values
+	focus         bool
 
 	// the expected min and max values
 	minX float64
@@ -177,8 +186,6 @@ type Model struct {
 
 	zoneManager *zone.Manager // provides mouse functionality
 	zoneID      string
-	zoneLastPos canvas.Point // tracks zone position of last zone mouse position
-	msgHandler  UpdateMsgHandler
 }
 
 // New returns a linechart Model initialized with given width, height,
@@ -200,23 +207,23 @@ func NewWithStyle(w, h int, minX, maxX, minY, maxY float64, xStep, yStep int, as
 	// origin point is canvas coordinates of where axes are drawn
 	origin, gWidth, gHeight := getGraphSizeAndOrigin(w, h, minY, maxY, xStep, yStep)
 	m := Model{
-		Canvas:      canvas.New(w, h),
-		AxisStyle:   as,
-		LabelStyle:  ls,
-		yStep:       yStep,
-		xStep:       xStep,
-		minX:        minX,
-		maxX:        maxX,
-		minY:        minY,
-		maxY:        maxY,
-		viewMinX:    minX,
-		viewMaxX:    maxX,
-		viewMinY:    minY,
-		viewMaxY:    maxY,
-		origin:      origin,
-		graphWidth:  gWidth,
-		graphHeight: gHeight,
-		msgHandler:  DefaultUpdateMsgHandler,
+		UpdateHandler: DefaultUpdateHandler(),
+		Canvas:        canvas.New(w, h),
+		AxisStyle:     as,
+		LabelStyle:    ls,
+		yStep:         yStep,
+		xStep:         xStep,
+		minX:          minX,
+		maxX:          maxX,
+		minY:          minY,
+		maxY:          maxY,
+		viewMinX:      minX,
+		viewMaxX:      maxX,
+		viewMinY:      minY,
+		viewMaxY:      maxY,
+		origin:        origin,
+		graphWidth:    gWidth,
+		graphHeight:   gHeight,
 	}
 	return m
 }
@@ -412,7 +419,7 @@ func (m *Model) Resize(w, h int) {
 // SetZoneManager enables mouse functionality
 // by setting a bubblezone.Manager to the linechart.
 // The bubblezone.Manager can check bubbletea mouse event Msgs
-// passed to the UpdateMsgHandler handler during an Update().
+// passed to the UpdateHandler handler during an Update().
 // The root bubbletea model must wrap the View() string with
 // bubblezone.Manager.Scan() to enable mouse functionality.
 // To disable mouse functionality after enabling, call SetZoneManager on nil.
@@ -431,11 +438,6 @@ func (m *Model) GetZoneManager() *zone.Manager {
 // GetZoneID will return linechart zone ID used by zone Manager.
 func (m *Model) GetZoneID() string {
 	return m.zoneID
-}
-
-// SetUpdateMsgHandler will replace the existing Update() bubbletea Msg handler.
-func (m *Model) SetUpdateMsgHandler(f UpdateMsgHandler) {
-	m.msgHandler = f
 }
 
 // drawYLabel draws Y axis values left of the Y axis every n step.
@@ -508,7 +510,6 @@ func (m *Model) DrawXYAxisAndLabel() {
 // scalePoint returns a Float64Point scaled to the graph size
 // of the linechart from a Float64Point data point, width and height.
 func (m *Model) scalePoint(f canvas.Float64Point, w, h int) (r canvas.Float64Point) {
-	// scale factor is graph height/width over its value range
 	dx := m.viewMaxX - m.viewMinX
 	dy := m.viewMaxY - m.viewMinY
 	if dx > 0 {
@@ -525,7 +526,8 @@ func (m *Model) scalePoint(f canvas.Float64Point, w, h int) (r canvas.Float64Poi
 // ScaleFloat64Point returns a Float64Point scaled to the graph size
 // of the linechart from a Float64Point data point.
 func (m *Model) ScaleFloat64Point(f canvas.Float64Point) (r canvas.Float64Point) {
-	// if rounded to the nearest integer would be between 0 to graph width/height,
+	// Need to use one less width and height, otherwise values rounded to the nearest
+	// integer would be would be between 0 to graph width/height,
 	// and indexing the full graph width/height would be outside of the canvas
 	return m.scalePoint(f, m.graphWidth-1, m.graphHeight-1)
 }
@@ -534,7 +536,7 @@ func (m *Model) ScaleFloat64Point(f canvas.Float64Point) (r canvas.Float64Point)
 // of the linechart from a Float64Point data point.  Used when drawing line runes
 // with line styles that can combine with the axes.
 func (m *Model) ScaleFloat64PointForLine(f canvas.Float64Point) (r canvas.Float64Point) {
-	// full graph height and can be used since LineStyle runes
+	// Full graph height and can be used since LineStyle runes
 	// can be combined with axes instead of overriding them
 	return m.scalePoint(f, m.graphWidth, m.graphHeight)
 }
@@ -744,12 +746,12 @@ func (m Model) Init() tea.Cmd {
 }
 
 // Update processes bubbletea Msg to by invoking
-// UpdateMsgHandlerFunc callback if linechart is focused.
+// UpdateHandlerFunc callback if linechart is focused.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.focus {
 		return m, nil
 	}
-	m.msgHandler(&m, msg)
+	m.UpdateHandler(&m, msg)
 	return m, nil
 }
 

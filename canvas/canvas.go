@@ -126,61 +126,67 @@ func NewCellWithStyle(r rune, s lipgloss.Style) Cell {
 
 type CellLine []Cell
 
-// UpdateMsgHandler callback invoked during an Update()
+// UpdateHandler callback invoked during an Update()
 // and passes in the canvas *Model and bubbletea Msg.
-type UpdateMsgHandler func(*Model, tea.Msg)
+type UpdateHandler func(*Model, tea.Msg)
 
-// DefaultUpdateMsgHandler is used by canvas chart to enable
+// DefaultUpdateHandler is used by canvas chart to enable
 // moving viewing window using the mouse wheel,
 // holding down mouse left button and moving,
 // and with the arrow keys.
-func DefaultUpdateMsgHandler(m *Model, tm tea.Msg) {
-	switch msg := tm.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, m.KeyMap.Up):
-			m.MoveUp()
-		case key.Matches(msg, m.KeyMap.Down):
-			m.MoveDown()
-		case key.Matches(msg, m.KeyMap.Left):
-			m.MoveLeft()
-		case key.Matches(msg, m.KeyMap.Right):
-			m.MoveRight()
-		}
-	case tea.MouseMsg:
-		switch msg.Button {
-		case tea.MouseButtonWheelUp:
-			m.MoveUp()
-		case tea.MouseButtonWheelDown:
-			m.MoveDown()
-		case tea.MouseButtonWheelRight:
-			m.MoveRight()
-		case tea.MouseButtonWheelLeft:
-			m.MoveLeft()
-		}
-
-		switch msg.Action {
-		case tea.MouseActionPress:
-			zInfo := m.zoneManager.Get(m.zoneID)
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				m.zoneLastPos = Point{X: x, Y: y} // set position of last click
+func DefaultUpdateHandler() UpdateHandler {
+	var lastPos Point // tracks zone position of last zone mouse position
+	return func(m *Model, tm tea.Msg) {
+		switch msg := tm.(type) {
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, m.KeyMap.Up):
+				m.MoveUp()
+			case key.Matches(msg, m.KeyMap.Down):
+				m.MoveDown()
+			case key.Matches(msg, m.KeyMap.Left):
+				m.MoveLeft()
+			case key.Matches(msg, m.KeyMap.Right):
+				m.MoveRight()
 			}
-		case tea.MouseActionMotion: // event occurs when mouse is pressed
-			zInfo := m.zoneManager.Get(m.zoneID)
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				if x > m.zoneLastPos.X {
-					m.MoveRight()
-				} else if x < m.zoneLastPos.X {
-					m.MoveLeft()
+		case tea.MouseMsg:
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				m.MoveUp()
+			case tea.MouseButtonWheelDown:
+				m.MoveDown()
+			case tea.MouseButtonWheelRight:
+				m.MoveRight()
+			case tea.MouseButtonWheelLeft:
+				m.MoveLeft()
+			}
+
+			if m.zoneManager == nil {
+				return
+			}
+			switch msg.Action {
+			case tea.MouseActionPress:
+				zInfo := m.zoneManager.Get(m.zoneID)
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					lastPos = Point{X: x, Y: y} // set position of last click
 				}
-				if y > m.zoneLastPos.Y {
-					m.MoveDown()
-				} else if y < m.zoneLastPos.Y {
-					m.MoveUp()
+			case tea.MouseActionMotion: // event occurs when mouse is pressed
+				zInfo := m.zoneManager.Get(m.zoneID)
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					if x > lastPos.X {
+						m.MoveRight()
+					} else if x < lastPos.X {
+						m.MoveLeft()
+					}
+					if y > lastPos.Y {
+						m.MoveDown()
+					} else if y < lastPos.Y {
+						m.MoveUp()
+					}
+					lastPos = Point{X: x, Y: y} // update last mouse position
 				}
-				m.zoneLastPos = Point{X: x, Y: y} // update last mouse position
 			}
 		}
 	}
@@ -193,28 +199,32 @@ type KeyMap struct {
 	Right key.Binding
 }
 
-var DefaultKeyMap = KeyMap{
-	Up: key.NewBinding(
-		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "move up"),
-	),
-	Down: key.NewBinding(
-		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "move down"),
-	),
-	Left: key.NewBinding(
-		key.WithKeys("left", "h"),
-		key.WithHelp("←/h", "move left"),
-	),
-	Right: key.NewBinding(
-		key.WithKeys("right", "l"),
-		key.WithHelp("→/l", "move right"),
-	),
+// DefaultKeyMap returns a default KeyMap for canvas.
+func DefaultKeyMap() KeyMap {
+	return KeyMap{
+		Up: key.NewBinding(
+			key.WithKeys("up", "k"),
+			key.WithHelp("↑/k", "move up"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("down", "j"),
+			key.WithHelp("↓/j", "move down"),
+		),
+		Left: key.NewBinding(
+			key.WithKeys("left", "h"),
+			key.WithHelp("←/h", "move left"),
+		),
+		Right: key.NewBinding(
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "move right"),
+		),
+	}
 }
 
 // Model contains state of a canvas
 type Model struct {
-	KeyMap KeyMap
+	KeyMap        KeyMap
+	UpdateHandler UpdateHandler
 
 	// overall canvas size
 	area    image.Rectangle // 0,0 is top left of canvas
@@ -232,8 +242,6 @@ type Model struct {
 	// manages mouse events
 	zoneManager *zone.Manager
 	zoneID      string
-	zoneLastPos Point // tracks zone position of last zone mouse position
-	msgHandler  UpdateMsgHandler
 }
 
 // New returns a canvas Model initialized with given width and height.
@@ -241,12 +249,12 @@ type Model struct {
 // and optional mouse functionality with bubblezone module.
 func New(w, h int) Model {
 	m := Model{
-		KeyMap:     DefaultKeyMap,
-		area:       image.Rect(0, 0, w, h),
-		ViewWidth:  w,
-		ViewHeight: h,
-		content:    make([]CellLine, h),
-		msgHandler: DefaultUpdateMsgHandler,
+		KeyMap:        DefaultKeyMap(),
+		UpdateHandler: DefaultUpdateHandler(),
+		area:          image.Rect(0, 0, w, h),
+		content:       make([]CellLine, h),
+		ViewWidth:     w,
+		ViewHeight:    h,
 	}
 	for i, _ := range m.content {
 		m.content[i] = make(CellLine, w)
@@ -446,7 +454,7 @@ func (m *Model) SetStyle(s lipgloss.Style) {
 // SetZoneManager enables mouse functionality
 // by setting a bubblezone.Manager to the canvas.
 // The bubblezone.Manager can check bubbletea mouse event Msgs
-// passed to the UpdateMsgHandler handler during an Update().
+// passed to the UpdateHandler handler during an Update().
 // The root bubbletea model must wrap the View() string with
 // bubblezone.Manager.Scan() to enable mouse functionality.
 // To disable mouse functionality after enabling, call SetZoneManager on nil.
@@ -465,11 +473,6 @@ func (m *Model) GetZoneManager() *zone.Manager {
 // GetZoneID will return canvas zone ID used by zone Manager.
 func (m *Model) GetZoneID() string {
 	return m.zoneID
-}
-
-// SetUpdateMsgHandler will replace the existing Update() bubbletea Msg handler.
-func (m *Model) SetUpdateMsgHandler(f UpdateMsgHandler) {
-	m.msgHandler = f
 }
 
 // ShiftUp moves all Cells up once.
@@ -529,12 +532,12 @@ func (m Model) Init() tea.Cmd {
 }
 
 // Update processes bubbletea Msg to by invoking
-// UpdateMsgHandlerFunc callback if canvas is focused.
+// UpdateHandler callback if canvas is focused.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.focus {
 		return m, nil
 	}
-	m.msgHandler(&m, msg)
+	m.UpdateHandler(&m, msg)
 	return m, nil
 }
 

@@ -17,50 +17,54 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// UpdateMsgHandler callback invoked during an Update()
+// UpdateHandler callback invoked during an Update()
 // and passes in the wavelinechart Model and bubbletea Msg.
-type UpdateMsgHandler func(*Model, tea.Msg)
+type UpdateHandler func(*Model, tea.Msg)
 
-// DefaultUpdateMsgHandler is used by steamlinechart to enable
+// DefaultUpdateHandler is used by steamlinechart to enable
 // zooming in and out with the mouse wheels,
 // moving the viewing window with mouse left hold and movement,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the Y axis.
-func DefaultUpdateMsgHandler(m *Model, tm tea.Msg) {
-	switch msg := tm.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, m.Canvas.KeyMap.Up):
-			m.MoveUp(1)
-		case key.Matches(msg, m.Canvas.KeyMap.Down):
-			m.MoveDown(1)
-		}
-	case tea.MouseMsg:
-		switch msg.Button {
-		case tea.MouseButtonWheelUp:
-			// zoom in limited values cannot cross
-			m.ZoomIn(0, 1)
-		case tea.MouseButtonWheelDown:
-			// zoom out limited by max values
-			m.ZoomOut(0, 1)
-		}
-		switch msg.Action {
-		case tea.MouseActionPress:
-			zInfo := m.GetZoneManager().Get(m.GetZoneID())
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				m.zoneLastPos = canvas.Point{X: x, Y: y} // set position of last click
+// Uses linechart.Canvas Keymap for keyboard messages.
+func DefaultUpdateHandler() UpdateHandler {
+	var lastPos canvas.Point
+	return func(m *Model, tm tea.Msg) {
+		switch msg := tm.(type) {
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, m.Canvas.KeyMap.Up):
+				m.MoveUp(1)
+			case key.Matches(msg, m.Canvas.KeyMap.Down):
+				m.MoveDown(1)
 			}
-		case tea.MouseActionMotion: // event occurs when mouse is pressed
-			zInfo := m.GetZoneManager().Get(m.GetZoneID())
-			if zInfo.InBounds(msg) {
-				x, y := zInfo.Pos(msg)
-				if y > m.zoneLastPos.Y {
-					m.MoveDown(1)
-				} else if y < m.zoneLastPos.Y {
-					m.MoveUp(1)
+		case tea.MouseMsg:
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				// zoom in limited values cannot cross
+				m.ZoomIn(0, 1)
+			case tea.MouseButtonWheelDown:
+				// zoom out limited by max values
+				m.ZoomOut(0, 1)
+			}
+			switch msg.Action {
+			case tea.MouseActionPress:
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					lastPos = canvas.Point{X: x, Y: y} // set position of last click
 				}
-				m.zoneLastPos = canvas.Point{X: x, Y: y} // update last mouse position
+			case tea.MouseActionMotion: // event occurs when mouse is pressed
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					if y > lastPos.Y {
+						m.MoveDown(1)
+					} else if y < lastPos.Y {
+						m.MoveUp(1)
+					}
+					lastPos = canvas.Point{X: x, Y: y} // update last mouse position
+				}
 			}
 		}
 	}
@@ -82,12 +86,10 @@ type dataSet struct {
 // of the graph canvas from right to left.
 type Model struct {
 	linechart.Model
-	dLineStyle runes.LineStyle     // default data set LineStyletype
-	dStyle     lipgloss.Style      // default data set Style
-	dSets      map[string]*dataSet // maps names to data sets
-
-	msgHandler  UpdateMsgHandler // handlers update events
-	zoneLastPos canvas.Point     // tracks zone position of last zone mouse position
+	UpdateHandler UpdateHandler       // handlers update events
+	dLineStyle    runes.LineStyle     // default data set LineStyletype
+	dStyle        lipgloss.Style      // default data set Style
+	dSets         map[string]*dataSet // maps names to data sets
 }
 
 // New returns a streamlinechart Model initialized with given linechart.Model.
@@ -99,11 +101,11 @@ func New(lc linechart.Model) Model {
 // given linechart.Model and styles as the default data set styles.
 func NewWithStyle(lc linechart.Model, ls runes.LineStyle, s lipgloss.Style) Model {
 	m := Model{
-		Model:      lc,
-		dLineStyle: ls,
-		dStyle:     s,
-		dSets:      make(map[string]*dataSet),
-		msgHandler: DefaultUpdateMsgHandler,
+		Model:         lc,
+		UpdateHandler: DefaultUpdateHandler(),
+		dLineStyle:    ls,
+		dStyle:        s,
+		dSets:         make(map[string]*dataSet),
 	}
 	m.dSets[DefaultDataSetName] = m.newDataSet()
 	return m
@@ -273,12 +275,12 @@ func (m *Model) DrawDataSets(names []string) {
 }
 
 // Update processes bubbletea Msg to by invoking
-// UpdateMsgHandlerFunc callback if linechart is focused.
+// UpdateHandlerFunc callback if linechart is focused.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.Focused() {
 		return m, nil
 	}
-	m.msgHandler(&m, msg)
+	m.UpdateHandler(&m, msg)
 	m.rescaleData()
 	return m, nil
 }
