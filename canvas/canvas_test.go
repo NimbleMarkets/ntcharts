@@ -132,7 +132,7 @@ func TestFill(t *testing.T) {
 	h := 5
 	c := New(w, h)
 
-	c.Fill(Cell{Rune: 'B'})
+	c.Fill(NewCell('B'))
 
 	for y := 0; y < c.Height(); y++ {
 		for x := 0; x < c.Width(); x++ {

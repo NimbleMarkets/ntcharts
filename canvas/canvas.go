@@ -124,6 +124,7 @@ func NewCellWithStyle(r rune, s lipgloss.Style) Cell {
 	return Cell{Rune: r, Style: s}
 }
 
+// CellLine is a slice of Cells
 type CellLine []Cell
 
 // UpdateHandler callback invoked during an Update()
@@ -134,6 +135,7 @@ type UpdateHandler func(*Model, tea.Msg)
 // moving viewing window using the mouse wheel,
 // holding down mouse left button and moving,
 // and with the arrow keys.
+// Uses canvas Keymap for keyboard messages.
 func DefaultUpdateHandler() UpdateHandler {
 	var lastPos Point // tracks zone position of last zone mouse position
 	return func(m *Model, tm tea.Msg) {
@@ -223,6 +225,7 @@ func DefaultKeyMap() KeyMap {
 
 // Model contains state of a canvas
 type Model struct {
+	Style         lipgloss.Style // default style applied to all cells
 	KeyMap        KeyMap
 	UpdateHandler UpdateHandler
 
@@ -249,6 +252,7 @@ type Model struct {
 // and optional mouse functionality with bubblezone module.
 func New(w, h int) Model {
 	m := Model{
+		Style:         defaultStyle,
 		KeyMap:        DefaultKeyMap(),
 		UpdateHandler: DefaultUpdateHandler(),
 		area:          image.Rect(0, 0, w, h),
@@ -329,7 +333,7 @@ func (m *Model) Clear() {
 // Each string element represents a line in the canvas starting from top to bottom.
 // Truncates contents if contents are greater than canvas height and width.
 func (m *Model) SetLines(lines []string) bool {
-	return m.SetLinesWithStyle(lines, defaultStyle)
+	return m.SetLinesWithStyle(lines, m.Style)
 }
 
 // SetLinesWithStyle copies []string into canvas as contents with style applied to all Cells.
@@ -350,7 +354,7 @@ func (m *Model) SetLinesWithStyle(lines []string, s lipgloss.Style) bool {
 // SetString copies string as rune values into canvas CellLine starting at coordinates (X, Y).
 // Truncates values execeeding the canvas width.
 func (m *Model) SetString(p Point, l string) bool {
-	return m.SetStringWithStyle(p, l, defaultStyle)
+	return m.SetStringWithStyle(p, l, m.Style)
 }
 
 // SetStringWithStyle copies string as rune values into canvas CellLine starting at coordinates (X, Y).
@@ -364,7 +368,7 @@ func (m *Model) SetStringWithStyle(p Point, l string, s lipgloss.Style) bool {
 // Style will be applied to all Cells.
 // Truncates values execeeding the canvas width.
 func (m *Model) SetRunes(p Point, l []rune) bool {
-	return m.SetRunesWithStyle(p, l, defaultStyle)
+	return m.SetRunesWithStyle(p, l, m.Style)
 }
 
 // SetRunesWithStyle copies rune values into canvas CellLine starting at coordinates (X, Y).
@@ -377,7 +381,7 @@ func (m *Model) SetRunesWithStyle(p Point, l []rune, s lipgloss.Style) bool {
 	xIdx := p.X
 	for _, r := range l {
 		if m.insideXBounds(xIdx) {
-			m.content[p.Y][xIdx] = Cell{Rune: r, Style: s}
+			m.content[p.Y][xIdx] = NewCellWithStyle(r, s)
 		}
 		xIdx += 1
 	}
@@ -407,7 +411,7 @@ func (m *Model) SetRune(p Point, r rune) bool {
 	if !p.In(m.area) {
 		return false
 	}
-	m.content[p.Y][p.X] = Cell{Rune: r}
+	m.content[p.Y][p.X] = NewCell(r)
 	return true
 }
 
