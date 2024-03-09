@@ -50,13 +50,13 @@ func WithCursor(p Point) Option {
 	}
 }
 
-// WithLines copies the given []string into
+// WithContent copies the given []string into
 // the contents of the canvas with default style.
 // Each string will be copied into a row starting
 // from the top of the canvas to bottom.
 // Use option WithStyle() to set canvas style
-// before using WithLines() for styling.
-func WithLines(l []string) Option {
+// before using WithContent() for styling.
+func WithContent(l []string) Option {
 	return func(m *Model) {
 		m.SetLines(l)
 	}

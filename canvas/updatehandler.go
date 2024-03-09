@@ -2,7 +2,7 @@ package canvas
 
 // File contains methods and objects used during canvas Model Update()
 // to modify internal state.
-// canvas Model is able to move the viewport displaying the contents
+// canvas is able to move the viewport displaying the contents
 // either up, down, left and right
 
 import (
@@ -55,24 +55,24 @@ func DefaultUpdateHandler() UpdateHandler {
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, m.KeyMap.Up):
-				m.MoveUp()
+				m.MoveUp(1)
 			case key.Matches(msg, m.KeyMap.Down):
-				m.MoveDown()
+				m.MoveDown(1)
 			case key.Matches(msg, m.KeyMap.Left):
-				m.MoveLeft()
+				m.MoveLeft(1)
 			case key.Matches(msg, m.KeyMap.Right):
-				m.MoveRight()
+				m.MoveRight(1)
 			}
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
-				m.MoveUp()
+				m.MoveUp(1)
 			case tea.MouseButtonWheelDown:
-				m.MoveDown()
+				m.MoveDown(1)
 			case tea.MouseButtonWheelRight:
-				m.MoveRight()
+				m.MoveRight(1)
 			case tea.MouseButtonWheelLeft:
-				m.MoveLeft()
+				m.MoveLeft(1)
 			}
 
 			if m.zoneManager == nil {
@@ -90,14 +90,14 @@ func DefaultUpdateHandler() UpdateHandler {
 				if zInfo.InBounds(msg) {
 					x, y := zInfo.Pos(msg)
 					if x > lastPos.X {
-						m.MoveRight()
+						m.MoveRight(1)
 					} else if x < lastPos.X {
-						m.MoveLeft()
+						m.MoveLeft(1)
 					}
 					if y > lastPos.Y {
-						m.MoveDown()
+						m.MoveDown(1)
 					} else if y < lastPos.Y {
-						m.MoveUp()
+						m.MoveUp(1)
 					}
 					lastPos = Point{X: x, Y: y} // update last mouse position
 				}
@@ -107,31 +107,33 @@ func DefaultUpdateHandler() UpdateHandler {
 }
 
 // MoveUp moves cursor up if possible.
-func (m *Model) MoveUp() {
-	if m.cursor.Y > 0 {
-		m.cursor.Y -= 1
+func (m *Model) MoveUp(i int) {
+	m.cursor.Y -= i
+	if m.cursor.Y < 0 {
+		m.cursor.Y = 0
 	}
 }
 
 // MoveDown moves cursor down if possible.
-func (m *Model) MoveDown() {
-	endY := m.cursor.Y + m.ViewHeight
-	if endY < m.area.Dy() {
-		m.cursor.Y += 1
+func (m *Model) MoveDown(i int) {
+	endY := m.cursor.Y + m.ViewHeight + i
+	if endY <= m.area.Dy() {
+		m.cursor.Y += i
 	}
 }
 
 // MoveLeft moves cursor left if possible.
-func (m *Model) MoveLeft() {
-	if m.cursor.X > 0 {
-		m.cursor.X -= 1
+func (m *Model) MoveLeft(i int) {
+	m.cursor.X -= i
+	if m.cursor.X < 0 {
+		m.cursor.X = 0
 	}
 }
 
 // MoveRight moves cursor right if possible.
-func (m *Model) MoveRight() {
-	endX := m.cursor.X + m.ViewWidth
-	if endX < m.area.Dx() {
-		m.cursor.X += 1
+func (m *Model) MoveRight(i int) {
+	endX := m.cursor.X + m.ViewWidth + 1
+	if endX <= m.area.Dx() {
+		m.cursor.X += i
 	}
 }

@@ -140,7 +140,7 @@ func getExampleCanvas2(zm *zone.Manager) (c canvas.Model) {
 		canvas.WithZoneManager(zm),
 		canvas.WithViewHeight(6),
 		canvas.WithViewWidth(24),
-		canvas.WithLines(contents))
+		canvas.WithContent(contents))
 	return c2
 }
 
