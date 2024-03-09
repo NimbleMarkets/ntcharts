@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 var defaultStyle = lipgloss.NewStyle().
@@ -33,6 +34,7 @@ type model struct {
 	coords2 []int
 
 	cursor canvas.Point
+	zM     *zone.Manager
 }
 
 func (m model) Init() tea.Cmd {
@@ -66,6 +68,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
+	case tea.MouseMsg:
+		// move all cursors at the same time on any mouse action
+		if m.zM.Get(m.c1.GetZoneID()).InBounds(msg) {
+			m.cursor.X, m.cursor.Y = m.zM.Get(m.c1.GetZoneID()).Pos(msg)
+		} else if m.zM.Get(m.c2.GetZoneID()).InBounds(msg) {
+			m.cursor.X, m.cursor.Y = m.zM.Get(m.c2.GetZoneID()).Pos(msg)
+		} else if m.zM.Get(m.c3.GetZoneID()).InBounds(msg) {
+			m.cursor.X, m.cursor.Y = m.zM.Get(m.c3.GetZoneID()).Pos(msg)
+		}
 	}
 	startX := 1 // start drawing sequence at X = 1 for demo, usually start at Y axis
 
@@ -89,13 +100,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	s := "arrow keys to move origin around, `q/ctrl+c` to quit\n"
+	s := "arrow keys or mouse to move origin around, `q/ctrl+c` to quit\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render(m.c1.View()),
 		defaultStyle.Render(m.c2.View()),
 		defaultStyle.Render(m.c3.View()),
 	) + "\n"
-	return s
+	return m.zM.Scan(s) // required if canvas has set bubblezone manager
 }
 
 func main() {
@@ -103,9 +114,10 @@ func main() {
 	h := 11
 	yAxis := 0
 	xAxis := 10
-	c1 := canvas.New(w, h)
-	c2 := canvas.New(w, h)
-	c3 := canvas.New(w, h)
+	z := zone.New() // bubblezone used to enable mouse functionality
+	c1 := canvas.New(w, h, canvas.WithZoneManager(z))
+	c2 := canvas.New(w, h, canvas.WithZoneManager(z))
+	c3 := canvas.New(w, h, canvas.WithZoneManager(z))
 
 	// canvas 1 draws arc lines for coordinates set 1
 	// canvas 2 draws arc lines for coordinates set 2
@@ -119,8 +131,8 @@ func main() {
 	graphYCoords2 := []int{9, 3, 1, 8, 9, 7, 2, 4, 5, 4, 0, 4, 0, 5, 7, 8, 5} // Cartesian coordinates with (0,0) as bottom left
 	canvasYCoords2 := canvas.CanvasYCoordinates(xAxis, graphYCoords2)         // Canvas coordinates with (0,0) as top left
 
-	m := model{c1, c2, c3, canvasYCoords1, canvasYCoords2, canvas.Point{yAxis, xAxis}}
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	m := model{c1, c2, c3, canvasYCoords1, canvasYCoords2, canvas.Point{yAxis, xAxis}, z}
+	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

@@ -112,18 +112,18 @@ func CanvasFloat64Point(origin Point, p Float64Point) (r Float64Point) {
 
 var defaultStyle = lipgloss.NewStyle()
 
-// Cell contains a rune and lipgloss.Style for rendering
+// Cell contains a rune and lipgloss Style for rendering
 type Cell struct {
 	Rune  rune
 	Style lipgloss.Style
 }
 
-// NewCell returns Cell with given rune and default lipgloss.Style.
+// NewCell returns Cell with given rune and default lipgloss Style.
 func NewCell(r rune) Cell {
 	return Cell{Rune: r, Style: defaultStyle}
 }
 
-// NewCellWithStyle returns Cell with given rune and lipgloss.Style.
+// NewCellWithStyle returns Cell with given rune and lipgloss Style.
 func NewCellWithStyle(r rune, s lipgloss.Style) Cell {
 	return Cell{Rune: r, Style: s}
 }
