@@ -61,7 +61,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// call different Draw functions with different Style combinations
 	m.s1.Draw()
-	m.s2.DrawNoFullCanvas()
+	m.s2.DrawColumnOnly()
 	m.s3.Draw()
 	m.s4.Draw()
 	return m, nil
@@ -71,7 +71,7 @@ func (m model) View() string {
 	s := "press any button to push the same random value to all sparklines, `q/ctrl+c` to quit\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render("Draw() w/o background\n"+m.s1.View()),
-		defaultStyle.Render(titleStyle.Render("style w/ background")+"\nDrawNoFullCanvas()\n"+m.s2.View()+"\nDraw()\n"+m.s3.View()),
+		defaultStyle.Render(titleStyle.Render("style w/ background")+"\nDrawColumnOnly()\n"+m.s2.View()+"\nDraw()\n"+m.s3.View()),
 		lipgloss.JoinVertical(lipgloss.Left,
 			defaultStyle.Render(fmt.Sprintf("Max: %.0f, Random: %.2f", m.max, randomFloat64)),
 			defaultStyle.Render("Draw() w/ background\n"+m.s4.View()),
@@ -87,15 +87,15 @@ func main() {
 	// all sparklines contain the same values,
 	// but will be scaled when displayed based on sparkline height
 	// sparkline1 calls Draw with no background style
-	// sparkline2 calls DrawNoFullCanvas with background style
+	// sparkline2 calls DrawColumnOnly with background style
 	// sparkline3 calls Draw with background style (same style as sparkline2)
 	// sparkline4 calls Draw with background style
 
 	m := model{
-		sparkline.NewWithStyle(width, height, max, blockStyle),
-		sparkline.NewWithStyle(width, (height/2)-1, max, blockStyle2),
-		sparkline.NewWithStyle(width, (height/2)-1, max, blockStyle2),
-		sparkline.NewWithStyle(width, height/4, max, blockStyle3),
+		sparkline.New(width, height, max, sparkline.WithStyle(blockStyle)),
+		sparkline.New(width, (height/2)-1, max, sparkline.WithStyle(blockStyle2)),
+		sparkline.New(width, (height/2)-1, max, sparkline.WithStyle(blockStyle2)),
+		sparkline.New(width, height/4, max, sparkline.WithStyle(blockStyle3)),
 		max}
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)

@@ -13,8 +13,45 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Option is used to set options when initializing a sparkline. Example:
+//
+//	sl := New(width, height, maxValue, WithStyle(someStyle), WithAuto())
+type Option func(*Model)
+
+// WithStyle sets the default column style.
+func WithStyle(s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.Style = s
+	}
+}
+
+// WithKeyMap sets the canvas KeyMap used
+// when processing keyboard event messages in Update().
+func WithKeyMap(k canvas.KeyMap) Option {
+	return func(m *Model) {
+		m.Canvas.KeyMap = k
+	}
+}
+
+// WithUpdateHandler sets the canvas UpdateHandler used
+// when processing bubbletea Msg events in Update().
+func WithUpdateHandler(h canvas.UpdateHandler) Option {
+	return func(m *Model) {
+		m.Canvas.UpdateHandler = h
+	}
+}
+
+// WithAuto enables automatically setting the max value
+// if new data arrives with greater value than the current max.
+func WithAuto() Option {
+	return func(m *Model) {
+		m.Auto = true
+	}
+}
+
 // Model contains state of a sparkline
 type Model struct {
+	Auto   bool           // whether to automatically set max value when adding data
 	Style  lipgloss.Style // style applied when drawing columns
 	Canvas canvas.Model
 
@@ -23,20 +60,19 @@ type Model struct {
 }
 
 // New returns a sparkline Model initialized with given width, height,
-// and expected data max value.
-func New(w, h int, m float64) Model {
-	return NewWithStyle(w, h, m, lipgloss.NewStyle())
-}
-
-// NewWithStyle returns a sparkline Model initialized with given width, height,
-// expected data max value and style.
-func NewWithStyle(w, h int, m float64, s lipgloss.Style) Model {
-	return Model{
-		Style:  s,
+// expected data max value and various options.
+func New(w, h int, max float64, opts ...Option) Model {
+	m := Model{
+		Auto:   false,
+		Style:  lipgloss.NewStyle(),
 		Canvas: canvas.New(w, h),
-		max:    m,
-		buf:    buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/m),
+		max:    max,
+		buf:    buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/max),
 	}
+	for _, opt := range opts {
+		opt(&m)
+	}
+	return m
 }
 
 // Width returns sparkline width.
@@ -87,7 +123,11 @@ func (m *Model) Clear() {
 // Negative values will be treated as the value 0.
 // Data will be scaled using expected max value and sparkline height.
 func (m *Model) Push(f float64) {
-	m.buf.Push(math.Max(f, 0))
+	v := math.Max(f, 0)
+	if m.Auto && v > m.max {
+		m.SetMax(v)
+	}
+	m.buf.Push(v)
 }
 
 // PushAll adds all data values in []float64 to sparkline data buffer.
@@ -95,7 +135,7 @@ func (m *Model) Push(f float64) {
 // Data will be scaled using expected max value and sparkline height.
 func (m *Model) PushAll(f []float64) {
 	for _, v := range f {
-		m.buf.Push(math.Max(v, 0))
+		m.Push(v)
 	}
 }
 
@@ -104,13 +144,13 @@ func (m *Model) PushAll(f []float64) {
 // Columns representing the data will be displayed going from
 // from the bottom to the top and coming from the left to the right of the canvas.
 func (m *Model) Draw() {
-	m.DrawNoFullCanvas()
+	m.DrawColumnOnly()
 	m.Canvas.SetStyle(m.Style)
 }
 
-// DrawNoFullCanvas is the same as Draw except the the style will only be applied
+// DrawColumnOnly is the same as Draw except the the style will only be applied
 // to the columns and not to the entire canvas.
-func (m *Model) DrawNoFullCanvas() {
+func (m *Model) DrawColumnOnly() {
 	m.Canvas.Clear()
 	d := m.buf.ReadAll()
 	graph.DrawColumns(&m.Canvas,
