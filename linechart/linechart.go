@@ -1,5 +1,5 @@
 // Package linechart implements a canvas that displays
-// (X,Y) Cartesian coordinates as a line chart
+// (X,Y) Cartesian coordinates as a line chart.
 package linechart
 
 import (

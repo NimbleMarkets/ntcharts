@@ -1,4 +1,4 @@
-// Package buffer contain buffers used with charts
+// Package buffer contain buffers used with charts.
 package buffer
 
 import (

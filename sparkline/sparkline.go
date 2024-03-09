@@ -1,6 +1,10 @@
 // Package sparkline implements a canvas that displays time series data
-// as a chart with columns moving from right to left
+// as a chart with columns moving from right to left.
 package sparkline
+
+// File contains a Model using the bubbletea framework
+// representing the state of the sparkline
+// and options used by the sparkline during initialization with New().
 
 import (
 	"math"
@@ -144,13 +148,13 @@ func (m *Model) PushAll(f []float64) {
 // Columns representing the data will be displayed going from
 // from the bottom to the top and coming from the left to the right of the canvas.
 func (m *Model) Draw() {
-	m.DrawColumnOnly()
+	m.DrawColumnsOnly()
 	m.Canvas.SetStyle(m.Style)
 }
 
-// DrawColumnOnly is the same as Draw except the the style will only be applied
+// DrawColumnsOnly is the same as Draw except the the style will only be applied
 // to the columns and not to the entire canvas.
-func (m *Model) DrawColumnOnly() {
+func (m *Model) DrawColumnsOnly() {
 	m.Canvas.Clear()
 	d := m.buf.ReadAll()
 	graph.DrawColumns(&m.Canvas,

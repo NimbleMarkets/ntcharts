@@ -1,4 +1,4 @@
-// Package runes contains commonly used runes and functions to obtain runes
+// Package runes contains commonly used runes and functions to obtain runes.
 package runes
 
 // https://en.wikipedia.org/wiki/Box-drawing_character

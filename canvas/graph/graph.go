@@ -1,4 +1,4 @@
-// Package graph contains functions to help draw runes on to a canvas
+// Package graph contains functions to help draw runes on to a canvas.
 package graph
 
 // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
