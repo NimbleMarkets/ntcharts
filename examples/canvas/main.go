@@ -120,11 +120,9 @@ func getExampleCanvas1() (c canvas.Model) {
 	return c1
 }
 
-func getExampleCanvas2() (c canvas.Model) {
-	c2 := canvas.New(30, 10)
-
+func getExampleCanvas2(zm *zone.Manager) (c canvas.Model) {
 	// set all contents at once with []string
-	c2.SetLines([]string{
+	contents := []string{
 		" ███████████████████  ",
 		"  ███████████████████ ",
 		"     ███       ███    ",
@@ -135,9 +133,14 @@ func getExampleCanvas2() (c canvas.Model) {
 		"       █       ███    ",
 		"                ██    ",
 		"                 █    ",
-	})
-	c2.ViewHeight = 6
-	c2.ViewWidth = 24
+	}
+
+	// creating canvas with options
+	c2 := canvas.New(30, 10,
+		canvas.WithZoneManager(zm),
+		canvas.WithViewHeight(6),
+		canvas.WithViewWidth(24),
+		canvas.WithLines(contents))
 	return c2
 }
 
@@ -145,13 +148,12 @@ func main() {
 	// Mouse support is enabled using the bubblezone module
 	// 1. create a new bubblezone.Manager with bubblezone.New()
 	// 2. call canvas.SetZoneManager() on the new bubblezone.Manager
-	// 3. create bubbletea.Program wil mouse support enabled
+	// 3. create bubbletea.Program with mouse support enabled, e.g. tea.WithMouseCellMotion()
 	// 4. bubblezone.Manager.Scan() must be called in bubbletea Model.View()
 	//    wrapping the returned string output
 	z := zone.New()
-	m := model{getExampleCanvas1(), getExampleCanvas2(), z}
+	m := model{getExampleCanvas1(), getExampleCanvas2(z), z}
 	m.c1.SetZoneManager(z)
-	m.c2.SetZoneManager(z)
 	m.c1.Focus()
 
 	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {

@@ -223,6 +223,75 @@ func DefaultKeyMap() KeyMap {
 	}
 }
 
+// Option is used to set options when initializing a sparkline. Example:
+//
+//	canvas := New(width, height, WithStyle(someStyle), WithKeyMap(someKeyMap))
+type Option func(*Model)
+
+// WithStyle sets the default Cell style.
+func WithStyle(s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.Style = s
+	}
+}
+
+// WithKeyMap sets the KeyMap used
+// when processing keyboard event messages in Update().
+func WithKeyMap(k KeyMap) Option {
+	return func(m *Model) {
+		m.KeyMap = k
+	}
+}
+
+// WithUpdateHandler sets the UpdateHandler used
+// when processing bubbletea Msg events in Update().
+func WithUpdateHandler(h UpdateHandler) Option {
+	return func(m *Model) {
+		m.UpdateHandler = h
+	}
+}
+
+// WithZoneManager sets the bubblezone Manager used
+// when processing bubbletea Msg mouse events in Update().
+func WithZoneManager(zm *zone.Manager) Option {
+	return func(m *Model) {
+		m.SetZoneManager(zm)
+	}
+}
+
+// WithCursor sets the cursor starting position for the viewport.
+func WithCursor(p Point) Option {
+	return func(m *Model) {
+		m.SetCursor(p)
+	}
+}
+
+// WithLines copies the given []string into
+// the contents of the canvas with default style.
+// Each string will be copied into a row starting
+// from the top of the canvas to bottom.
+// Use option WithStyle() to set canvas style
+// before using WithLines() for styling.
+func WithLines(l []string) Option {
+	return func(m *Model) {
+		m.SetLines(l)
+	}
+}
+
+// WithViewWidth sets the viewport width of the canvas.
+func WithViewWidth(w int) Option {
+	return func(m *Model) {
+		m.ViewWidth = w
+	}
+}
+
+// WithViewHeight sets the viewport height of the canvas.
+func WithViewHeight(h int) Option {
+	return func(m *Model) {
+		m.ViewHeight = h
+	}
+}
+
 // Model contains state of a canvas
 type Model struct {
 	Style         lipgloss.Style // default style applied to all cells
@@ -234,11 +303,14 @@ type Model struct {
 	content []CellLine
 	focus   bool
 
-	// simulates a viewport to display contents
+	// simulates a viewport width and height
+	// to display contents of the canvas
 	ViewWidth  int
 	ViewHeight int
 
 	// internal coordinates tracking viewport cursor
+	// the contents will be displayed from top to bottom
+	// and left to right of the cursor
 	// 0,0 is top left of canvas
 	cursor Point
 
@@ -247,10 +319,9 @@ type Model struct {
 	zoneID      string
 }
 
-// New returns a canvas Model initialized with given width and height.
-// Canvases support optional visual styles with lipgloss module,
-// and optional mouse functionality with bubblezone module.
-func New(w, h int) Model {
+// New returns a canvas Model initialized with given width, height
+// and various options.
+func New(w, h int, opts ...Option) Model {
 	m := Model{
 		Style:         defaultStyle,
 		KeyMap:        DefaultKeyMap(),
@@ -262,6 +333,9 @@ func New(w, h int) Model {
 	}
 	for i, _ := range m.content {
 		m.content[i] = make(CellLine, w)
+	}
+	for _, opt := range opts {
+		opt(&m)
 	}
 	return m
 }
