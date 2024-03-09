@@ -1,13 +1,17 @@
 // Package canvas implements an abstract 2D area used to plot
-// arbitary runes that can be displayed using the bubbletea framework
+// arbitary runes that can be displayed using the bubbletea framework.
 package canvas
+
+// File contains a Model using the bubbletea framework
+// representing the state of the canvas,
+// types and functions of the coordinates system used by the canvas
+// and types and functions of the contents of the canvas.
 
 import (
 	"image"
 	"math"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
@@ -127,176 +131,11 @@ func NewCellWithStyle(r rune, s lipgloss.Style) Cell {
 // CellLine is a slice of Cells
 type CellLine []Cell
 
-// UpdateHandler callback invoked during an Update()
-// and passes in the canvas *Model and bubbletea Msg.
-type UpdateHandler func(*Model, tea.Msg)
-
-// DefaultUpdateHandler is used by canvas chart to enable
-// moving viewing window using the mouse wheel,
-// holding down mouse left button and moving,
-// and with the arrow keys.
-// Uses canvas Keymap for keyboard messages.
-func DefaultUpdateHandler() UpdateHandler {
-	var lastPos Point // tracks zone position of last zone mouse position
-	return func(m *Model, tm tea.Msg) {
-		switch msg := tm.(type) {
-		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.KeyMap.Up):
-				m.MoveUp()
-			case key.Matches(msg, m.KeyMap.Down):
-				m.MoveDown()
-			case key.Matches(msg, m.KeyMap.Left):
-				m.MoveLeft()
-			case key.Matches(msg, m.KeyMap.Right):
-				m.MoveRight()
-			}
-		case tea.MouseMsg:
-			switch msg.Button {
-			case tea.MouseButtonWheelUp:
-				m.MoveUp()
-			case tea.MouseButtonWheelDown:
-				m.MoveDown()
-			case tea.MouseButtonWheelRight:
-				m.MoveRight()
-			case tea.MouseButtonWheelLeft:
-				m.MoveLeft()
-			}
-
-			if m.zoneManager == nil {
-				return
-			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.zoneManager.Get(m.zoneID)
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = Point{X: x, Y: y} // set position of last click
-				}
-			case tea.MouseActionMotion: // event occurs when mouse is pressed
-				zInfo := m.zoneManager.Get(m.zoneID)
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if x > lastPos.X {
-						m.MoveRight()
-					} else if x < lastPos.X {
-						m.MoveLeft()
-					}
-					if y > lastPos.Y {
-						m.MoveDown()
-					} else if y < lastPos.Y {
-						m.MoveUp()
-					}
-					lastPos = Point{X: x, Y: y} // update last mouse position
-				}
-			}
-		}
-	}
-}
-
-type KeyMap struct {
-	Up    key.Binding
-	Down  key.Binding
-	Left  key.Binding
-	Right key.Binding
-}
-
-// DefaultKeyMap returns a default KeyMap for canvas.
-func DefaultKeyMap() KeyMap {
-	return KeyMap{
-		Up: key.NewBinding(
-			key.WithKeys("up", "k"),
-			key.WithHelp("↑/k", "move up"),
-		),
-		Down: key.NewBinding(
-			key.WithKeys("down", "j"),
-			key.WithHelp("↓/j", "move down"),
-		),
-		Left: key.NewBinding(
-			key.WithKeys("left", "h"),
-			key.WithHelp("←/h", "move left"),
-		),
-		Right: key.NewBinding(
-			key.WithKeys("right", "l"),
-			key.WithHelp("→/l", "move right"),
-		),
-	}
-}
-
-// Option is used to set options when initializing a sparkline. Example:
-//
-//	canvas := New(width, height, WithStyle(someStyle), WithKeyMap(someKeyMap))
-type Option func(*Model)
-
-// WithStyle sets the default Cell style.
-func WithStyle(s lipgloss.Style) Option {
-	return func(m *Model) {
-		m.Style = s
-	}
-}
-
-// WithKeyMap sets the KeyMap used
-// when processing keyboard event messages in Update().
-func WithKeyMap(k KeyMap) Option {
-	return func(m *Model) {
-		m.KeyMap = k
-	}
-}
-
-// WithUpdateHandler sets the UpdateHandler used
-// when processing bubbletea Msg events in Update().
-func WithUpdateHandler(h UpdateHandler) Option {
-	return func(m *Model) {
-		m.UpdateHandler = h
-	}
-}
-
-// WithZoneManager sets the bubblezone Manager used
-// when processing bubbletea Msg mouse events in Update().
-func WithZoneManager(zm *zone.Manager) Option {
-	return func(m *Model) {
-		m.SetZoneManager(zm)
-	}
-}
-
-// WithCursor sets the cursor starting position for the viewport.
-func WithCursor(p Point) Option {
-	return func(m *Model) {
-		m.SetCursor(p)
-	}
-}
-
-// WithLines copies the given []string into
-// the contents of the canvas with default style.
-// Each string will be copied into a row starting
-// from the top of the canvas to bottom.
-// Use option WithStyle() to set canvas style
-// before using WithLines() for styling.
-func WithLines(l []string) Option {
-	return func(m *Model) {
-		m.SetLines(l)
-	}
-}
-
-// WithViewWidth sets the viewport width of the canvas.
-func WithViewWidth(w int) Option {
-	return func(m *Model) {
-		m.ViewWidth = w
-	}
-}
-
-// WithViewHeight sets the viewport height of the canvas.
-func WithViewHeight(h int) Option {
-	return func(m *Model) {
-		m.ViewHeight = h
-	}
-}
-
 // Model contains state of a canvas
 type Model struct {
 	Style         lipgloss.Style // default style applied to all cells
-	KeyMap        KeyMap
-	UpdateHandler UpdateHandler
+	KeyMap        KeyMap         // KeyMap used for keyboard msgs during Update()
+	UpdateHandler UpdateHandler  // callback invoked during Update()
 
 	// overall canvas size
 	area    image.Rectangle // 0,0 is top left of canvas
@@ -314,7 +153,7 @@ type Model struct {
 	// 0,0 is top left of canvas
 	cursor Point
 
-	// manages mouse events
+	// bubblezone Manager used to handler mouse events during Update()
 	zoneManager *zone.Manager
 	zoneID      string
 }
@@ -650,36 +489,6 @@ func (m Model) View() (r string) {
 		r = m.zoneManager.Mark(m.zoneID, r)
 	}
 	return
-}
-
-// MoveUp moves cursor up if possible.
-func (m *Model) MoveUp() {
-	if m.cursor.Y > 0 {
-		m.cursor.Y -= 1
-	}
-}
-
-// MoveDown moves cursor down if possible.
-func (m *Model) MoveDown() {
-	endY := m.cursor.Y + m.ViewHeight
-	if endY < m.area.Dy() {
-		m.cursor.Y += 1
-	}
-}
-
-// MoveLeft moves cursor left if possible.
-func (m *Model) MoveLeft() {
-	if m.cursor.X > 0 {
-		m.cursor.X -= 1
-	}
-}
-
-// MoveRight moves cursor right if possible.
-func (m *Model) MoveRight() {
-	endX := m.cursor.X + m.ViewWidth
-	if endX < m.area.Dx() {
-		m.cursor.X += 1
-	}
 }
 
 // insideXBounds returns whether X coordinate is within canvas bounds.
