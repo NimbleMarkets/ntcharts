@@ -77,7 +77,7 @@ tasks:
     cmds:
       - go build -o bin/btcharts-linechart-circles examples/linechart/circles/*.go
       - go build -o bin/btcharts-linechart-lines examples/linechart/lines/*.go
-      - go build -o bin/btcharts-linechart-scatter examples/linechart/scatterchart/*.go
+      - go build -o bin/btcharts-linechart-scatter examples/linechart/scatter/*.go
       - go build -o bin/btcharts-linechart-streaming examples/linechart/streaming/*.go
       - go build -o bin/btcharts-linechart-wavelines examples/linechart/wavelines/*.go
     sources:

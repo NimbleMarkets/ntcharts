@@ -46,7 +46,7 @@ func WithUpdateHandler(h canvas.UpdateHandler) Option {
 }
 
 // WithAuto enables automatically setting the max value
-// if new data arrives with greater value than the current max.
+// if new data greater than the current max is added.
 func WithAuto() Option {
 	return func(m *Model) {
 		m.Auto = true
