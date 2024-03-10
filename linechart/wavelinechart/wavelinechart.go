@@ -32,7 +32,7 @@ type dataSet struct {
 
 // Option is used to set options when initializing a wavelinechart. Example:
 //
-//	wlc := New(width, height, maxValue, WithStyles(someLineStyle, someLipglossStyle))
+//	wlc := New(width, height, minX, maxX, minY, maxY, WithStyles(someLineStyle, someLipglossStyle))
 type Option func(*Model)
 
 // WithLineChart sets internal linechart to given linechart.

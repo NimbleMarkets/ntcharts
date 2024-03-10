@@ -11,7 +11,7 @@ import (
 
 // Option is used to set options when initializing a linechart. Example:
 //
-//	lc := New(width, height, maxValue, WithZoneManager(someZoneManager))
+//	lc := New(width, height, minX, maxX, minY, maxY, WithZoneManager(someZoneManager))
 type Option func(*Model)
 
 // WithStyles sets the default style of the axes, the value shown for the axes

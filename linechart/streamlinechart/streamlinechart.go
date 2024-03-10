@@ -28,7 +28,7 @@ type dataSet struct {
 
 // Option is used to set options when initializing a streamlinechart. Example:
 //
-//	slc := New(width, height, maxValue, WithStyles(someLineStyle, someLipglossStyle))
+//	slc := New(width, height, minY, maxY, WithStyles(someLineStyle, someLipglossStyle))
 type Option func(*Model)
 
 // WithLineChart sets internal linechart to given linechart.
