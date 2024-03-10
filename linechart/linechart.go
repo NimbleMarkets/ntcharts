@@ -308,6 +308,12 @@ func (m *Model) SetYRange(min, max float64) {
 	m.maxY = max
 }
 
+// SetXYRange updates the minimum and maximum expected X and Y values.
+func (m *Model) SetXYRange(minX, maxX, minY, maxY float64) {
+	m.SetXRange(minX, maxX)
+	m.SetYRange(minY, maxY)
+}
+
 // SetXRange updates the displayed minimum and maximum X values.
 // Minimum and maximum values will be bounded by the expected X values.
 // Returns whether not displayed X values have updated.

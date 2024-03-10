@@ -28,7 +28,7 @@ type dataSet struct {
 
 // Option is used to set options when initializing a streamlinechart. Example:
 //
-//	slc := New(width, height, minY, maxY, WithStyles(someLineStyle, someLipglossStyle))
+//	slc := New(width, height, WithStyles(someLineStyle, someLipglossStyle))
 type Option func(*Model)
 
 // WithLineChart sets internal linechart to given linechart.
@@ -63,6 +63,17 @@ func WithYRange(min, max float64) Option {
 	return func(m *Model) {
 		m.SetYRange(min, max)
 		m.SetViewYRange(min, max)
+	}
+}
+
+// WithXYRange sets expected and displayed
+// minimum and maximum Y value range.
+func WithXYRange(minX, maxX, minY, maxY float64) Option {
+	return func(m *Model) {
+		m.SetXRange(minX, maxX)
+		m.SetViewXRange(minX, maxX)
+		m.SetYRange(minY, maxY)
+		m.SetViewYRange(minY, maxY)
 	}
 }
 

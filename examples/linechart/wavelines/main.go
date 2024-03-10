@@ -158,25 +158,21 @@ func main() {
 	zoneManager := zone.New()
 
 	// wavelinechart 1 created with New() and SetStyle()
-	wlc1 := wavelinechart.New(
-		width, height,
-		minXValue, maxXValue,
-		minYValue, maxYValue)
+	wlc1 := wavelinechart.New(width, height)
 	wlc1.AxisStyle = axisStyle
 	wlc1.LabelStyle = labelStyle
 	wlc1.SetXStep(xStep)
 	wlc1.SetYStep(xStep)
-	wlc1.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
+	wlc1.SetXYRange(minXValue, maxXValue, minYValue, maxYValue)     // set expected ranges (can be less than or greater than displayed)
+	wlc1.SetViewXYRange(minXValue, maxXValue, minYValue, maxYValue) // setting displayed ranges fails unless setting expected values first
+	wlc1.SetStyles(runes.ThinLineStyle, graphLineStyle1)            // graphLineStyle1 replaces linechart rune style
 	wlc1.SetZoneManager(zoneManager)
 	wlc1.Focus()
 
 	// wavelinechart 2 created with New() using options
 	// and setting second data set style
-	wlc2 := wavelinechart.New(
-		// linechart.New(
-		width, height,
-		minXValue, maxXValue,
-		minYValue, maxYValue,
+	wlc2 := wavelinechart.New(width, height,
+		wavelinechart.WithXYRange(minXValue, maxXValue, minYValue, maxYValue),
 		wavelinechart.WithXYSteps(xStep, yStep),
 		wavelinechart.WithAxesStyles(axisStyle, labelStyle),
 		wavelinechart.WithStyles(runes.ThinLineStyle, graphLineStyle1), // graphLineStyle1 replaces linechart rune style

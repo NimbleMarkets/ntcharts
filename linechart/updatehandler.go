@@ -19,9 +19,9 @@ type UpdateHandler func(*Model, tea.Msg)
 
 // DefaultUpdateHandler is used by linechart to enable
 // zooming in and out with the mouse wheels,
-// moving the viewing window with mouse left hold and movement,
+// moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
-// Uses Canvas Keymap for keyboard messages.
+// Uses linechart Canvas Keymap for keyboard messages.
 func DefaultUpdateHandler() UpdateHandler {
 	var lastPos canvas.Point
 	return func(m *Model, tm tea.Msg) {
@@ -80,10 +80,10 @@ func DefaultUpdateHandler() UpdateHandler {
 
 // XAxisUpdateHandler is used by linechart to enable
 // zooming in and out with the mouse wheels,
-// moving the viewing window with mouse left hold and movement,
+// moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis.
-// Uses Canvas Keymap for keyboard messages.
+// Uses linechart Canvas Keymap for keyboard messages.
 func XAxisUpdateHandler() UpdateHandler {
 	var lastPos canvas.Point
 	return func(m *Model, tm tea.Msg) {
@@ -133,10 +133,10 @@ func XAxisUpdateHandler() UpdateHandler {
 
 // YAxisUpdateHandler is used by steamlinechart to enable
 // zooming in and out with the mouse wheels,
-// moving the viewing window with mouse left hold and movement,
+// moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the Y axis.
-// Uses linechart.Canvas Keymap for keyboard messages.
+// Uses linechart Canvas Keymap for keyboard messages.
 func YAxisUpdateHandler() UpdateHandler {
 	var lastPos canvas.Point
 	return func(m *Model, tm tea.Msg) {

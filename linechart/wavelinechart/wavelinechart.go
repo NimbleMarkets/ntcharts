@@ -32,7 +32,7 @@ type dataSet struct {
 
 // Option is used to set options when initializing a wavelinechart. Example:
 //
-//	wlc := New(width, height, minX, maxX, minY, maxY, WithStyles(someLineStyle, someLipglossStyle))
+//	wlc := New(width, height, WithStyles(someLineStyle, someLipglossStyle))
 type Option func(*Model)
 
 // WithLineChart sets internal linechart to given linechart.
@@ -49,6 +49,35 @@ func WithXYSteps(x int, y int) Option {
 	return func(m *Model) {
 		m.SetXStep(x)
 		m.SetYStep(y)
+	}
+}
+
+// WithXRange sets expected and displayed
+// minimum and maximum Y value range.
+func WithXRange(min, max float64) Option {
+	return func(m *Model) {
+		m.SetXRange(min, max)
+		m.SetViewXRange(min, max)
+	}
+}
+
+// WithYRange sets expected and displayed
+// minimum and maximum Y value range.
+func WithYRange(min, max float64) Option {
+	return func(m *Model) {
+		m.SetYRange(min, max)
+		m.SetViewYRange(min, max)
+	}
+}
+
+// WithXYRange sets expected and displayed
+// minimum and maximum Y value range.
+func WithXYRange(minX, maxX, minY, maxY float64) Option {
+	return func(m *Model) {
+		m.SetXRange(minX, maxX)
+		m.SetViewXRange(minX, maxX)
+		m.SetYRange(minY, maxY)
+		m.SetViewYRange(minY, maxY)
 	}
 }
 
@@ -111,19 +140,22 @@ type Model struct {
 
 // New returns a wavelinechart Model initialized
 // with given linechart Model and various options.
-func New(w, h int, minX, maxX, minY, maxY float64, opts ...Option) Model {
+// By default, the chart will auto set X and Y value ranges,
+// and only enable moving viewport on X axis.
+func New(w, h int, opts ...Option) Model {
 	m := Model{
-		Model: linechart.New(w, h, minX, maxX, minY, maxY,
+		Model: linechart.New(w, h, 0, 1, 0, 1,
 			linechart.WithAutoXYRange(),                                  // automatically adjust value ranges
 			linechart.WithUpdateHandler(linechart.XAxisUpdateHandler())), // only scroll on X axis
 		dLineStyle: runes.ArcLineStyle,
 		dStyle:     lipgloss.NewStyle(),
 		dSets:      make(map[string]*dataSet),
 	}
-	m.dSets[DefaultDataSetName] = m.newDataSet()
 	for _, opt := range opts {
 		opt(&m)
 	}
+	m.UpdateGraphSizes()
+	m.dSets[DefaultDataSetName] = m.newDataSet()
 	return m
 }
 
