@@ -18,6 +18,9 @@ var defaultStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("63")) // purple
 
+var graphStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("4")) // blue
+
 var axisStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("3")) // yellow
 
@@ -84,20 +87,20 @@ func main() {
 	maxYValue := 100.0
 
 	// linechart1 draws a 'X' on a randomized (X,Y) coordinate
-	lc1 := linechart.NewWithStyle(
+	lc1 := linechart.New(
 		width, height,
 		minXValue, maxXValue,
 		minYValue, maxYValue,
-		1, 1,
-		axisStyle, labelStyle)
+		linechart.WithXYSteps(1, 1),
+		linechart.WithStyles(axisStyle, labelStyle, graphStyle))
 
 	// linechart2 draws a braille rune on a randomized (X,Y) coordinate
-	lc2 := linechart.NewWithStyle(
+	lc2 := linechart.New(
 		width, height,
 		minXValue, maxXValue,
 		minYValue, maxYValue,
-		1, 1,
-		axisStyle, labelStyle)
+		linechart.WithXYSteps(1, 1),
+		linechart.WithStyles(axisStyle, labelStyle, graphStyle))
 
 	m := model{lc1, lc2}
 	if _, err := tea.NewProgram(m).Run(); err != nil {

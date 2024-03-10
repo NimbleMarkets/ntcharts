@@ -20,6 +20,9 @@ var defaultStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("63")) // purple
 
+var replacedStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("5")) // pink
+
 var lineStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("4")) // blue
 
@@ -69,6 +72,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	randomFloat64Point1 = canvas.Float64Point{X: xRand1, Y: yRand1}
 	randomFloat64Point2 = canvas.Float64Point{X: xRand2, Y: yRand2}
 
+	// linecharts drawing methods with style replaces initialized graph style
+
 	// linechart1 draws line with all runes as 'X' with default lipgloss style
 	m.lc1.DrawRuneLineWithStyle(randomFloat64Point1, randomFloat64Point2, 'X', lineStyle)
 
@@ -102,25 +107,24 @@ func main() {
 	minYValue := -50.0
 	maxYValue := 100.0
 
-	lc1 := linechart.NewWithStyle(
+	lc1 := linechart.New(
 		width, height,
 		minXValue, maxXValue,
 		minYValue, maxYValue,
-		1, 1,
-		axisStyle, labelStyle)
-	lc2 := linechart.NewWithStyle(
+		linechart.WithXYSteps(1, 1),
+		linechart.WithStyles(axisStyle, labelStyle, replacedStyle))
+	lc2 := linechart.New(
 		width, height,
 		minXValue, maxXValue,
 		minYValue, maxYValue,
-		1, 1,
-		axisStyle, labelStyle)
-	lc3 := linechart.NewWithStyle(
+		linechart.WithXYSteps(1, 1),
+		linechart.WithStyles(axisStyle, labelStyle, replacedStyle))
+	lc3 := linechart.New(
 		width, height,
 		minXValue, maxXValue,
 		minYValue, maxYValue,
-		1, 1,
-		axisStyle, labelStyle)
-
+		linechart.WithXYSteps(1, 1),
+		linechart.WithStyles(axisStyle, labelStyle, replacedStyle))
 	m := model{lc1, lc2, lc3}
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)

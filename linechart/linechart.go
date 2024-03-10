@@ -96,6 +96,7 @@ func (g *BrailleGrid) BraillePatterns() [][]rune {
 type Model struct {
 	UpdateHandler UpdateHandler
 	Canvas        canvas.Model
+	Style         lipgloss.Style // style applied when drawing runes
 	AxisStyle     lipgloss.Style // style applied when drawing X and Y axes
 	LabelStyle    lipgloss.Style // style applied when drawing X and Y number value
 	xStep         int            // number of steps when displaying X axis values
@@ -114,6 +115,13 @@ type Model struct {
 	viewMinY float64
 	viewMaxY float64
 
+	// whether to automatically set expected values
+	// when a value appears beyond the existing bounds
+	AutoMinX bool
+	AutoMaxX bool
+	AutoMinY bool
+	AutoMaxY bool
+
 	origin      canvas.Point // start of X and Y axes lines on canvas for graphing area
 	graphWidth  int          // width of graphing area - excludes X axis and labels
 	graphHeight int          // height of graphing area - excludes Y axis and labels
@@ -123,30 +131,19 @@ type Model struct {
 }
 
 // New returns a linechart Model initialized with given width, height,
-// expected data min values and expected data max values.
+// expected data value ranges and various options.
 // Width and height includes area used for chart labeling.
 // If xStep is 0, then will not draw X axis or values below X axis.
 // If yStep is 0, then will not draw Y axis or values left of Y axis.
-func New(w, h int, minX, maxX, minY, maxY float64, xStep, yStep int) Model {
-	return NewWithStyle(w, h, minX, maxX, minY, maxY, xStep, yStep, lipgloss.NewStyle(), lipgloss.NewStyle())
-}
-
-// NewWithStyle returns a linechart Model initialized with given width, height,
-// expected data min values, expected data max values and styles.
-// Width and height includes area used for chart labeling.
-// If xStep is 0, then will not draw X axis or values below X axis.
-// If yStep is 0, then will not draw Y axis or values left of Y axis.
-func NewWithStyle(w, h int, minX, maxX, minY, maxY float64, xStep, yStep int, as lipgloss.Style, ls lipgloss.Style) Model {
-	// graph width and height exclude area used by axes
-	// origin point is canvas coordinates of where axes are drawn
-	origin, gWidth, gHeight := getGraphSizeAndOrigin(w, h, minY, maxY, xStep, yStep)
+func New(w, h int, minX, maxX, minY, maxY float64, opts ...Option) Model {
 	m := Model{
 		UpdateHandler: DefaultUpdateHandler(),
 		Canvas:        canvas.New(w, h),
-		AxisStyle:     as,
-		LabelStyle:    ls,
-		yStep:         yStep,
-		xStep:         xStep,
+		Style:         defaultStyle,
+		AxisStyle:     defaultStyle,
+		LabelStyle:    defaultStyle,
+		yStep:         2,
+		xStep:         2,
 		minX:          minX,
 		maxX:          maxX,
 		minY:          minY,
@@ -155,10 +152,11 @@ func NewWithStyle(w, h int, minX, maxX, minY, maxY float64, xStep, yStep int, as
 		viewMaxX:      maxX,
 		viewMinY:      minY,
 		viewMaxY:      maxY,
-		origin:        origin,
-		graphWidth:    gWidth,
-		graphHeight:   gHeight,
 	}
+	for _, opt := range opts {
+		opt(&m)
+	}
+	m.UpdateGraphSizes()
 	return m
 }
 
@@ -188,8 +186,10 @@ func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int) (canv
 	return origin, gWidth, gHeight
 }
 
-// resetGraphWidthHeight resets the Model GraphWidth and GraphHeight
-func (m *Model) resetGraphWidthHeight() {
+// UpdateGraphSizes updates the Model origin, graph width and graph height.
+// This method is should be called whenever the X and Y axes values have changed,
+// for example when X and Y ranges have been adjusted by AutoAdjustRange().
+func (m *Model) UpdateGraphSizes() {
 	origin, gWidth, gHeight := getGraphSizeAndOrigin(
 		m.Canvas.Width(),
 		m.Canvas.Height(),
@@ -287,13 +287,13 @@ func (m *Model) Clear() {
 // SetXStep updates the number of steps when displaying X axis values.
 func (m *Model) SetXStep(xStep int) {
 	m.xStep = xStep
-	m.resetGraphWidthHeight()
+	m.UpdateGraphSizes()
 }
 
 // SetYStep updates the number of steps when displaying Y axis values.
 func (m *Model) SetYStep(yStep int) {
 	m.yStep = yStep
-	m.resetGraphWidthHeight()
+	m.UpdateGraphSizes()
 }
 
 // SetXRange updates the minimum and maximum expected X values.
@@ -317,7 +317,7 @@ func (m *Model) SetViewXRange(min, max float64) {
 	if vMin < vMax {
 		m.viewMinX = vMin
 		m.viewMaxX = vMax
-		m.resetGraphWidthHeight()
+		m.UpdateGraphSizes()
 	}
 }
 
@@ -347,7 +347,45 @@ func (m *Model) Resize(w, h int) {
 	m.Canvas.Resize(w, h)
 	m.Canvas.ViewWidth = w
 	m.Canvas.ViewHeight = h
-	m.resetGraphWidthHeight()
+	m.UpdateGraphSizes()
+}
+
+// AutoAdjustRange automatically adjusts both the expected X and Y values
+// and the displayed X and Y values if enabled and the given Float64Point
+// is outside of expected ranges.
+// It returns whether or not the display X and Y ranges have been adjusted.
+func (m *Model) AutoAdjustRange(f canvas.Float64Point) (b bool) {
+	// adjusts both expected range and
+	// the display range (if not zoomed in)
+	if m.AutoMinX && (f.X < m.minX) {
+		if m.minX == m.viewMinX {
+			m.viewMinX = f.X
+			b = true
+		}
+		m.minX = f.X
+	}
+	if m.AutoMaxX && (f.X > m.maxX) {
+		if m.maxX == m.viewMaxX {
+			m.viewMaxX = f.X
+			b = true
+		}
+		m.maxX = f.X
+	}
+	if m.AutoMinY && (f.Y < m.minY) {
+		if m.minY == m.viewMinY {
+			m.viewMinY = f.Y
+			b = true
+		}
+		m.minY = f.Y
+	}
+	if m.AutoMaxY && (f.Y > m.maxY) {
+		if m.maxY == m.viewMaxY {
+			m.viewMaxY = f.Y
+			b = true
+		}
+		m.maxY = f.Y
+	}
+	return
 }
 
 // SetZoneManager enables mouse functionality
@@ -478,12 +516,15 @@ func (m *Model) ScaleFloat64PointForLine(f canvas.Float64Point) (r canvas.Float6
 // DrawRune draws the rune on to the linechart
 // from a given Float64Point data point.
 func (m *Model) DrawRune(f canvas.Float64Point, r rune) {
-	m.DrawRuneWithStyle(f, r, defaultStyle)
+	m.DrawRuneWithStyle(f, r, m.Style)
 }
 
 // DrawRuneWithStyle draws the rune with style on to the linechart
 // from a given Float64Point data point.
 func (m *Model) DrawRuneWithStyle(f canvas.Float64Point, r rune, s lipgloss.Style) {
+	if m.AutoAdjustRange(f) { // auto adjust x and y ranges if enabled
+		m.UpdateGraphSizes()
+	}
 	sf := m.ScaleFloat64Point(f) // scale Cartesian coordinates data point to graphing area
 	p := canvas.CanvasPointFromFloat64Point(m.origin, sf)
 	// draw rune avoiding the axes
@@ -500,13 +541,20 @@ func (m *Model) DrawRuneWithStyle(f canvas.Float64Point, r rune, s lipgloss.Styl
 // such that there is an approximate straight line between the two given
 // Float64Point data points.
 func (m *Model) DrawRuneLine(f1 canvas.Float64Point, f2 canvas.Float64Point, r rune) {
-	m.DrawRuneLineWithStyle(f1, f2, r, defaultStyle)
+	m.DrawRuneLineWithStyle(f1, f2, r, m.Style)
 }
 
 // DrawRuneLineWithStyle draws the rune with style on to the linechart
 // such that there is an approximate straight line between the two given
 // Float64Point data points.
 func (m *Model) DrawRuneLineWithStyle(f1 canvas.Float64Point, f2 canvas.Float64Point, r rune, s lipgloss.Style) {
+	// auto adjust x and y ranges if enabled
+	r1 := m.AutoAdjustRange(f1)
+	r2 := m.AutoAdjustRange(f2)
+	if r1 || r2 {
+		m.UpdateGraphSizes()
+	}
+
 	// scale Cartesian coordinates data point to graphing area
 	sf1 := m.ScaleFloat64Point(f1)
 	sf2 := m.ScaleFloat64Point(f2)
@@ -533,7 +581,7 @@ func (m *Model) DrawRuneLineWithStyle(f1 canvas.Float64Point, f2 canvas.Float64P
 // such that there is an approximate circle of float64 radious around
 // the center of a circle at Float64Point data point.
 func (m *Model) DrawRuneCircle(c canvas.Float64Point, f float64, r rune) {
-	m.DrawRuneCircleWithStyle(c, f, r, defaultStyle)
+	m.DrawRuneCircleWithStyle(c, f, r, m.Style)
 }
 
 // DrawRuneCircleWithStyle draws the rune with style on to the linechart
@@ -545,8 +593,13 @@ func (m *Model) DrawRuneCircleWithStyle(c canvas.Float64Point, f float64, r rune
 
 	points := graph.GetCirclePoints(center, radius)
 	for _, v := range points {
+		np := canvas.NewFloat64PointFromPoint(v)
+		// auto adjust x and y ranges if enabled
+		if m.AutoAdjustRange(np) {
+			m.UpdateGraphSizes()
+		}
 		// scale Cartesian coordinates data point to graphing area
-		sf := m.ScaleFloat64Point(canvas.NewFloat64PointFromPoint(v))
+		sf := m.ScaleFloat64Point(np)
 		// convert scaled points to canvas points
 		p := canvas.CanvasPointFromFloat64Point(m.origin, sf)
 		// draw rune while avoiding drawing outside of graphing area
@@ -567,12 +620,19 @@ func (m *Model) DrawRuneCircleWithStyle(c canvas.Float64Point, f float64, r rune
 // DrawLine draws line runes of a given LineStyle on to the linechart
 // such that there is an approximate straight line between the two given Float64Point data points.
 func (m *Model) DrawLine(f1 canvas.Float64Point, f2 canvas.Float64Point, ls runes.LineStyle) {
-	m.DrawLineWithStyle(f1, f2, ls, defaultStyle)
+	m.DrawLineWithStyle(f1, f2, ls, m.Style)
 }
 
 // DrawLineWithStyle draws line runes of a given LineStyle and style on to the linechart
 // such that there is an approximate straight line between the two given Float64Point data points.
 func (m *Model) DrawLineWithStyle(f1 canvas.Float64Point, f2 canvas.Float64Point, ls runes.LineStyle, s lipgloss.Style) {
+	// auto adjust x and y ranges if enabled
+	r1 := m.AutoAdjustRange(f1)
+	r2 := m.AutoAdjustRange(f2)
+	if r1 || r2 {
+		m.UpdateGraphSizes()
+	}
+
 	// scale Cartesian coordinates data points to graphing area
 	sf1 := m.ScaleFloat64PointForLine(f1)
 	sf2 := m.ScaleFloat64PointForLine(f2)
@@ -594,13 +654,20 @@ func (m *Model) DrawLineWithStyle(f1 canvas.Float64Point, f2 canvas.Float64Point
 // such that there is an approximate straight line between the two given Float64Point data points.
 // Braille runes will not overlap the axes.
 func (m *Model) DrawBrailleLine(f1 canvas.Float64Point, f2 canvas.Float64Point) {
-	m.DrawBrailleLineWithStyle(f1, f2, defaultStyle)
+	m.DrawBrailleLineWithStyle(f1, f2, m.Style)
 }
 
 // DrawBrailleLineWithStyle draws braille line runes of a given LineStyle and style on to the linechart
 // such that there is an approximate straight line between the two given Float64Point data points.
 // Braille runes will not overlap the axes.
 func (m *Model) DrawBrailleLineWithStyle(f1 canvas.Float64Point, f2 canvas.Float64Point, s lipgloss.Style) {
+	// auto adjust x and y ranges if enabled
+	r1 := m.AutoAdjustRange(f1)
+	r2 := m.AutoAdjustRange(f2)
+	if r1 || r2 {
+		m.UpdateGraphSizes()
+	}
+
 	bGrid := NewBrailleGrid(m.graphWidth, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
 
 	// get braille grid points from two Float64Point data points
@@ -627,7 +694,7 @@ func (m *Model) DrawBrailleLineWithStyle(f1 canvas.Float64Point, f2 canvas.Float
 // around the center of a circle at Float64Point data point.
 // Braille runes will not overlap the axes.
 func (m *Model) DrawBrailleCircle(p canvas.Float64Point, f float64) {
-	m.DrawBrailleCircleWithStyle(p, f, defaultStyle)
+	m.DrawBrailleCircleWithStyle(p, f, m.Style)
 }
 
 // DrawBrailleCircleWithStyle draws braille line runes of a given LineStyle and style on to the linechart
@@ -642,7 +709,11 @@ func (m *Model) DrawBrailleCircleWithStyle(p canvas.Float64Point, f float64, s l
 	bGrid := NewBrailleGrid(m.graphWidth, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
 	points := graph.GetCirclePoints(c, r)
 	for _, p := range points {
-		bGrid.Set(bGrid.GridPoint(canvas.NewFloat64PointFromPoint(p)))
+		np := canvas.NewFloat64PointFromPoint(p)
+		if m.AutoAdjustRange(np) {
+			m.UpdateGraphSizes()
+		}
+		bGrid.Set(bGrid.GridPoint(np))
 	}
 
 	// get all rune patterns for braille grid and draw them on to the canvas
@@ -652,11 +723,6 @@ func (m *Model) DrawBrailleCircleWithStyle(p canvas.Float64Point, f float64, s l
 	}
 	patterns := bGrid.BraillePatterns()
 	graph.DrawBraillePatterns(&m.Canvas, canvas.Point{X: startX, Y: 0}, patterns, s)
-}
-
-// getBraillePoint returns a Point for a braille map from a given Point for a canvas.
-func (m *Model) getBraillePoint(f canvas.Point) canvas.Point {
-	return canvas.Point{X: f.X * 2, Y: f.Y * 4} // braille runes have 4 height and 2 width
 }
 
 // Focused returns whether canvas is being focused.

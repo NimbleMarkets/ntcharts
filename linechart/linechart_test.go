@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 	xStep := 1
 	yStep := 2
 
-	lc := New(w, h, minX, maxX, minY, maxY, xStep, yStep)
+	lc := New(w, h, minX, maxX, minY, maxY, WithXYSteps(xStep, yStep))
 
 	if lc.Width() != w {
 		t.Errorf("Width not initialized:%d", lc.Width())

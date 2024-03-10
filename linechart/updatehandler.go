@@ -8,6 +8,7 @@ package linechart
 
 import (
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )

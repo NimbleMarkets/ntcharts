@@ -66,11 +66,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		radiusFloat64 *= -1
 	}
 
-	// linechart1 draws circle with all runes as 'X'
+	// linechart1 draws circle with all runes as 'X' with style replacing initialized style
 	m.lc1.DrawRuneCircleWithStyle(randomFloat64Point, radiusFloat64, 'X', lineStyle)
 
-	// linechart2 draws braille circle
-	m.lc2.DrawBrailleCircleWithStyle(randomFloat64Point, radiusFloat64, lineStyle)
+	// linechart2 draws braille circle with initialized style
+	m.lc2.DrawBrailleCircle(randomFloat64Point, radiusFloat64)
 	return m, nil
 }
 
@@ -95,18 +95,18 @@ func main() {
 	minYValue := -50.0
 	maxYValue := 50.0
 
-	lc1 := linechart.NewWithStyle(
+	lc1 := linechart.New(
 		width, height,
 		minXValue, maxXValue,
 		minYValue, maxYValue,
-		1, 1,
-		axisStyle, labelStyle)
-	lc2 := linechart.NewWithStyle(
+		linechart.WithXYSteps(1, 1),
+		linechart.WithStyles(axisStyle, labelStyle, lipgloss.NewStyle())) // initialized runes to no style
+	lc2 := linechart.New(
 		width, height,
 		minXValue, maxXValue,
 		minYValue, maxYValue,
-		1, 1,
-		axisStyle, labelStyle)
+		linechart.WithXYSteps(1, 1),
+		linechart.WithStyles(axisStyle, labelStyle, lineStyle)) // initialized runes to lineStyle
 
 	m := model{lc1, lc2}
 	if _, err := tea.NewProgram(m).Run(); err != nil {
