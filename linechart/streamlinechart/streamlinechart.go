@@ -288,7 +288,7 @@ func (m *Model) Draw() {
 // to left of the graphing area of the canvas.
 func (m *Model) DrawAll() {
 	names := make([]string, 0, len(m.dSets))
-	for n, _ := range m.dSets {
+	for n := range m.dSets {
 		names = append(names, n)
 	}
 	sort.Strings(names)

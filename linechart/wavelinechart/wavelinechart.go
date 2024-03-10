@@ -129,6 +129,8 @@ func WithDataSetPoints(n string, f []canvas.Float64Point) Option {
 // For each data set, wavelinecharts can only plot a single rune in each column
 // of the graph canvas by mapping (X,Y) data points values in Cartesian coordinates
 // to the (X,Y) canvas coordinates of the graph.
+// If multiple data points map to the same column, then the latest data point
+// will be used for that column.
 // By default, there is a line through the graph X axis without any plotted points.
 // Uses linechart Model UpdateHandler() for processing keyboard and mouse messages.
 type Model struct {
@@ -180,7 +182,7 @@ func (m *Model) newDataSet() *dataSet {
 func (m *Model) resetDataSetSeqY(ds *dataSet) {
 	f := m.ScaleFloat64Point(canvas.Float64Point{X: 0.0, Y: 0.0})
 	ds.seqY = make([]int, m.Width(), m.Width())
-	for i, _ := range ds.seqY {
+	for i := range ds.seqY {
 		// note: can't use setDataSetSeqY because this method
 		// is scaling every index value in the sequence and
 		// setDataSetSeqY maps an X coordinate to a sequence index
@@ -223,7 +225,7 @@ func (m *Model) rescaleData() {
 
 // ClearAllData will reset stored data values in all data sets.
 func (m *Model) ClearAllData() {
-	for n, _ := range m.dSets {
+	for n := range m.dSets {
 		m.ClearDataSet(n)
 	}
 	m.dSets[DefaultDataSetName] = m.newDataSet()
@@ -314,7 +316,7 @@ func (m *Model) Draw() {
 // of the graphing area of the canvas for all data sets.
 func (m *Model) DrawAll() {
 	names := make([]string, 0, len(m.dSets))
-	for n, _ := range m.dSets {
+	for n := range m.dSets {
 		names = append(names, n)
 	}
 	sort.Strings(names)

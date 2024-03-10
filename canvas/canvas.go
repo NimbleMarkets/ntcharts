@@ -170,7 +170,7 @@ func New(w, h int, opts ...Option) Model {
 		ViewWidth:     w,
 		ViewHeight:    h,
 	}
-	for i, _ := range m.content {
+	for i := range m.content {
 		m.content[i] = make(CellLine, w)
 	}
 	for _, opt := range opts {
@@ -217,7 +217,7 @@ func (m *Model) SetCursor(p Point) {
 func (m *Model) Resize(w, h int) {
 	// create new lines and copy over previous contents
 	newLines := make([]CellLine, h)
-	for i, _ := range newLines {
+	for i := range newLines {
 		newLines[i] = make(CellLine, w)
 		// copy over previous line
 		if i < m.area.Dy() {
@@ -237,7 +237,7 @@ func (m *Model) Resize(w, h int) {
 
 // Clear will reset canvas contents.
 func (m *Model) Clear() {
-	for i, _ := range m.content {
+	for i := range m.content {
 		m.content[i] = make(CellLine, m.area.Dx())
 	}
 }
@@ -340,8 +340,8 @@ func (m *Model) Cell(p Point) (c Cell) {
 
 // Fill sets all content in canvas to Cell.
 func (m *Model) Fill(c Cell) {
-	for i, _ := range m.content {
-		for j, _ := range m.content[i] {
+	for i := range m.content {
+		for j := range m.content[i] {
 			m.content[i][j] = c
 		}
 	}
@@ -353,7 +353,7 @@ func (m *Model) FillLine(y int, c Cell) {
 	if !m.insideYBounds(y) {
 		return
 	}
-	for j, _ := range m.content[y] {
+	for j := range m.content[y] {
 		m.content[y][j] = c
 	}
 }
@@ -361,8 +361,8 @@ func (m *Model) FillLine(y int, c Cell) {
 // SetStyle applies a lipgloss.Style to all Cells to change
 // visual elements of each rune in the canvas.
 func (m *Model) SetStyle(s lipgloss.Style) {
-	for i, _ := range m.content {
-		for j, _ := range m.content[i] {
+	for i := range m.content {
+		for j := range m.content[i] {
 			m.content[i][j].Style = s
 		}
 	}
@@ -411,7 +411,7 @@ func (m *Model) ShiftDown() {
 // ShiftLeft moves all Cells left once.
 // Last cell in each CellLine will be a new default Cell.
 func (m *Model) ShiftLeft() {
-	for i, _ := range m.content {
+	for i := range m.content {
 		cl := m.content[i]
 		copy(cl, cl[1:])
 		cl[len(cl)-1] = Cell{}
@@ -421,7 +421,7 @@ func (m *Model) ShiftLeft() {
 // ShiftRight moves all Cells right once.
 // First cell in each CellLine will be a new default Cell.
 func (m *Model) ShiftRight() {
-	for i, _ := range m.content {
+	for i := range m.content {
 		cl := m.content[i]
 		copy(cl[1:], cl)
 		cl[0] = Cell{}
