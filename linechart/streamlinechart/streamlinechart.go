@@ -12,63 +12,9 @@ import (
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
 	"github.com/NimbleMarkets/bubbletea-charts/linechart"
 
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-// UpdateHandler callback invoked during an Update()
-// and passes in the wavelinechart Model and bubbletea Msg.
-type UpdateHandler func(*Model, tea.Msg)
-
-// DefaultUpdateHandler is used by steamlinechart to enable
-// zooming in and out with the mouse wheels,
-// moving the viewing window with mouse left hold and movement,
-// and moving the viewing window with the arrow keys.
-// There is only movement along the Y axis.
-// Uses linechart.Canvas Keymap for keyboard messages.
-func DefaultUpdateHandler() UpdateHandler {
-	var lastPos canvas.Point
-	return func(m *Model, tm tea.Msg) {
-		switch msg := tm.(type) {
-		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.Canvas.KeyMap.Up):
-				m.MoveUp(1)
-			case key.Matches(msg, m.Canvas.KeyMap.Down):
-				m.MoveDown(1)
-			}
-		case tea.MouseMsg:
-			switch msg.Button {
-			case tea.MouseButtonWheelUp:
-				// zoom in limited values cannot cross
-				m.ZoomIn(0, 1)
-			case tea.MouseButtonWheelDown:
-				// zoom out limited by max values
-				m.ZoomOut(0, 1)
-			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = canvas.Point{X: x, Y: y} // set position of last click
-				}
-			case tea.MouseActionMotion: // event occurs when mouse is pressed
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if y > lastPos.Y {
-						m.MoveDown(1)
-					} else if y < lastPos.Y {
-						m.MoveUp(1)
-					}
-					lastPos = canvas.Point{X: x, Y: y} // update last mouse position
-				}
-			}
-		}
-	}
-}
 
 const DefaultDataSetName = "default"
 
@@ -80,39 +26,105 @@ type dataSet struct {
 	sBuf *buffer.Float64ScaleRingBuffer
 }
 
+// Option is used to set options when initializing a streamlinechart. Example:
+//
+//	slc := New(width, height, maxValue, WithStyles(someLineStyle, someLipglossStyle))
+type Option func(*Model)
+
+// WithLineChart sets internal linechart to given linechart.
+func WithLineChart(lc *linechart.Model) Option {
+	return func(m *Model) {
+		m.Model = *lc
+	}
+}
+
+// WithXYSteps sets the number of steps when drawing X and Y axes values.
+// If X steps 0, then X axis will be hidden.
+// If Y steps 0, then Y axis will be hidden.
+func WithXYSteps(x int, y int) Option {
+	return func(m *Model) {
+		m.SetXStep(x)
+		m.SetYStep(y)
+	}
+}
+
+// WithStyles sets the default line style and lipgloss style of data sets.
+func WithStyles(ls runes.LineStyle, s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.SetStyles(ls, s)
+	}
+}
+
+// WithAxesStyles sets the axes line and line label styles.
+func WithAxesStyles(as lipgloss.Style, ls lipgloss.Style) Option {
+	return func(m *Model) {
+		m.AxisStyle = as
+		m.LabelStyle = ls
+	}
+}
+
+// WithDataSetStyles sets the line style and lipgloss style
+// of the data set given by name.
+func WithDataSetStyles(n string, ls runes.LineStyle, s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.SetDataSetStyles(n, ls, s)
+	}
+}
+
+// WithStream adds []float64 data points to the default data set.
+func WithStream(f []float64) Option {
+	return func(m *Model) {
+		for _, v := range f {
+			m.Push(v)
+		}
+	}
+}
+
+// WithDataSetStream adds []float64 data points to the data set given by name.
+func WithDataSetStream(n string, f []float64) Option {
+	return func(m *Model) {
+		for _, v := range f {
+			m.PushDataSet(n, v)
+		}
+	}
+}
+
 // Model contains state of a streamlinechart with an embedded linechart.Model
 // A data set consists of a sequence of Y data values.
 // For each data set, streamlinecharts can only plot a single rune in each column
 // of the graph canvas from right to left.
+// Uses linechart Model UpdateHandler() for processing keyboard and mouse messages.
 type Model struct {
 	linechart.Model
-	UpdateHandler UpdateHandler       // handlers update events
-	dLineStyle    runes.LineStyle     // default data set LineStyletype
-	dStyle        lipgloss.Style      // default data set Style
-	dSets         map[string]*dataSet // maps names to data sets
+	dLineStyle runes.LineStyle     // default data set LineStyletype
+	dStyle     lipgloss.Style      // default data set Style
+	dSets      map[string]*dataSet // maps names to data sets
 }
 
-// New returns a streamlinechart Model initialized with given linechart.Model.
-func New(lc linechart.Model) Model {
-	return NewWithStyle(lc, runes.ArcLineStyle, lipgloss.NewStyle())
-}
-
-// NewWithStyle returns a streamlinechart Model initialized with
-// given linechart.Model and styles as the default data set styles.
-func NewWithStyle(lc linechart.Model, ls runes.LineStyle, s lipgloss.Style) Model {
+// New returns a streamlinechart Model initialized from
+// width, height, Y value range and various options.
+// By default, the chart will hide the X axis,
+// auto set Y value ranges, and only enable moving viewport on Y axis.
+func New(w, h int, minY, maxY float64, opts ...Option) Model {
 	m := Model{
-		Model:         lc,
-		UpdateHandler: DefaultUpdateHandler(),
-		dLineStyle:    ls,
-		dStyle:        s,
-		dSets:         make(map[string]*dataSet),
+		Model: linechart.New(w, h, 0, 1, minY, maxY,
+			linechart.WithXYSteps(0, 2),                                  // hide X axis
+			linechart.WithAutoYRange(),                                   // automatically adjust Y value range
+			linechart.WithUpdateHandler(linechart.YAxisUpdateHandler())), // only scroll on Y axis
+		dLineStyle: runes.ArcLineStyle,
+		dStyle:     lipgloss.NewStyle(),
+		dSets:      make(map[string]*dataSet),
 	}
 	m.dSets[DefaultDataSetName] = m.newDataSet()
+	for _, opt := range opts {
+		opt(&m)
+	}
 	return m
 }
 
 // newDataSet returns a new initialize *dataSet.
 func (m *Model) newDataSet() *dataSet {
+	// note that graph width is not used since lines are able to overlap onto Y axis
 	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	return &dataSet{
 		LineStyle: m.dLineStyle,
@@ -124,10 +136,20 @@ func (m *Model) newDataSet() *dataSet {
 // rescaleData will scale all internally stored data with new scale factor.
 func (m *Model) rescaleData() {
 	// rescale stream buffer
-	sf := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // scale factor
+	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	for _, ds := range m.dSets {
-		ds.sBuf.SetScale(sf)
-		ds.sBuf.SetOffset(m.ViewMinY())
+		width := m.Width() - m.Origin().X // width of graphing area includes Y axis
+		// create new buffer with new size if the graphing area size has changed
+		if ds.sBuf.Size() != width {
+			buf := buffer.NewFloat64ScaleRingBuffer(width, m.ViewMinY(), ys)
+			for _, f := range ds.sBuf.ReadAllRaw() {
+				buf.Push(f)
+			}
+			ds.sBuf = buf
+		} else {
+			ds.sBuf.SetScale(ys)
+			ds.sBuf.SetOffset(m.ViewMinY())
+		}
 	}
 }
 
@@ -185,21 +207,19 @@ func (m *Model) SetViewXYRange(minX, maxX, minY, maxY float64) {
 // Resize will change streamlinechart display width and height.
 // Existing data will be rescaled.
 func (m *Model) Resize(w, h int) {
-	// data buffers does not change since the graphing area
-	// remains the same and X,Y coordinates are still valid
 	m.Model.Resize(w, h)
 	m.rescaleData()
 }
 
-// SetDataSetStyle will set the default styles of data sets.
-func (m *Model) SetStyle(ls runes.LineStyle, s lipgloss.Style) {
+// SetStyles will set the default styles of data sets.
+func (m *Model) SetStyles(ls runes.LineStyle, s lipgloss.Style) {
 	m.dLineStyle = ls
 	m.dStyle = s
-	m.SetDataSetStyle(DefaultDataSetName, ls, s)
+	m.SetDataSetStyles(DefaultDataSetName, ls, s)
 }
 
-// SetDataSetStyle will set the styles of the given data set by name string.
-func (m *Model) SetDataSetStyle(n string, ls runes.LineStyle, s lipgloss.Style) {
+// SetDataSetStyles will set the styles of the given data set by name string.
+func (m *Model) SetDataSetStyles(n string, ls runes.LineStyle, s lipgloss.Style) {
 	if _, ok := m.dSets[n]; !ok {
 		m.dSets[n] = m.newDataSet()
 	}
@@ -208,7 +228,7 @@ func (m *Model) SetDataSetStyle(n string, ls runes.LineStyle, s lipgloss.Style) 
 	ds.Style = s
 }
 
-// Push will push a float64 Y data value to the "default" data set
+// Push will push a float64 Y data value to the default data set
 // to be displayed with Draw.
 func (m *Model) Push(f float64) {
 	m.PushDataSet(DefaultDataSetName, f)
@@ -217,6 +237,11 @@ func (m *Model) Push(f float64) {
 // Push will push a float64 Y data value to a data set
 // to be displayed with Draw. Using given data set by name string.
 func (m *Model) PushDataSet(n string, f float64) {
+	// auto adjust x and y ranges if enabled
+	if m.AutoAdjustRange(canvas.Float64Point{X: m.MinX(), Y: f}) {
+		m.UpdateGraphSizes()
+		m.rescaleData()
+	}
 	if _, ok := m.dSets[n]; !ok {
 		m.dSets[n] = m.newDataSet()
 	}
@@ -224,7 +249,7 @@ func (m *Model) PushDataSet(n string, f float64) {
 }
 
 // Draw will draw lines runes displayed from right to left
-// of the graphing area of the canvas. Uses "default" data set.
+// of the graphing area of the canvas. Uses default data set.
 func (m *Model) Draw() {
 	m.DrawDataSets([]string{DefaultDataSetName})
 }
@@ -280,7 +305,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.Focused() {
 		return m, nil
 	}
-	m.UpdateHandler(&m, msg)
+	m.UpdateHandler(&m.Model, msg)
 	m.rescaleData()
 	return m, nil
 }

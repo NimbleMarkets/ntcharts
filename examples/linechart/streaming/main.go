@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
-	"github.com/NimbleMarkets/bubbletea-charts/linechart"
 	"github.com/NimbleMarkets/bubbletea-charts/linechart/streamlinechart"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -101,7 +100,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.slc2.PushDataSet(dataSet2, randf2)
 		m.slc2.DrawAll()
 	}
-	// wavelinechart handles mouse events
+	// streamlinechart handles mouse events
 	if forwardMsg {
 		if m.slc1.Focused() {
 			m.slc1, _ = m.slc1.Update(msg)
@@ -130,37 +129,24 @@ func main() {
 	height := 11
 	minYValue := -50.0
 	maxYValue := 100.0
-	xStep := 0 // xStep = 0 means do not display X axis
-	yStep := 1
 
 	// create new bubblezone Manager to enable mouse support to zoom in and out of chart
 	zoneManager := zone.New()
 
-	// streamlinechart 1 created with New() and SetStyle()
-	slc1 := streamlinechart.New(
-		linechart.NewWithStyle(
-			width, height,
-			0, 0, // x values not used
-			minYValue, maxYValue,
-			xStep, yStep,
-			axisStyle, labelStyle),
-	)
-	slc1.SetStyle(runes.ThinLineStyle, graphLineStyle1)
+	// streamlinechart 1 created with New() and setting options afterwards
+	slc1 := streamlinechart.New(width, height, minYValue, maxYValue)
+	slc1.AxisStyle = axisStyle
+	slc1.LabelStyle = labelStyle
+	slc1.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
 	slc1.SetZoneManager(zoneManager)
 
-	// wavelinechart 2 created with NewWithStyle()
+	// streamlinechart 2 created with New() using options
 	// and setting second data set style
-	slc2 := streamlinechart.NewWithStyle(
-		linechart.NewWithStyle(
-			width, height,
-			0, 0, // x values not used
-			minYValue, maxYValue,
-			xStep, yStep,
-			axisStyle, labelStyle),
-		runes.ArcLineStyle,
-		graphLineStyle1,
+	slc2 := streamlinechart.New(width, height, minYValue, maxYValue,
+		streamlinechart.WithAxesStyles(axisStyle, labelStyle),
+		streamlinechart.WithStyles(runes.ArcLineStyle, graphLineStyle1), // graphLineStyle1 replaces linechart rune style
+		streamlinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
 	)
-	slc2.SetDataSetStyle(dataSet2, runes.ArcLineStyle, graphLineStyle2)
 	slc2.SetZoneManager(zoneManager)
 
 	m := model{slc1, slc2, zoneManager}
