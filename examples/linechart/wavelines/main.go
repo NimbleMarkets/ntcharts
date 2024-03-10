@@ -7,7 +7,6 @@ import (
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
-	"github.com/NimbleMarkets/bubbletea-charts/linechart"
 	"github.com/NimbleMarkets/bubbletea-charts/linechart/wavelinechart"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -64,7 +63,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.wlc2.Clear()
 			m.wlc2.ClearAllData()
-			m.wlc2.SetDataSetStyle(dataSet2, runes.ArcLineStyle, graphLineStyle2)
+			m.wlc2.SetDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2)
 			m.wlc2.DrawXYAxisAndLabel()
 			m.wlc2.DrawAll()
 			return m, nil
@@ -160,29 +159,30 @@ func main() {
 
 	// wavelinechart 1 created with New() and SetStyle()
 	wlc1 := wavelinechart.New(
-		linechart.NewWithStyle(
-			width, height,
-			minXValue, maxXValue,
-			minYValue, maxYValue,
-			xStep, yStep,
-			axisStyle, labelStyle))
-	wlc1.SetStyle(runes.ThinLineStyle, graphLineStyle1)
+		width, height,
+		minXValue, maxXValue,
+		minYValue, maxYValue)
+	wlc1.AxisStyle = axisStyle
+	wlc1.LabelStyle = labelStyle
+	wlc1.SetXStep(xStep)
+	wlc1.SetYStep(xStep)
+	wlc1.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
 	wlc1.SetZoneManager(zoneManager)
 	wlc1.Focus()
 
-	// wavelinechart 2 created with NewWithStyle()
+	// wavelinechart 2 created with New() using options
 	// and setting second data set style
-	wlc2 := wavelinechart.NewWithStyle(
-		linechart.NewWithStyle(
-			width, height,
-			minXValue, maxXValue,
-			minYValue, maxYValue,
-			xStep, yStep,
-			axisStyle, labelStyle),
-		runes.ThinLineStyle,
-		graphLineStyle1,
+	wlc2 := wavelinechart.New(
+		// linechart.New(
+		width, height,
+		minXValue, maxXValue,
+		minYValue, maxYValue,
+		wavelinechart.WithXYSteps(xStep, yStep),
+		wavelinechart.WithAxesStyles(axisStyle, labelStyle),
+		wavelinechart.WithStyles(runes.ThinLineStyle, graphLineStyle1), // graphLineStyle1 replaces linechart rune style
+		wavelinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
 	)
-	wlc2.SetDataSetStyle(dataSet2, runes.ArcLineStyle, graphLineStyle2)
+	// wlc2.SetDataSetStyle(dataSet2, runes.ArcLineStyle, graphLineStyle2)
 	wlc2.SetZoneManager(zoneManager)
 
 	m := model{wlc1, wlc2, zoneManager}

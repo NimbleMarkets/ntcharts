@@ -30,12 +30,78 @@ type dataSet struct {
 	pBuf *buffer.Float64PointScaleBuffer
 }
 
+// Option is used to set options when initializing a wavelinechart. Example:
+//
+//	wlc := New(width, height, maxValue, WithStyles(someLineStyle, someLipglossStyle))
+type Option func(*Model)
+
+// WithLineChart sets internal linechart to given linechart.
+func WithLineChart(lc *linechart.Model) Option {
+	return func(m *Model) {
+		m.Model = *lc
+	}
+}
+
+// WithXYSteps sets the number of steps when drawing X and Y axes values.
+// If X steps 0, then X axis will be hidden.
+// If Y steps 0, then Y axis will be hidden.
+func WithXYSteps(x int, y int) Option {
+	return func(m *Model) {
+		m.SetXStep(x)
+		m.SetYStep(y)
+	}
+}
+
+// WithStyles sets the default line style and lipgloss style of data sets.
+func WithStyles(ls runes.LineStyle, s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.SetStyles(ls, s)
+	}
+}
+
+// WithAxesStyles sets the axes line and line label styles.
+func WithAxesStyles(as lipgloss.Style, ls lipgloss.Style) Option {
+	return func(m *Model) {
+		m.AxisStyle = as
+		m.LabelStyle = ls
+	}
+}
+
+// WithDataSetStyles sets the line style and lipgloss style
+// of the data set given by name.
+func WithDataSetStyles(n string, ls runes.LineStyle, s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.SetDataSetStyles(n, ls, s)
+	}
+}
+
+// WithPoints maps []Float64Point data points to canvas coordinates
+// for the default data set.
+func WithPoints(f []canvas.Float64Point) Option {
+	return func(m *Model) {
+		for _, v := range f {
+			m.Plot(v)
+		}
+	}
+}
+
+// WithDataSetPoints maps []Float64Point data points to canvas coordinates
+// for the data set given by name.
+func WithDataSetPoints(n string, f []canvas.Float64Point) Option {
+	return func(m *Model) {
+		for _, v := range f {
+			m.PlotDataSet(n, v)
+		}
+	}
+}
+
 // Model contains state of a wavelinechart with an embedded linechart.Model
 // A data set is a list of (X,Y) Cartesian coordinates.
 // For each data set, wavelinecharts can only plot a single rune in each column
 // of the graph canvas by mapping (X,Y) data points values in Cartesian coordinates
 // to the (X,Y) canvas coordinates of the graph.
 // By default, there is a line through the graph X axis without any plotted points.
+// Uses linechart Model UpdateHandler() for processing keyboard and mouse messages.
 type Model struct {
 	linechart.Model
 	dLineStyle runes.LineStyle     // default data set LineStyletype
@@ -43,21 +109,21 @@ type Model struct {
 	dSets      map[string]*dataSet // maps names to data sets
 }
 
-// New returns a wavelinechart Model initialized with given linechart.Model.
-func New(lc linechart.Model) Model {
-	return NewWithStyle(lc, runes.ArcLineStyle, lipgloss.NewStyle())
-}
-
-// NewWithStyle returns a wavelinechart Model initialized with
-// given linechart.Model and styles as the default data set styles.
-func NewWithStyle(lc linechart.Model, ls runes.LineStyle, s lipgloss.Style) Model {
+// New returns a wavelinechart Model initialized
+// with given linechart Model and various options.
+func New(w, h int, minX, maxX, minY, maxY float64, opts ...Option) Model {
 	m := Model{
-		Model:      lc,
-		dLineStyle: ls,
-		dStyle:     s,
+		Model: linechart.New(w, h, minX, maxX, minY, maxY,
+			linechart.WithAutoXYRange(),                                  // automatically adjust value ranges
+			linechart.WithUpdateHandler(linechart.XAxisUpdateHandler())), // only scroll on X axis
+		dLineStyle: runes.ArcLineStyle,
+		dStyle:     lipgloss.NewStyle(),
 		dSets:      make(map[string]*dataSet),
 	}
 	m.dSets[DefaultDataSetName] = m.newDataSet()
+	for _, opt := range opts {
+		opt(&m)
+	}
 	return m
 }
 
@@ -78,11 +144,14 @@ func (m *Model) newDataSet() *dataSet {
 }
 
 // resetPoints will set graph sequence of Y coordinates of a data set
-// such that Draw will display each Y coordinate on Y = 0
+// such that Draw will display each Y coordinate on Y = 0.
 func (m *Model) resetDataSetSeqY(ds *dataSet) {
 	f := m.ScaleFloat64Point(canvas.Float64Point{X: 0.0, Y: 0.0})
 	ds.seqY = make([]int, m.Width(), m.Width())
 	for i, _ := range ds.seqY {
+		// note: can't use setDataSetSeqY because this method
+		// is scaling every index value in the sequence and
+		// setDataSetSeqY maps an X coordinate to a sequence index
 		// avoid drawing below X axis
 		ds.seqY[i] = canvas.CanvasPointFromFloat64Point(m.Origin(), f).Y
 		if (m.XStep() > 0) && (ds.seqY[i] > m.Origin().Y) {
@@ -92,7 +161,7 @@ func (m *Model) resetDataSetSeqY(ds *dataSet) {
 }
 
 // setDataSetSeqY will set a data set canvas row and column
-// from given scaled Float64Point data point
+// from given scaled Float64Point data point.
 func (m *Model) setDataSetSeqY(ds *dataSet, f canvas.Float64Point) {
 	p := canvas.CanvasPointFromFloat64Point(m.Origin(), f)
 	// avoid drawing outside graphing area
@@ -164,15 +233,15 @@ func (m *Model) Resize(w, h int) {
 	m.rescaleData()
 }
 
-// SetDataSetStyle will set the default styles of data sets.
-func (m *Model) SetStyle(ls runes.LineStyle, s lipgloss.Style) {
+// SetStyles will set the default styles of data sets.
+func (m *Model) SetStyles(ls runes.LineStyle, s lipgloss.Style) {
 	m.dLineStyle = ls
 	m.dStyle = s
-	m.SetDataSetStyle(DefaultDataSetName, ls, s)
+	m.SetDataSetStyles(DefaultDataSetName, ls, s)
 }
 
-// SetDataSetStyle will set the styles of the given data set by name string.
-func (m *Model) SetDataSetStyle(n string, ls runes.LineStyle, s lipgloss.Style) {
+// SetDataSetStyles will set the styles of the given data set by name string.
+func (m *Model) SetDataSetStyles(n string, ls runes.LineStyle, s lipgloss.Style) {
 	if _, ok := m.dSets[n]; !ok {
 		m.dSets[n] = m.newDataSet()
 	}
@@ -182,25 +251,29 @@ func (m *Model) SetDataSetStyle(n string, ls runes.LineStyle, s lipgloss.Style) 
 }
 
 // Plot will map a Float64Point data value to a canvas coordinates
-// to be displayed with Draw. Uses "default" data set.
+// to be displayed with Draw. Uses default data set.
 func (m *Model) Plot(f canvas.Float64Point) {
 	m.PlotDataSet(DefaultDataSetName, f)
 }
 
-// Plot will map a Float64Point data value to a canvas coordinates
+// PlotDataSet will map a Float64Point data value to a canvas coordinates
 // to be displayed with Draw. Uses given data set by name string.
 func (m *Model) PlotDataSet(n string, f canvas.Float64Point) {
+	if m.AutoAdjustRange(f) { // auto adjust x and y ranges if enabled
+		m.UpdateGraphSizes()
+		m.rescaleData()
+	}
 	if _, ok := m.dSets[n]; !ok {
 		m.dSets[n] = m.newDataSet()
 	}
 	ds := m.dSets[n]
 	ds.pBuf.Push(f)
-	s := ds.pBuf.At(ds.pBuf.Length() - 1)
+	s := ds.pBuf.At(ds.pBuf.Length() - 1) // scaled value of inserted data
 	m.setDataSetSeqY(ds, s)
 }
 
 // Draw will draw lines runes for each column
-// of the graphing area of the canvas. Uses "default" data set.
+// of the graphing area of the canvas. Uses default data set.
 func (m *Model) Draw() {
 	m.DrawDataSets([]string{DefaultDataSetName})
 }
