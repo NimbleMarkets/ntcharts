@@ -50,7 +50,7 @@ func WithZoneManager(zm *zone.Manager) Option {
 
 // WithXYSteps sets the number of steps when drawing
 // X and Y axes values.
-func WithXYSteps(x int, y int) Option {
+func WithXYSteps(x, y int) Option {
 	return func(m *Model) {
 		m.xStep = x
 		m.yStep = y

@@ -45,7 +45,7 @@ func WithLineChart(lc *linechart.Model) Option {
 // WithXYSteps sets the number of steps when drawing X and Y axes values.
 // If X steps 0, then X axis will be hidden.
 // If Y steps 0, then Y axis will be hidden.
-func WithXYSteps(x int, y int) Option {
+func WithXYSteps(x, y int) Option {
 	return func(m *Model) {
 		m.SetXStep(x)
 		m.SetYStep(y)
