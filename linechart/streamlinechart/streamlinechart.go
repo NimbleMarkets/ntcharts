@@ -48,6 +48,24 @@ func WithXYSteps(x int, y int) Option {
 	}
 }
 
+// WithXRange sets expected and displayed
+// minimum and maximum Y value range.
+func WithXRange(min, max float64) Option {
+	return func(m *Model) {
+		m.SetXRange(min, max)
+		m.SetViewXRange(min, max)
+	}
+}
+
+// WithYRange sets expected and displayed
+// minimum and maximum Y value range.
+func WithYRange(min, max float64) Option {
+	return func(m *Model) {
+		m.SetYRange(min, max)
+		m.SetViewYRange(min, max)
+	}
+}
+
 // WithStyles sets the default line style and lipgloss style of data sets.
 func WithStyles(ls runes.LineStyle, s lipgloss.Style) Option {
 	return func(m *Model) {
@@ -102,12 +120,12 @@ type Model struct {
 }
 
 // New returns a streamlinechart Model initialized from
-// width, height, Y value range and various options.
+// width, height and various options.
 // By default, the chart will hide the X axis,
 // auto set Y value ranges, and only enable moving viewport on Y axis.
-func New(w, h int, minY, maxY float64, opts ...Option) Model {
+func New(w, h int, opts ...Option) Model {
 	m := Model{
-		Model: linechart.New(w, h, 0, 1, minY, maxY,
+		Model: linechart.New(w, h, 0, 1, 0, 1,
 			linechart.WithXYSteps(0, 2),                                  // hide X axis
 			linechart.WithAutoYRange(),                                   // automatically adjust Y value range
 			linechart.WithUpdateHandler(linechart.YAxisUpdateHandler())), // only scroll on Y axis
@@ -115,10 +133,11 @@ func New(w, h int, minY, maxY float64, opts ...Option) Model {
 		dStyle:     lipgloss.NewStyle(),
 		dSets:      make(map[string]*dataSet),
 	}
-	m.dSets[DefaultDataSetName] = m.newDataSet()
 	for _, opt := range opts {
 		opt(&m)
 	}
+	m.UpdateGraphSizes()
+	m.dSets[DefaultDataSetName] = m.newDataSet()
 	return m
 }
 

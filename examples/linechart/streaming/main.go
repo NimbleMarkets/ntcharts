@@ -134,15 +134,18 @@ func main() {
 	zoneManager := zone.New()
 
 	// streamlinechart 1 created with New() and setting options afterwards
-	slc1 := streamlinechart.New(width, height, minYValue, maxYValue)
+	slc1 := streamlinechart.New(width, height)
 	slc1.AxisStyle = axisStyle
 	slc1.LabelStyle = labelStyle
+	slc1.SetYRange(minYValue, maxYValue)                 // set expected Y values (values can be less or greater than what is displayed)
+	slc1.SetViewYRange(minYValue, maxYValue)             // setting display Y values will fail unless set expected Y values first
 	slc1.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
 	slc1.SetZoneManager(zoneManager)
 
 	// streamlinechart 2 created with New() using options
 	// and setting second data set style
-	slc2 := streamlinechart.New(width, height, minYValue, maxYValue,
+	slc2 := streamlinechart.New(width, height,
+		streamlinechart.WithYRange(minYValue, maxYValue),
 		streamlinechart.WithAxesStyles(axisStyle, labelStyle),
 		streamlinechart.WithStyles(runes.ArcLineStyle, graphLineStyle1), // graphLineStyle1 replaces linechart rune style
 		streamlinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),

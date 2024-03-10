@@ -309,33 +309,37 @@ func (m *Model) SetYRange(min, max float64) {
 }
 
 // SetXRange updates the displayed minimum and maximum X values.
-// Zoom out display values bound by the expected X values.
-// Zoom in display min X value must be less than display max X value.
-func (m *Model) SetViewXRange(min, max float64) {
+// Minimum and maximum values will be bounded by the expected X values.
+// Returns whether not displayed X values have updated.
+func (m *Model) SetViewXRange(min, max float64) bool {
 	vMin := math.Max(m.minX, min)
 	vMax := math.Min(m.maxX, max)
 	if vMin < vMax {
 		m.viewMinX = vMin
 		m.viewMaxX = vMax
 		m.UpdateGraphSizes()
+		return true
 	}
+	return false
 }
 
 // SetYRange updates the displayed minimum and maximum Y values.
-// Zoom out display values bound by the expected Y values.
-// Zoom in display min Y value must be less than display max Y value.
-func (m *Model) SetViewYRange(min, max float64) {
+// Minimum and maximum values will be bounded by the expected Y values.
+// Returns whether not displayed Y values have updated.
+func (m *Model) SetViewYRange(min, max float64) bool {
 	vMin := math.Max(m.minY, min)
 	vMax := math.Min(m.maxY, max)
 	if vMin < vMax {
 		m.viewMinY = vMin
 		m.viewMaxY = vMax
+		m.UpdateGraphSizes()
+		return true
 	}
+	return false
 }
 
 // SetViewXYRange updates the displayed minimum and maximum X and Y values.
-// Zoom out display values bound by the expected values.
-// Zoom in display min values must be less than display max values.
+// Minimum and maximum values will be bounded by the expected values.
 func (m *Model) SetViewXYRange(minX, maxX, minY, maxY float64) {
 	m.SetViewXRange(minX, maxX)
 	m.SetViewYRange(minY, maxY)
