@@ -17,6 +17,20 @@ import (
 
 var defaultStyle = lipgloss.NewStyle()
 
+// LabelFormatter converts a float64 into text
+// for displaying the X and Y axis labels
+// given an index of label and numeric value
+// Index increments from minimum value to maximum values.
+type LabelFormatter func(int, float64) string
+
+// DefaultLabelFormatter returns a LabelFormatter
+// that convert float64 to integers
+func DefaultLabelFormatter() LabelFormatter {
+	return func(i int, v float64) string {
+		return fmt.Sprintf("%.0f", v)
+	}
+}
+
 // BrailleGrid implements a 2D grid with (X, Y) coordinates
 // used to display Braille Pattern runes.
 // Since Braille Pattern runes are 4 high and 2 wide,
@@ -94,14 +108,16 @@ func (g *BrailleGrid) BraillePatterns() [][]rune {
 
 // Model contains state of a linechart with an embedded canvas.Model
 type Model struct {
-	UpdateHandler UpdateHandler
-	Canvas        canvas.Model
-	Style         lipgloss.Style // style applied when drawing runes
-	AxisStyle     lipgloss.Style // style applied when drawing X and Y axes
-	LabelStyle    lipgloss.Style // style applied when drawing X and Y number value
-	xStep         int            // number of steps when displaying X axis values
-	yStep         int            // number of steps when displaying Y axis values
-	focus         bool
+	UpdateHandler   UpdateHandler
+	Canvas          canvas.Model
+	Style           lipgloss.Style // style applied when drawing runes
+	AxisStyle       lipgloss.Style // style applied when drawing X and Y axes
+	LabelStyle      lipgloss.Style // style applied when drawing X and Y number value
+	XLabelFormatter LabelFormatter // convert to X number values display string
+	YLabelFormatter LabelFormatter // convert to Y number values display string
+	xStep           int            // number of steps when displaying X axis values
+	yStep           int            // number of steps when displaying Y axis values
+	focus           bool
 
 	// the expected min and max values
 	minX float64
@@ -137,21 +153,23 @@ type Model struct {
 // If yStep is 0, then will not draw Y axis or values left of Y axis.
 func New(w, h int, minX, maxX, minY, maxY float64, opts ...Option) Model {
 	m := Model{
-		UpdateHandler: DefaultUpdateHandler(),
-		Canvas:        canvas.New(w, h),
-		Style:         defaultStyle,
-		AxisStyle:     defaultStyle,
-		LabelStyle:    defaultStyle,
-		yStep:         2,
-		xStep:         2,
-		minX:          minX,
-		maxX:          maxX,
-		minY:          minY,
-		maxY:          maxY,
-		viewMinX:      minX,
-		viewMaxX:      maxX,
-		viewMinY:      minY,
-		viewMaxY:      maxY,
+		UpdateHandler:   DefaultUpdateHandler(),
+		Canvas:          canvas.New(w, h),
+		Style:           defaultStyle,
+		AxisStyle:       defaultStyle,
+		LabelStyle:      defaultStyle,
+		XLabelFormatter: DefaultLabelFormatter(),
+		YLabelFormatter: DefaultLabelFormatter(),
+		yStep:           2,
+		xStep:           2,
+		minX:            minX,
+		maxX:            maxX,
+		minY:            minY,
+		maxY:            maxY,
+		viewMinX:        minX,
+		viewMaxX:        maxX,
+		viewMinY:        minY,
+		viewMaxY:        maxY,
 	}
 	for _, opt := range opts {
 		opt(&m)
@@ -161,27 +179,38 @@ func New(w, h int, minX, maxX, minY, maxY float64, opts ...Option) Model {
 }
 
 // getGraphSizeAndOrigin calculates and returns the linechart origin and graph width and height
-func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int) (canvas.Point, int, int) {
+func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int, yFmter LabelFormatter) (canvas.Point, int, int) {
 	// graph width and height exclude area used by axes
 	// origin point is canvas coordinates of where axes are drawn
 	origin := canvas.Point{X: 0, Y: h - 1}
 	gWidth := w
 	gHeight := h
-	if yStep > 0 {
-		// find out how many spaces left of the Y axis
-		// to reserve for axis tick value
-		nOffset := len(fmt.Sprintf("%.0f", maxY))
-		lenMinY := len(fmt.Sprintf("%.0f", minY))
-		if lenMinY > nOffset {
-			nOffset = lenMinY
-		}
-		origin.X += nOffset
-		gWidth -= (nOffset + 1) // ignore Y axis and tick values
-	}
 	if xStep > 0 {
 		// use last 2 rows of canvas to plot X axis and tick values
 		origin.Y -= 1
 		gHeight -= 2
+	}
+	if yStep > 0 {
+		// find out how many spaces left of the Y axis
+		// to reserve for axis tick value by checking the string length
+		// of all values to be displayed
+		var lastVal string
+		valueLen := 0
+		rangeSz := maxY - minY // range of possible expected values
+		increment := rangeSz / float64(gHeight)
+		for i := 0; i <= gHeight; {
+			v := minY + (increment * float64(i)) // value to set left of Y axis
+			s := yFmter(i, v)
+			if lastVal != s {
+				if len(s) > valueLen {
+					valueLen = len(s)
+				}
+				lastVal = s
+			}
+			i += yStep
+		}
+		origin.X += valueLen
+		gWidth -= (valueLen + 1) // ignore Y axis and tick values
 	}
 	return origin, gWidth, gHeight
 }
@@ -197,6 +226,7 @@ func (m *Model) UpdateGraphSizes() {
 		m.viewMaxY,
 		m.xStep,
 		m.yStep,
+		m.YLabelFormatter,
 	)
 	m.origin = origin
 	m.graphWidth = gWidth
@@ -431,12 +461,12 @@ func (m *Model) drawYLabel(n int) {
 	if n <= 0 {
 		return
 	}
-	lastVal := fmt.Sprintf("%.0f", m.viewMinY-1)
-	rangeSz := m.viewMaxY - m.viewMinY // number of possible expected values
+	var lastVal string
+	rangeSz := m.viewMaxY - m.viewMinY // range of possible expected values
 	increment := rangeSz / float64(m.graphHeight)
 	for i := 0; i <= m.graphHeight; {
 		v := m.viewMinY + (increment * float64(i)) // value to set left of Y axis
-		s := fmt.Sprintf("%.0f", v)
+		s := m.YLabelFormatter(i, v)
 		if lastVal != s {
 			m.Canvas.SetStringWithStyle(canvas.Point{m.origin.X - len(s), m.origin.Y - i}, s, m.LabelStyle)
 			lastVal = s
@@ -453,16 +483,16 @@ func (m *Model) drawXLabel(n int) {
 	if n <= 0 {
 		return
 	}
-	lastVal := fmt.Sprintf("%.0f", m.viewMinX-1)
-	rangeSz := m.viewMaxX - m.viewMinX // number of possible expected values
+	var lastVal string
+	rangeSz := m.viewMaxX - m.viewMinX // range of possible expected values
 	increment := rangeSz / float64(m.graphWidth)
 	for i := 0; i < m.graphWidth; {
 		// can only set if rune to the left of target coordinates is empty
 		if c := m.Canvas.Cell(canvas.Point{m.origin.X + i - 1, m.origin.Y + 1}); c.Rune == runes.Null {
 			v := m.viewMinX + (increment * float64(i)) // value to set under X axis
-			s := fmt.Sprintf("%.0f", v)
+			s := m.XLabelFormatter(i, v)
 			// dont display if number will be cut off or value repeats
-			if (lastVal != s) && ((len(s) + i) < m.graphWidth) {
+			if (s != lastVal) && ((len(s) + i) < m.graphWidth) {
 				m.Canvas.SetStringWithStyle(canvas.Point{m.origin.X + i, m.origin.Y + 1}, s, m.LabelStyle)
 				lastVal = s
 			}

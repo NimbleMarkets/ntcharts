@@ -24,6 +24,20 @@ func WithStyles(as lipgloss.Style, ls lipgloss.Style, s lipgloss.Style) Option {
 	}
 }
 
+// WithXLabelFormatter sets the default X label formatter for displaying X values as strings.
+func WithXLabelFormatter(fmter LabelFormatter) Option {
+	return func(m *Model) {
+		m.XLabelFormatter = fmter
+	}
+}
+
+// WithYLabelFormatter sets the default X label formatter for displaying X values as strings.
+func WithYLabelFormatter(fmter LabelFormatter) Option {
+	return func(m *Model) {
+		m.YLabelFormatter = fmter
+	}
+}
+
 // / WithKeyMap sets the KeyMap used
 // when processing keyboard event messages in Update().
 func WithKeyMap(k canvas.KeyMap) Option {
