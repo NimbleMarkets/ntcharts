@@ -153,7 +153,7 @@ type Model struct {
 // If yStep is 0, then will not draw Y axis or values left of Y axis.
 func New(w, h int, minX, maxX, minY, maxY float64, opts ...Option) Model {
 	m := Model{
-		UpdateHandler:   DefaultUpdateHandler(),
+		UpdateHandler:   XYAxesUpdateHandler(1, 1),
 		Canvas:          canvas.New(w, h),
 		Style:           defaultStyle,
 		AxisStyle:       defaultStyle,

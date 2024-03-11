@@ -17,34 +17,34 @@ import (
 // and passes in the linechart Model and bubbletea Msg.
 type UpdateHandler func(*Model, tea.Msg)
 
-// DefaultUpdateHandler is used by linechart to enable
+// XYAxesUpdateHandler is used by linechart to enable
 // zooming in and out with the mouse wheels,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // Uses linechart Canvas Keymap for keyboard messages.
-func DefaultUpdateHandler() UpdateHandler {
+func XYAxesUpdateHandler(xIncrement, yIncrement float64) UpdateHandler {
 	var lastPos canvas.Point
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, m.Canvas.KeyMap.Up):
-				m.MoveUp(1)
+				m.MoveUp(yIncrement)
 			case key.Matches(msg, m.Canvas.KeyMap.Down):
-				m.MoveDown(1)
+				m.MoveDown(yIncrement)
 			case key.Matches(msg, m.Canvas.KeyMap.Left):
-				m.MoveLeft(1)
+				m.MoveLeft(xIncrement)
 			case key.Matches(msg, m.Canvas.KeyMap.Right):
-				m.MoveRight(1)
+				m.MoveRight(xIncrement)
 			}
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
 				// zoom in limited values cannot cross
-				m.ZoomIn(1, 1)
+				m.ZoomIn(xIncrement, yIncrement)
 			case tea.MouseButtonWheelDown:
 				// zoom out limited by max values
-				m.ZoomOut(1, 1)
+				m.ZoomOut(xIncrement, yIncrement)
 			}
 
 			if m.GetZoneManager() == nil {
@@ -62,14 +62,14 @@ func DefaultUpdateHandler() UpdateHandler {
 				if zInfo.InBounds(msg) {
 					x, y := zInfo.Pos(msg)
 					if x > lastPos.X {
-						m.MoveRight(1)
+						m.MoveRight(xIncrement)
 					} else if x < lastPos.X {
-						m.MoveLeft(1)
+						m.MoveLeft(xIncrement)
 					}
 					if y > lastPos.Y {
-						m.MoveDown(1)
+						m.MoveDown(yIncrement)
 					} else if y < lastPos.Y {
-						m.MoveUp(1)
+						m.MoveUp(yIncrement)
 					}
 					lastPos = canvas.Point{X: x, Y: y}
 				}
@@ -82,27 +82,27 @@ func DefaultUpdateHandler() UpdateHandler {
 // zooming in and out with the mouse wheels,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
-// There is only movement along the X axis.
+// There is only movement along the X axis with the given increment.
 // Uses linechart Canvas Keymap for keyboard messages.
-func XAxisUpdateHandler() UpdateHandler {
+func XAxisUpdateHandler(increment float64) UpdateHandler {
 	var lastPos canvas.Point
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, m.Canvas.KeyMap.Left):
-				m.MoveLeft(1)
+				m.MoveLeft(increment)
 			case key.Matches(msg, m.Canvas.KeyMap.Right):
-				m.MoveRight(1)
+				m.MoveRight(increment)
 			}
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
 				// zoom in limited values cannot cross
-				m.ZoomIn(1, 0)
+				m.ZoomIn(increment, 0)
 			case tea.MouseButtonWheelDown:
 				// zoom out limited by max values
-				m.ZoomOut(1, 0)
+				m.ZoomOut(increment, 0)
 			}
 
 			if m.GetZoneManager() == nil {
@@ -120,9 +120,9 @@ func XAxisUpdateHandler() UpdateHandler {
 				if zInfo.InBounds(msg) {
 					x, y := zInfo.Pos(msg)
 					if x > lastPos.X {
-						m.MoveRight(1)
+						m.MoveRight(increment)
 					} else if x < lastPos.X {
-						m.MoveLeft(1)
+						m.MoveLeft(increment)
 					}
 					lastPos = canvas.Point{X: x, Y: y}
 				}
@@ -135,27 +135,27 @@ func XAxisUpdateHandler() UpdateHandler {
 // zooming in and out with the mouse wheels,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
-// There is only movement along the Y axis.
+// There is only movement along the Y axis with the given increment.
 // Uses linechart Canvas Keymap for keyboard messages.
-func YAxisUpdateHandler() UpdateHandler {
+func YAxisUpdateHandler(increment float64) UpdateHandler {
 	var lastPos canvas.Point
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, m.Canvas.KeyMap.Up):
-				m.MoveUp(1)
+				m.MoveUp(increment)
 			case key.Matches(msg, m.Canvas.KeyMap.Down):
-				m.MoveDown(1)
+				m.MoveDown(increment)
 			}
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
 				// zoom in limited values cannot cross
-				m.ZoomIn(0, 1)
+				m.ZoomIn(0, increment)
 			case tea.MouseButtonWheelDown:
 				// zoom out limited by max values
-				m.ZoomOut(0, 1)
+				m.ZoomOut(0, increment)
 			}
 			switch msg.Action {
 			case tea.MouseActionPress:
@@ -169,9 +169,9 @@ func YAxisUpdateHandler() UpdateHandler {
 				if zInfo.InBounds(msg) {
 					x, y := zInfo.Pos(msg)
 					if y > lastPos.Y {
-						m.MoveDown(1)
+						m.MoveDown(increment)
 					} else if y < lastPos.Y {
-						m.MoveUp(1)
+						m.MoveUp(increment)
 					}
 					lastPos = canvas.Point{X: x, Y: y} // update last mouse position
 				}

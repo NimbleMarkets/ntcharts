@@ -147,8 +147,8 @@ type Model struct {
 func New(w, h int, opts ...Option) Model {
 	m := Model{
 		Model: linechart.New(w, h, 0, 1, 0, 1,
-			linechart.WithAutoXYRange(),                                  // automatically adjust value ranges
-			linechart.WithUpdateHandler(linechart.XAxisUpdateHandler())), // only scroll on X axis
+			linechart.WithAutoXYRange(),                                   // automatically adjust value ranges
+			linechart.WithUpdateHandler(linechart.XAxisUpdateHandler(1))), // only scroll on X axis
 		dLineStyle: runes.ArcLineStyle,
 		dStyle:     lipgloss.NewStyle(),
 		dSets:      make(map[string]*dataSet),
@@ -346,10 +346,10 @@ func (m *Model) DrawDataSets(names []string) {
 // Update processes bubbletea Msg to by invoking
 // UpdateMsgHandlerFunc callback if wavelinechart is focused.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	if !m.Model.Focused() {
+	if !m.Focused() {
 		return m, nil
 	}
-	m.Model, _ = m.Model.Update(msg)
+	m.UpdateHandler(&m.Model, msg)
 	m.rescaleData() // rescale data points to new viewing window
 	return m, nil
 }

@@ -137,9 +137,9 @@ type Model struct {
 func New(w, h int, opts ...Option) Model {
 	m := Model{
 		Model: linechart.New(w, h, 0, 1, 0, 1,
-			linechart.WithXYSteps(0, 2),                                  // hide X axis
-			linechart.WithAutoYRange(),                                   // automatically adjust Y value range
-			linechart.WithUpdateHandler(linechart.YAxisUpdateHandler())), // only scroll on Y axis
+			linechart.WithXYSteps(0, 2),                                   // hide X axis
+			linechart.WithAutoYRange(),                                    // automatically adjust Y value range
+			linechart.WithUpdateHandler(linechart.YAxisUpdateHandler(1))), // only scroll on Y axis
 		dLineStyle: runes.ArcLineStyle,
 		dStyle:     lipgloss.NewStyle(),
 		dSets:      make(map[string]*dataSet),
