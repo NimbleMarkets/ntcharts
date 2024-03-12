@@ -27,16 +27,7 @@ func XYAxesUpdateHandler(xIncrement, yIncrement float64) UpdateHandler {
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.Canvas.KeyMap.Up):
-				m.MoveUp(yIncrement)
-			case key.Matches(msg, m.Canvas.KeyMap.Down):
-				m.MoveDown(yIncrement)
-			case key.Matches(msg, m.Canvas.KeyMap.Left):
-				m.MoveLeft(xIncrement)
-			case key.Matches(msg, m.Canvas.KeyMap.Right):
-				m.MoveRight(xIncrement)
-			}
+			keyXYHandler(m, msg, xIncrement, yIncrement)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -46,34 +37,7 @@ func XYAxesUpdateHandler(xIncrement, yIncrement float64) UpdateHandler {
 				// zoom out limited by max values
 				m.ZoomOut(xIncrement, yIncrement)
 			}
-
-			if m.GetZoneManager() == nil {
-				return
-			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = canvas.Point{X: x, Y: y}
-				}
-			case tea.MouseActionMotion:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if x > lastPos.X {
-						m.MoveRight(xIncrement)
-					} else if x < lastPos.X {
-						m.MoveLeft(xIncrement)
-					}
-					if y > lastPos.Y {
-						m.MoveDown(yIncrement)
-					} else if y < lastPos.Y {
-						m.MoveUp(yIncrement)
-					}
-					lastPos = canvas.Point{X: x, Y: y}
-				}
-			}
+			mouseActionXYHandler(m, msg, &lastPos, xIncrement, yIncrement)
 		}
 	}
 }
@@ -89,12 +53,7 @@ func XAxisUpdateHandler(increment float64) UpdateHandler {
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.Canvas.KeyMap.Left):
-				m.MoveLeft(increment)
-			case key.Matches(msg, m.Canvas.KeyMap.Right):
-				m.MoveRight(increment)
-			}
+			keyXHandler(m, msg, increment)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -104,29 +63,7 @@ func XAxisUpdateHandler(increment float64) UpdateHandler {
 				// zoom out limited by max values
 				m.ZoomOut(increment, 0)
 			}
-
-			if m.GetZoneManager() == nil {
-				return
-			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = canvas.Point{X: x, Y: y}
-				}
-			case tea.MouseActionMotion:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if x > lastPos.X {
-						m.MoveRight(increment)
-					} else if x < lastPos.X {
-						m.MoveLeft(increment)
-					}
-					lastPos = canvas.Point{X: x, Y: y}
-				}
-			}
+			mouseActionXHandler(m, msg, &lastPos, increment)
 		}
 	}
 }
@@ -141,12 +78,7 @@ func XAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.Canvas.KeyMap.Left):
-				m.MoveLeft(increment)
-			case key.Matches(msg, m.Canvas.KeyMap.Right):
-				m.MoveRight(increment)
-			}
+			keyXHandler(m, msg, increment)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -154,29 +86,7 @@ func XAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
 			case tea.MouseButtonWheelDown:
 				m.MoveRight(increment)
 			}
-
-			if m.GetZoneManager() == nil {
-				return
-			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = canvas.Point{X: x, Y: y}
-				}
-			case tea.MouseActionMotion:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if x > lastPos.X {
-						m.MoveRight(increment)
-					} else if x < lastPos.X {
-						m.MoveLeft(increment)
-					}
-					lastPos = canvas.Point{X: x, Y: y}
-				}
-			}
+			mouseActionXHandler(m, msg, &lastPos, increment)
 		}
 	}
 }
@@ -192,12 +102,7 @@ func YAxisUpdateHandler(increment float64) UpdateHandler {
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.Canvas.KeyMap.Up):
-				m.MoveUp(increment)
-			case key.Matches(msg, m.Canvas.KeyMap.Down):
-				m.MoveDown(increment)
-			}
+			keyYHandler(m, msg, increment)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -207,25 +112,7 @@ func YAxisUpdateHandler(increment float64) UpdateHandler {
 				// zoom out limited by max values
 				m.ZoomOut(0, increment)
 			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = canvas.Point{X: x, Y: y} // set position of last click
-				}
-			case tea.MouseActionMotion: // event occurs when mouse is pressed
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if y > lastPos.Y {
-						m.MoveDown(increment)
-					} else if y < lastPos.Y {
-						m.MoveUp(increment)
-					}
-					lastPos = canvas.Point{X: x, Y: y} // update last mouse position
-				}
-			}
+			mouseActionYHandler(m, msg, &lastPos, increment)
 		}
 	}
 }
@@ -240,12 +127,7 @@ func YAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
 	return func(m *Model, tm tea.Msg) {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.Canvas.KeyMap.Up):
-				m.MoveUp(increment)
-			case key.Matches(msg, m.Canvas.KeyMap.Down):
-				m.MoveDown(increment)
-			}
+			keyYHandler(m, msg, increment)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -253,25 +135,7 @@ func YAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
 			case tea.MouseButtonWheelDown:
 				m.MoveDown(increment)
 			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = canvas.Point{X: x, Y: y} // set position of last click
-				}
-			case tea.MouseActionMotion: // event occurs when mouse is pressed
-				zInfo := m.GetZoneManager().Get(m.GetZoneID())
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if y > lastPos.Y {
-						m.MoveDown(increment)
-					} else if y < lastPos.Y {
-						m.MoveUp(increment)
-					}
-					lastPos = canvas.Point{X: x, Y: y} // update last mouse position
-				}
-			}
+			mouseActionYHandler(m, msg, &lastPos, increment)
 		}
 	}
 }
@@ -327,5 +191,123 @@ func (m *Model) MoveUp(i float64) {
 func (m *Model) MoveDown(i float64) {
 	if (m.viewMinY - i) >= m.MinY() {
 		m.SetViewYRange(m.viewMinY-i, m.viewMaxY-i)
+	}
+}
+
+// keyXYHandler handles keyboard messages for X and Y axis
+func keyXYHandler(m *Model, msg tea.KeyMsg, xIncrement, yIncrement float64) {
+	switch {
+	case key.Matches(msg, m.Canvas.KeyMap.Up):
+		m.MoveUp(yIncrement)
+	case key.Matches(msg, m.Canvas.KeyMap.Down):
+		m.MoveDown(yIncrement)
+	case key.Matches(msg, m.Canvas.KeyMap.Left):
+		m.MoveLeft(xIncrement)
+	case key.Matches(msg, m.Canvas.KeyMap.Right):
+		m.MoveRight(xIncrement)
+	}
+}
+
+// keyXHandler handles keyboard messages for X axis
+func keyXHandler(m *Model, msg tea.KeyMsg, xIncrement float64) {
+	switch {
+	case key.Matches(msg, m.Canvas.KeyMap.Left):
+		m.MoveLeft(xIncrement)
+	case key.Matches(msg, m.Canvas.KeyMap.Right):
+		m.MoveRight(xIncrement)
+	}
+}
+
+// keyYHandler handles keyboard messages for Y axis
+func keyYHandler(m *Model, msg tea.KeyMsg, yIncrement float64) {
+	switch {
+	case key.Matches(msg, m.Canvas.KeyMap.Up):
+		m.MoveUp(yIncrement)
+	case key.Matches(msg, m.Canvas.KeyMap.Down):
+		m.MoveDown(yIncrement)
+	}
+}
+
+// mouseActionXYHandler handles mouse click messages for X and Y axes
+func mouseActionXYHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, xIncrement, yIncrement float64) {
+	if m.GetZoneManager() == nil {
+		return
+	}
+	switch msg.Action {
+	case tea.MouseActionPress:
+		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		if zInfo.InBounds(msg) {
+			x, y := zInfo.Pos(msg)
+			*lastPos = canvas.Point{X: x, Y: y}
+		}
+	case tea.MouseActionMotion:
+		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		if zInfo.InBounds(msg) {
+			x, y := zInfo.Pos(msg)
+			if x > lastPos.X {
+				m.MoveRight(xIncrement)
+			} else if x < lastPos.X {
+				m.MoveLeft(xIncrement)
+			}
+			if y > lastPos.Y {
+				m.MoveDown(yIncrement)
+			} else if y < lastPos.Y {
+				m.MoveUp(yIncrement)
+			}
+			*lastPos = canvas.Point{X: x, Y: y}
+		}
+	}
+}
+
+// mouseActionXHandler handles mouse click messages for X axis
+func mouseActionXHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, increment float64) {
+	if m.GetZoneManager() == nil {
+		return
+	}
+	switch msg.Action {
+	case tea.MouseActionPress:
+		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		if zInfo.InBounds(msg) {
+			x, y := zInfo.Pos(msg)
+			*lastPos = canvas.Point{X: x, Y: y}
+		}
+	case tea.MouseActionMotion:
+		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		if zInfo.InBounds(msg) {
+			x, y := zInfo.Pos(msg)
+			if x > lastPos.X {
+				m.MoveRight(increment)
+			} else if x < lastPos.X {
+				m.MoveLeft(increment)
+			}
+			*lastPos = canvas.Point{X: x, Y: y}
+		}
+	}
+
+}
+
+// mouseActionYHandler handles mouse click messages for Y axis
+func mouseActionYHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, increment float64) {
+	if m.GetZoneManager() == nil {
+		return
+	}
+	switch msg.Action {
+	case tea.MouseActionPress:
+		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		if zInfo.InBounds(msg) {
+			x, y := zInfo.Pos(msg)
+			*lastPos = canvas.Point{X: x, Y: y} // set position of last click
+		}
+	case tea.MouseActionMotion: // event occurs when mouse is pressed
+		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		if zInfo.InBounds(msg) {
+			x, y := zInfo.Pos(msg)
+			if y > lastPos.Y {
+				m.MoveDown(increment)
+			} else if y < lastPos.Y {
+				m.MoveUp(increment)
+			}
+			*lastPos = canvas.Point{X: x, Y: y} // update last mouse position
+		}
 	}
 }

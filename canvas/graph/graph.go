@@ -144,14 +144,14 @@ func DrawLineSequence(m *canvas.Model, startYAxis bool, startX int, seqY []int, 
 			p := canvas.Point{startX, y}
 			r := runes.LineHorizontal
 			if startYAxis {
-				c := m.Cell(p).Rune
-				if c == runes.LineUpRight { // first point is origin
+				switch m.Cell(p).Rune {
+				case runes.LineUpRight: // first point is origin
 					m.SetCell(p, canvas.NewCellWithStyle(runes.LineUpRight, s))
-				} else if c == runes.LineVertical { // first point on Y axis
+				case runes.LineVertical: // first point on Y axis
 					m.SetCell(p, canvas.NewCellWithStyle(runes.LineVerticalRight, s))
-				} else if c == runes.LineVerticalRight { // first point on Y axis overlapping another line
+				case runes.LineVerticalRight: // first point on Y axis overlapping another line
 					m.SetCell(p, canvas.NewCellWithStyle(runes.LineVerticalRight, s))
-				} else {
+				default:
 					DrawLineRune(m, p, r, ls, s)
 				}
 			} else {
