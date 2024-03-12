@@ -131,6 +131,56 @@ func XAxisUpdateHandler(increment float64) UpdateHandler {
 	}
 }
 
+// XAxisNoZoomUpdateHandler is used by linechart to enable
+// moving the viewing window along the X axis with mouse wheel,
+// holding down the mouse button and moving, and with arrow keys.
+// There is only movement along the X axis with the given increment.
+// Uses linechart Canvas Keymap for keyboard messages.
+func XAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
+	var lastPos canvas.Point
+	return func(m *Model, tm tea.Msg) {
+		switch msg := tm.(type) {
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, m.Canvas.KeyMap.Left):
+				m.MoveLeft(increment)
+			case key.Matches(msg, m.Canvas.KeyMap.Right):
+				m.MoveRight(increment)
+			}
+		case tea.MouseMsg:
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				m.MoveLeft(increment)
+			case tea.MouseButtonWheelDown:
+				m.MoveRight(increment)
+			}
+
+			if m.GetZoneManager() == nil {
+				return
+			}
+			switch msg.Action {
+			case tea.MouseActionPress:
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					lastPos = canvas.Point{X: x, Y: y}
+				}
+			case tea.MouseActionMotion:
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					if x > lastPos.X {
+						m.MoveRight(increment)
+					} else if x < lastPos.X {
+						m.MoveLeft(increment)
+					}
+					lastPos = canvas.Point{X: x, Y: y}
+				}
+			}
+		}
+	}
+}
+
 // YAxisUpdateHandler is used by steamlinechart to enable
 // zooming in and out with the mouse wheels,
 // moving the viewing window by holding down mouse button and moving,
@@ -156,6 +206,52 @@ func YAxisUpdateHandler(increment float64) UpdateHandler {
 			case tea.MouseButtonWheelDown:
 				// zoom out limited by max values
 				m.ZoomOut(0, increment)
+			}
+			switch msg.Action {
+			case tea.MouseActionPress:
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					lastPos = canvas.Point{X: x, Y: y} // set position of last click
+				}
+			case tea.MouseActionMotion: // event occurs when mouse is pressed
+				zInfo := m.GetZoneManager().Get(m.GetZoneID())
+				if zInfo.InBounds(msg) {
+					x, y := zInfo.Pos(msg)
+					if y > lastPos.Y {
+						m.MoveDown(increment)
+					} else if y < lastPos.Y {
+						m.MoveUp(increment)
+					}
+					lastPos = canvas.Point{X: x, Y: y} // update last mouse position
+				}
+			}
+		}
+	}
+}
+
+// YAxisNoZoomUpdateHandler is used by steamlinechart to enable
+// moving the viewing window along the Y axis with mouse wheel,
+// holding down the mouse button and moving, and with arrow keys.
+// There is only movement along the Y axis with the given increment.
+// Uses linechart Canvas Keymap for keyboard messages.
+func YAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
+	var lastPos canvas.Point
+	return func(m *Model, tm tea.Msg) {
+		switch msg := tm.(type) {
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, m.Canvas.KeyMap.Up):
+				m.MoveUp(increment)
+			case key.Matches(msg, m.Canvas.KeyMap.Down):
+				m.MoveDown(increment)
+			}
+		case tea.MouseMsg:
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				m.MoveUp(increment)
+			case tea.MouseButtonWheelDown:
+				m.MoveDown(increment)
 			}
 			switch msg.Action {
 			case tea.MouseActionPress:
