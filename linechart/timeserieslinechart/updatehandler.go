@@ -21,6 +21,17 @@ func DateUpdateHandler() linechart.UpdateHandler {
 	return linechart.XAxisUpdateHandler(daySeconds)
 }
 
+// DateNoZoomUpdateHandler is used by timeserieslinechart to enable
+// moving the viewing window by using the mouse scroll wheel,
+// holding down mouse button and moving,
+// and moving the viewing window with the arrow keys.
+// There is only movement along the X axis by day increments.
+// Uses linechart Canvas Keymap for keyboard messages.
+func DateNoZoomUpdateHandler() linechart.UpdateHandler {
+	const daySeconds = 86400 // number of seconds in a day
+	return linechart.XAxisNoZoomUpdateHandler(daySeconds)
+}
+
 // HourUpdateHandler is used by timeserieslinechart to enable
 // zooming in and out with the mouse wheels,
 // moving the viewing window by holding down mouse button and moving,
@@ -32,7 +43,18 @@ func HourUpdateHandler() linechart.UpdateHandler {
 	return linechart.XAxisUpdateHandler(hourSeconds)
 }
 
-// HourUpdateHandler is used by timeserieslinechart to enable
+// HourNoZoomUpdateHandler is used by timeserieslinechart to enable
+// moving the viewing window by using the mouse scroll wheel,
+// holding down mouse button and moving,
+// and moving the viewing window with the arrow keys.
+// There is only movement along the X axis by hour increments.
+// Uses linechart Canvas Keymap for keyboard messages.
+func HourNoZoomUpdateHandler() linechart.UpdateHandler {
+	const hourSeconds = 3600 // number of seconds in a hour
+	return linechart.XAxisNoZoomUpdateHandler(hourSeconds)
+}
+
+// SecondUpdateHandler is used by timeserieslinechart to enable
 // zooming in and out with the mouse wheels,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
@@ -40,4 +62,14 @@ func HourUpdateHandler() linechart.UpdateHandler {
 // Uses linechart Canvas Keymap for keyboard messages.
 func SecondUpdateHandler() linechart.UpdateHandler {
 	return linechart.XAxisUpdateHandler(1)
+}
+
+// SecondNoZoomUpdateHandler is used by timeserieslinechart to enable
+// moving the viewing window by using the mouse scroll wheel,
+// holding down mouse button and moving,
+// and moving the viewing window with the arrow keys.
+// There is only movement along the X axis by second increments.
+// Uses linechart Canvas Keymap for keyboard messages.
+func SecondNoZoomUpdateHandler() linechart.UpdateHandler {
+	return linechart.XAxisNoZoomUpdateHandler(1)
 }
