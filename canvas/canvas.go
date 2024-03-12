@@ -50,6 +50,11 @@ func (p Float64Point) Sub(f Float64Point) Float64Point {
 	return Float64Point{p.X - f.X, p.Y - f.Y}
 }
 
+// NewPointFromFloat64Point returns a new Point from a given Float64Point.
+func NewPointFromFloat64Point(f Float64Point) Point {
+	return Point{int(math.Round(f.X)), int(math.Round(f.Y))}
+}
+
 // CanvasYCoordinates returns a sequence of Y coordinates in the
 // canvas coordinates system (X,Y is top left) from a given sequence of Y coordinates
 // in the Cartesian coordinates system (X,Y is bottom left)
@@ -96,10 +101,9 @@ func CanvasPoint(origin Point, p Point) (r Point) {
 // Cartesian coordinates system (X,Y is bottom left)
 // by passing the graph origin in the canvas coordinates system.
 func CanvasPointFromFloat64Point(origin Point, f Float64Point) Point {
-	// round coordinates to nearest integer
-	p := Point{int(math.Round(f.X)), int(math.Round(f.Y))}
+	// round coordinates to nearest integer and
 	// convert Cartesian coordinates to canvas coordinates
-	return CanvasPoint(origin, p)
+	return CanvasPoint(origin, NewPointFromFloat64Point(f))
 }
 
 // CanvasFloat64Point returns a Float64Point in the

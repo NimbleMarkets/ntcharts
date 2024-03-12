@@ -81,9 +81,9 @@ func XAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
 			keyXHandler(m, msg, increment)
 		case tea.MouseMsg:
 			switch msg.Button {
-			case tea.MouseButtonWheelUp:
+			case tea.MouseButtonWheelUp, tea.MouseButtonWheelLeft:
 				m.MoveLeft(increment)
-			case tea.MouseButtonWheelDown:
+			case tea.MouseButtonWheelDown, tea.MouseButtonWheelRight:
 				m.MoveRight(increment)
 			}
 			mouseActionXHandler(m, msg, &lastPos, increment)

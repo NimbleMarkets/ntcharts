@@ -553,8 +553,8 @@ func (m *Model) DrawRuneCircle(c canvas.Float64Point, f float64, r rune) {
 // such that there is an approximate circle of float64 radious around
 // the center of a circle at Float64Point data point.
 func (m *Model) DrawRuneCircleWithStyle(c canvas.Float64Point, f float64, r rune, s lipgloss.Style) {
-	center := canvas.Point{int(math.Round(c.X)), int(math.Round(c.Y))} // round center to nearest integer
-	radius := int(math.Round(f))                                       // round radius to nearest integer
+	center := canvas.NewPointFromFloat64Point(c) // round center to nearest integers
+	radius := int(math.Round(f))                 // round radius to nearest integer
 
 	points := graph.GetCirclePoints(center, radius)
 	for _, v := range points {
@@ -666,13 +666,13 @@ func (m *Model) DrawBrailleCircle(p canvas.Float64Point, f float64) {
 // such that there is an approximate circle of given float64 radius
 // around the center of a circle at Float64Point data point.
 // Braille runes will not overlap the axes.
-func (m *Model) DrawBrailleCircleWithStyle(p canvas.Float64Point, f float64, s lipgloss.Style) {
-	c := canvas.Point{int(math.Round(p.X)), int(math.Round(p.Y))} // round center to nearest integer
-	r := int(math.Round(f))                                       // round radius to nearest integer
+func (m *Model) DrawBrailleCircleWithStyle(c canvas.Float64Point, f float64, s lipgloss.Style) {
+	center := canvas.NewPointFromFloat64Point(c) // round center to nearest integer
+	radius := int(math.Round(f))                 // round radius to nearest integer
 
 	// set braille grid points from computed circle points around center
 	bGrid := graph.NewBrailleGrid(m.graphWidth, m.graphHeight, m.minX, m.maxX, m.minY, m.maxY)
-	points := graph.GetCirclePoints(c, r)
+	points := graph.GetCirclePoints(center, radius)
 	for _, p := range points {
 		np := canvas.NewFloat64PointFromPoint(p)
 		if m.AutoAdjustRange(np) {
