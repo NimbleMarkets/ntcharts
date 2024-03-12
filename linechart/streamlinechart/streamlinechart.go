@@ -148,7 +148,9 @@ func New(w, h int, opts ...Option) Model {
 		opt(&m)
 	}
 	m.UpdateGraphSizes()
-	m.dSets[DefaultDataSetName] = m.newDataSet()
+	if _, ok := m.dSets[DefaultDataSetName]; !ok {
+		m.dSets[DefaultDataSetName] = m.newDataSet()
+	}
 	return m
 }
 

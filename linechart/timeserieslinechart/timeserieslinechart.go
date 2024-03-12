@@ -107,7 +107,9 @@ func New(w, h int, opts ...Option) Model {
 	}
 	m.UpdateGraphSizes()
 	m.rescaleData()
-	m.dSets[DefaultDataSetName] = m.newDataSet()
+	if _, ok := m.dSets[DefaultDataSetName]; !ok {
+		m.dSets[DefaultDataSetName] = m.newDataSet()
+	}
 	return m
 }
 
@@ -183,7 +185,6 @@ func (m *Model) resetPoints(ds *dataSet) {
 	ds.points = make([][]float64, width, width)
 	var valBefore float64
 	for _, v := range ds.tBuf.ReadAll() {
-		m.addToPoints(ds.points, v)
 		rejBefore := m.addToPoints(ds.points, v)
 		if rejBefore {
 			valBefore = v.Y
