@@ -26,7 +26,7 @@ func DateTimeLabelFormatter() linechart.LabelFormatter {
 		if i == 0 { // reset year labeling if redisplaying values
 			yearLabel = ""
 		}
-		t := time.Unix(int64(v), 0)
+		t := time.Unix(int64(v), 0).UTC()
 		monthDay := t.Format("01/02")
 		year := t.Format("'06")
 		if yearLabel != year { // apply year label if first time seeing year
@@ -40,7 +40,7 @@ func DateTimeLabelFormatter() linechart.LabelFormatter {
 
 func HourTimeLabelFormatter() linechart.LabelFormatter {
 	return func(i int, v float64) string {
-		t := time.Unix(int64(v), 0)
+		t := time.Unix(int64(v), 0).UTC()
 		return t.Format("15:04:05")
 	}
 }
@@ -96,8 +96,8 @@ func New(w, h int, opts ...Option) Model {
 		Model: linechart.New(w, h, float64(min.Unix()), float64(max.Unix()), 0, 1,
 			linechart.WithXYSteps(4, 2),
 			linechart.WithXLabelFormatter(DateTimeLabelFormatter()),
-			linechart.WithAutoXYRange(),                       // automatically adjust value ranges
-			linechart.WithUpdateHandler(DateUpdateHandler())), // only scroll on X axis, increments by day
+			linechart.WithAutoXYRange(),                        // automatically adjust value ranges
+			linechart.WithUpdateHandler(DateUpdateHandler(1))), // only scroll on X axis, increments by 1 day
 		dLineStyle: runes.ArcLineStyle,
 		dStyle:     lipgloss.NewStyle(),
 		dSets:      make(map[string]*dataSet),
@@ -343,8 +343,10 @@ func (m *Model) Draw() {
 // to left of the graphing area of the canvas.
 func (m *Model) DrawAll() {
 	names := make([]string, 0, len(m.dSets))
-	for n := range m.dSets {
-		names = append(names, n)
+	for n, ds := range m.dSets {
+		if ds.tBuf.Length() > 0 {
+			names = append(names, n)
+		}
 	}
 	sort.Strings(names)
 	m.DrawDataSets(names)
@@ -354,6 +356,9 @@ func (m *Model) DrawAll() {
 // of the graphing area of the canvas for each data set given
 // by name strings.
 func (m *Model) DrawDataSets(names []string) {
+	if len(names) == 0 {
+		return
+	}
 	m.Clear()
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {

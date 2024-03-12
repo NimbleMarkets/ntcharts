@@ -318,8 +318,10 @@ func (m *Model) Draw() {
 // of the graphing area of the canvas for all data sets.
 func (m *Model) DrawAll() {
 	names := make([]string, 0, len(m.dSets))
-	for n := range m.dSets {
-		names = append(names, n)
+	for n, ds := range m.dSets {
+		if ds.pBuf.Length() > 0 {
+			names = append(names, n)
+		}
 	}
 	sort.Strings(names)
 	m.DrawDataSets(names)
@@ -329,6 +331,9 @@ func (m *Model) DrawAll() {
 // of the graphing area of the canvas for each data set given
 // by name strings.
 func (m *Model) DrawDataSets(names []string) {
+	if len(names) == 0 {
+		return
+	}
 	m.Clear()
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {

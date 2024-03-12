@@ -16,9 +16,9 @@ import (
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by day increments.
 // Uses linechart Canvas Keymap for keyboard messages.
-func DateUpdateHandler() linechart.UpdateHandler {
-	const daySeconds = 86400 // number of seconds in a day
-	return linechart.XAxisUpdateHandler(daySeconds)
+func DateUpdateHandler(i int) linechart.UpdateHandler {
+	daySeconds := 86400 * i // number of seconds in a day
+	return linechart.XAxisUpdateHandler(float64(daySeconds))
 }
 
 // DateNoZoomUpdateHandler is used by timeserieslinechart to enable
@@ -27,9 +27,9 @@ func DateUpdateHandler() linechart.UpdateHandler {
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by day increments.
 // Uses linechart Canvas Keymap for keyboard messages.
-func DateNoZoomUpdateHandler() linechart.UpdateHandler {
-	const daySeconds = 86400 // number of seconds in a day
-	return linechart.XAxisNoZoomUpdateHandler(daySeconds)
+func DateNoZoomUpdateHandler(i int) linechart.UpdateHandler {
+	daySeconds := 86400 * i // number of seconds in a day
+	return linechart.XAxisNoZoomUpdateHandler(float64(daySeconds))
 }
 
 // HourUpdateHandler is used by timeserieslinechart to enable
@@ -38,9 +38,9 @@ func DateNoZoomUpdateHandler() linechart.UpdateHandler {
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by hour increments.
 // Uses linechart Canvas Keymap for keyboard messages.
-func HourUpdateHandler() linechart.UpdateHandler {
-	const hourSeconds = 3600 // number of seconds in a hour
-	return linechart.XAxisUpdateHandler(hourSeconds)
+func HourUpdateHandler(i int) linechart.UpdateHandler {
+	hourSeconds := 3600 * i // number of seconds in a hour
+	return linechart.XAxisUpdateHandler(float64(hourSeconds))
 }
 
 // HourNoZoomUpdateHandler is used by timeserieslinechart to enable
@@ -49,9 +49,9 @@ func HourUpdateHandler() linechart.UpdateHandler {
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by hour increments.
 // Uses linechart Canvas Keymap for keyboard messages.
-func HourNoZoomUpdateHandler() linechart.UpdateHandler {
-	const hourSeconds = 3600 // number of seconds in a hour
-	return linechart.XAxisNoZoomUpdateHandler(hourSeconds)
+func HourNoZoomUpdateHandler(i int) linechart.UpdateHandler {
+	hourSeconds := 3600 * i // number of seconds in a hour
+	return linechart.XAxisNoZoomUpdateHandler(float64(hourSeconds))
 }
 
 // SecondUpdateHandler is used by timeserieslinechart to enable
@@ -60,8 +60,8 @@ func HourNoZoomUpdateHandler() linechart.UpdateHandler {
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by second increments.
 // Uses linechart Canvas Keymap for keyboard messages.
-func SecondUpdateHandler() linechart.UpdateHandler {
-	return linechart.XAxisUpdateHandler(1)
+func SecondUpdateHandler(i int) linechart.UpdateHandler {
+	return linechart.XAxisUpdateHandler(float64(i))
 }
 
 // SecondNoZoomUpdateHandler is used by timeserieslinechart to enable
@@ -70,6 +70,6 @@ func SecondUpdateHandler() linechart.UpdateHandler {
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by second increments.
 // Uses linechart Canvas Keymap for keyboard messages.
-func SecondNoZoomUpdateHandler() linechart.UpdateHandler {
-	return linechart.XAxisNoZoomUpdateHandler(1)
+func SecondNoZoomUpdateHandler(i int) linechart.UpdateHandler {
+	return linechart.XAxisNoZoomUpdateHandler(float64(i))
 }
