@@ -174,7 +174,7 @@ func (m *Model) rescaleData() {
 // based on current view time range
 func (m *Model) resetPoints(ds *dataSet) {
 	// add all points to the graphing area
-	// if there are points that are before or after
+	// if there are points that are before
 	// the graph, then need to use those points
 	// otherwise the lines do not look continuous
 	// and graph line starts or ends with Y value as 0

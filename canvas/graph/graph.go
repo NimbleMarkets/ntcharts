@@ -1,4 +1,4 @@
-// Package graph contains functions to help draw runes on to a canvas.
+// Package graph contains data structures and functions to help draw runes on to a canvas.
 package graph
 
 // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
@@ -13,6 +13,82 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 )
+
+// BrailleGrid wraps a runes.PatternDotsGrid
+// to implements a 2D grid with (X, Y) floating point coordinates
+// used to display Braille Pattern runes.
+// Since Braille Pattern runes are 4 high and 2 wide,
+// the BrailleGrid will internally scale the width and height
+// sizes to match those patterns.
+// BrailleGrid uses canvas coordinates system with (0,0) being top left.
+type BrailleGrid struct {
+	cWidth  int // canvas width
+	cHeight int // canvas height
+
+	minX float64
+	maxX float64
+	minY float64
+	maxY float64
+
+	gWidth  int // grid width
+	gHeight int // grid height
+	grid    *runes.PatternDotsGrid
+}
+
+// NewBrailleGrid returns new initialized *BrailleGrid
+// with given canvas width, canvas height and
+// minimums and maximums X and Y values of the data points.
+func NewBrailleGrid(w, h int, minX, maxX, minY, maxY float64) *BrailleGrid {
+	gridW := w * 2
+	gridH := h * 4
+	g := BrailleGrid{
+		cWidth:  w,
+		cHeight: h,
+		minX:    minX,
+		maxX:    maxX,
+		minY:    minY,
+		maxY:    maxY,
+		gWidth:  gridW,
+		gHeight: gridH,
+		grid:    runes.NewPatternDotsGrid(gridW, gridH),
+	}
+	g.Clear()
+	return &g
+}
+
+// Clear will reset the internal grid
+func (g *BrailleGrid) Clear() {
+	g.grid.Reset()
+}
+
+// GridPoint returns a canvas Point representing a point in the braille grid
+// in the canvas coordinates system from a Float64Point data point
+// in the Cartesian coordinates system.
+func (g *BrailleGrid) GridPoint(f canvas.Float64Point) canvas.Point {
+	var sf canvas.Float64Point
+	dx := g.maxX - g.minX
+	dy := g.maxY - g.minY
+	if dx > 0 {
+		xs := float64(g.gWidth-1) / dx
+		sf.X = (f.X - g.minX) * xs
+	}
+	if dy > 0 {
+		ys := float64(g.gHeight-1) / dy
+		sf.Y = (f.Y - g.minY) * ys
+	}
+	return canvas.CanvasPointFromFloat64Point(canvas.Point{X: 0, Y: g.gHeight - 1}, sf)
+}
+
+// Set will set point on grid from given canvas Point.
+func (g *BrailleGrid) Set(p canvas.Point) {
+	g.grid.Set(p.X, p.Y)
+}
+
+// BraillePatterns returns [][]rune containing
+// braille pattern runes to draw on to the canvas.
+func (g *BrailleGrid) BraillePatterns() [][]rune {
+	return g.grid.BraillePatterns()
+}
 
 // DrawVerticalLineUp draws a vertical line going up starting from (X,Y) coordinates.
 // Applies given style to all runes.

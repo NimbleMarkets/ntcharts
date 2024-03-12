@@ -64,8 +64,20 @@ var brailleDotNumberOffsets = [8]int32{0x0001, 0x0002, 0x0004, 0x0008, 0x00010, 
 // PatternDots indicates whether a dot in a Braille Pattern is displayed.
 type PatternDots [8]bool
 
-// PatternDotsGrid is a 2D array where each index indicates whether a dot
-// in a sequence of Braille Patterns should be displayed.
+// PatternDotsGrid is a 2D array where each row and column indicates whether
+// a dot in a sequence of Braille Patterns runes should be displayed.
+// Example:
+//
+//	 width = 4, height = 4 will give 2 Braille Pattern runes
+//	 [0][3][0][3]
+//	 [1][4][1][4]
+//	 [2][5][2][5]
+//	 [6][7][6][7]
+//
+//	setting (0,0) will set Dot 0 of first braille rune
+//	setting (0,3) will set Dot 6 of first braille rune
+//	setting (3,0) will set Dot 3 of second braille rune
+//	setting (3,3) will set Dot 7 of second braille rune
 type PatternDotsGrid struct {
 	w int      // grid width
 	h int      // grid height
