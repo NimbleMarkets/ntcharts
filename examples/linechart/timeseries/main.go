@@ -136,6 +136,9 @@ func main() {
 	minYValue := 0.0
 	maxYValue := 100.0
 
+	// timeserieslinecharts creates line charts starting with time as time.Now()
+	// Pressing keys will insert random Y value data into chart with time.Now() (when key was pressed)
+
 	// create new bubblezone Manager to enable mouse support to zoom in and out of chart
 	zoneManager := zone.New()
 
@@ -157,9 +160,9 @@ func main() {
 		timeserieslinechart.WithAxesStyles(axisStyle, labelStyle),
 		timeserieslinechart.WithStyles(runes.ThinLineStyle, graphLineStyle1), // default data set
 		timeserieslinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
+		timeserieslinechart.WithUpdateHandler(timeserieslinechart.SecondUpdateHandler(1)),
+		timeserieslinechart.WithXLabelFormatter(timeserieslinechart.HourTimeLabelFormatter()), // replace default Date with Hour formatter
 	)
-	tslc2.XLabelFormatter = timeserieslinechart.HourTimeLabelFormatter()
-	tslc2.UpdateHandler = timeserieslinechart.SecondUpdateHandler(1)
 	tslc2.SetZoneManager(zoneManager)
 
 	m := model{tslc1, tslc2, zoneManager}

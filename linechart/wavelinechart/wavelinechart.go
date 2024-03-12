@@ -42,6 +42,14 @@ func WithLineChart(lc *linechart.Model) Option {
 	}
 }
 
+// WithUpdateHandler sets the UpdateHandler used
+// when processing bubbletea Msg events in Update().
+func WithUpdateHandler(h linechart.UpdateHandler) Option {
+	return func(m *Model) {
+		m.UpdateHandler = h
+	}
+}
+
 // WithXYSteps sets the number of steps when drawing X and Y axes values.
 // If X steps 0, then X axis will be hidden.
 // If Y steps 0, then Y axis will be hidden.

@@ -31,7 +31,7 @@ func WithXLabelFormatter(fmter LabelFormatter) Option {
 	}
 }
 
-// WithYLabelFormatter sets the default X label formatter for displaying X values as strings.
+// WithYLabelFormatter sets the default Y label formatter for displaying Y values as strings.
 func WithYLabelFormatter(fmter LabelFormatter) Option {
 	return func(m *Model) {
 		m.YLabelFormatter = fmter

@@ -23,6 +23,28 @@ func WithLineChart(lc *linechart.Model) Option {
 	}
 }
 
+// WithUpdateHandler sets the UpdateHandler used
+// when processing bubbletea Msg events in Update().
+func WithUpdateHandler(h linechart.UpdateHandler) Option {
+	return func(m *Model) {
+		m.UpdateHandler = h
+	}
+}
+
+// WithXLabelFormatter sets the default X label formatter for displaying X values as strings.
+func WithXLabelFormatter(fmter linechart.LabelFormatter) Option {
+	return func(m *Model) {
+		m.XLabelFormatter = fmter
+	}
+}
+
+// WithYLabelFormatter sets the default Y label formatter for displaying Y values as strings.
+func WithYLabelFormatter(fmter linechart.LabelFormatter) Option {
+	return func(m *Model) {
+		m.YLabelFormatter = fmter
+	}
+}
+
 // WithAxesStyles sets the axes line and line label styles.
 func WithAxesStyles(as lipgloss.Style, ls lipgloss.Style) Option {
 	return func(m *Model) {
