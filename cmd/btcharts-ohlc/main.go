@@ -42,12 +42,20 @@ var axisStyle = lipgloss.NewStyle().
 var labelStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("6")) // cyan
 
+const ( // used for flag options and data set names
+	OpenOptionName     = "open"
+	HighOptionName     = "high"
+	LowOptionName      = "low"
+	CloseOptionName    = "close"
+	AdjCloseOptionName = "adjclose"
+)
+
 var dataSetStyles = map[string]lipgloss.Style{
-	"open":     openLineStyle,
-	"high":     highLineStyle,
-	"low":      lowLineStyle,
-	"close":    closeLineStyle,
-	"adjclose": closeLineStyle,
+	OpenOptionName:     openLineStyle,
+	HighOptionName:     highLineStyle,
+	LowOptionName:      lowLineStyle,
+	CloseOptionName:    closeLineStyle,
+	AdjCloseOptionName: closeLineStyle,
 }
 
 // displayOptions contains which OHLC lines to display
@@ -57,7 +65,7 @@ type displayOptions struct {
 	High     bool
 	Low      bool
 	Close    bool
-	AdjClose bool
+	AdjClose bool // replaces Close with Adjusted Close
 }
 
 // record represents a record entry in the CSV file
@@ -131,11 +139,9 @@ type model struct {
 }
 
 func NewModel(minTime, maxTime time.Time, minY, maxY float64, tsm map[string][]tslc.TimePoint, opts displayOptions) *model {
-	min := minTime
-	max := maxTime
 	m := model{
 		chart: tslc.New(20, 10,
-			tslc.WithTimeRange(min, max),
+			tslc.WithTimeRange(minTime, maxTime),
 			tslc.WithYRange(minY, maxY),
 			tslc.WithAxesStyles(axisStyle, labelStyle),
 		),
@@ -250,21 +256,21 @@ func addOpen(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
 	if r.Open < *minY {
 		*minY = r.Open
 	}
-	s["open"] = append(s["open"], tslc.TimePoint{Time: r.Date, Value: r.Open})
+	s[OpenOptionName] = append(s[OpenOptionName], tslc.TimePoint{Time: r.Date, Value: r.Open})
 }
 
 func addHigh(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
 	if r.High > *maxY {
 		*maxY = r.High
 	}
-	s["high"] = append(s["high"], tslc.TimePoint{Time: r.Date, Value: r.High})
+	s[HighOptionName] = append(s[HighOptionName], tslc.TimePoint{Time: r.Date, Value: r.High})
 }
 
 func addLow(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
 	if r.Low < *minY {
 		*minY = r.Low
 	}
-	s["low"] = append(s["low"], tslc.TimePoint{Time: r.Date, Value: r.Low})
+	s[LowOptionName] = append(s[LowOptionName], tslc.TimePoint{Time: r.Date, Value: r.Low})
 }
 
 func addClose(r record, s map[string][]tslc.TimePoint, minY, maxY *float64, useAdjClose bool) {
@@ -272,12 +278,12 @@ func addClose(r record, s map[string][]tslc.TimePoint, minY, maxY *float64, useA
 		if r.AdjustedClose > *maxY {
 			*maxY = r.AdjustedClose
 		}
-		s["adjclose"] = append(s["adjclose"], tslc.TimePoint{Time: r.Date, Value: r.Close})
+		s[AdjCloseOptionName] = append(s[AdjCloseOptionName], tslc.TimePoint{Time: r.Date, Value: r.Close})
 	} else {
 		if r.Close > *maxY {
 			*maxY = r.Close
 		}
-		s["close"] = append(s["close"], tslc.TimePoint{Time: r.Date, Value: r.Close})
+		s[CloseOptionName] = append(s[CloseOptionName], tslc.TimePoint{Time: r.Date, Value: r.Close})
 	}
 }
 
@@ -329,13 +335,12 @@ func main() {
 	var displayOpts displayOptions
 	var filePath string
 	flag.StringVar(&filePath, "filepath", "", "filepath to OHLC csv file, '-' to read from stdin")
-	flag.BoolVar(&displayOpts.Open, "open", false, "whether to display OPEN line")
-	flag.BoolVar(&displayOpts.High, "high", false, "whether to display HIGH line")
-	flag.BoolVar(&displayOpts.Low, "low", false, "whether to display LOW line")
-	flag.BoolVar(&displayOpts.Close, "close", false, "whether to display CLOSE line")
-	flag.BoolVar(&displayOpts.AdjClose, "adjclose", false, "whether to replace CLOSE line with Adjusted CLOSE line (only used if --close enabled)")
+	flag.BoolVar(&displayOpts.Open, OpenOptionName, false, "whether to display OPEN line")
+	flag.BoolVar(&displayOpts.High, HighOptionName, false, "whether to display HIGH line")
+	flag.BoolVar(&displayOpts.Low, LowOptionName, false, "whether to display LOW line")
+	flag.BoolVar(&displayOpts.Close, CloseOptionName, false, "whether to display CLOSE line")
+	flag.BoolVar(&displayOpts.AdjClose, AdjCloseOptionName, false, "whether to replace CLOSE line with Adjusted CLOSE line (only used if --close enabled)")
 	flag.Parse()
-	//TODO: if displaying volume, then it is a special column graph?
 
 	// if nothing specified, default to display all lines
 	if !displayOpts.Open && !displayOpts.High && !displayOpts.Low && !displayOpts.Close {
