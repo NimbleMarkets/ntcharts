@@ -23,14 +23,35 @@ tasks:
       - go get -u ./...
 
   build:
-    desc: 'Build all'
+    desc: 'Build all the things'
     deps:
+      - build-cmds
       - build-examples
-  
+
   clean:
     desc: 'Clean all'
     deps:
       - clean-examples
+
+###############################################################################
+# Commands
+
+  build-cmds:
+    desc: 'Build all commands'
+    deps:
+      - build-cmd-btcharts-ohlc
+
+  build-cmd-btcharts-ohlc:
+    desc: 'Build btcharts-ohlc command'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/btcharts-ohlc cmd/btcharts-ohlc/*.go
+    sources:
+      - cmd/btcharts-ohlc/*.go
+      - canvas/**/*.go
+      - linechart/**/*.go
+    generates:
+      - bin/btcharts-ohlc
 
 ###############################################################################
 # Examples
@@ -79,6 +100,7 @@ tasks:
       - go build -o bin/btcharts-linechart-lines examples/linechart/lines/*.go
       - go build -o bin/btcharts-linechart-scatter examples/linechart/scatter/*.go
       - go build -o bin/btcharts-linechart-streaming examples/linechart/streaming/*.go
+      - go build -o bin/btcharts-linechart-timeseries examples/linechart/timeseries/*.go
       - go build -o bin/btcharts-linechart-wavelines examples/linechart/wavelines/*.go
     sources:
       - canvas/**/*.go
@@ -89,6 +111,7 @@ tasks:
       - bin/btcharts-linechart-lines
       - bin/btcharts-linechart-scatter
       - bin/btcharts-linechart-streaming
+      - bin/btcharts-linechart-timeseries
       - bin/btcharts-linechart-wavelines
 
   build-ex-sparkline:
