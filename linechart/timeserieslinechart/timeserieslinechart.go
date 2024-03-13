@@ -2,6 +2,8 @@
 // for time series data points
 package timeserieslinechart
 
+// https://en.wikipedia.org/wiki/Moving_average
+
 import (
 	"fmt"
 	"math"
@@ -50,20 +52,29 @@ type TimePoint struct {
 	Value float64
 }
 
+// cAverage tracks cumulative average
+type cAverage struct {
+	Avg   float64
+	Count float64
+}
+
+// Add adds a float64 to current cumulative average
+func (a *cAverage) Add(f float64) float64 {
+	a.Count += 1
+	a.Avg += (f - a.Avg) / a.Count
+	return a.Avg
+}
+
 type dataSet struct {
 	LineStyle runes.LineStyle // type of line runes to draw
 	Style     lipgloss.Style
 
 	lastTime time.Time // last seen time value
 
-	// stores TimePoints as FloatPoint64{X:time.Time, Y: value} used to draw line runes
-	// time.Time will be converted to seconds since epoch for storage
+	// stores TimePoints as FloatPoint64{X:time.Time, Y: value}
+	// time.Time will be converted to seconds since epoch.
+	// both time and value will be scaled to fit the graphing area
 	tBuf *buffer.Float64PointScaleBuffer
-
-	// stores data point values mapped to a specific column of the canvas
-	// used to obtain average of point values to display
-	// should always been the same size as the Model timeBuckets
-	points [][]float64
 }
 
 // Model contains state of a timeserieslinechart with an embedded linechart.Model
@@ -78,10 +89,6 @@ type Model struct {
 	dLineStyle runes.LineStyle     // default data set LineStyletype
 	dStyle     lipgloss.Style      // default data set Style
 	dSets      map[string]*dataSet // maps names to data sets
-
-	// chunk the time ranges into buckets with total size of graphing area
-	// each value represents the start time of each time slice for a graph column
-	timeBuckets []time.Time
 }
 
 // New returns a timeserieslinechart Model initialized from
@@ -115,50 +122,25 @@ func New(w, h int, opts ...Option) Model {
 
 // newDataSet returns a new initialize *dataSet.
 func (m *Model) newDataSet() *dataSet {
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
-	sz := len(m.timeBuckets)
-	// do not offset or scale X time values
-	offset := canvas.Float64Point{X: 0, Y: m.ViewMinY()}
-	scale := canvas.Float64Point{X: 1, Y: ys}
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // x scale factor
+	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
+	offset := canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()}
+	scale := canvas.Float64Point{X: xs, Y: ys}
 	return &dataSet{
 		LineStyle: m.dLineStyle,
 		Style:     m.dStyle,
 		tBuf:      buffer.NewFloat64PointScaleBuffer(offset, scale),
-		points:    make([][]float64, sz, sz),
-	}
-}
-
-// resetTimeBuckets will reinitialize time chunks representing
-// the start time of each graph column
-func (m *Model) resetTimeBuckets() {
-	// width of graphing area includes Y axis (used for line runes)
-	width := m.Width() - m.Origin().X
-	if len(m.timeBuckets) != width {
-		m.timeBuckets = make([]time.Time, width, width)
-	}
-	// from min displayed time to max display time, divide the time range into chunks
-	start := m.ViewMinX()
-	end := m.ViewMaxX()
-	rangeSz := end - start
-	increment := rangeSz / float64(width)
-	for i := 0; i < width; i++ {
-		t := int64(start) + int64(math.Round(increment*float64(i)))
-		m.timeBuckets[i] = time.Unix(t, 0)
 	}
 }
 
 // rescaleData will reinitialize time chunks and
 // map time points into graph columns for display
 func (m *Model) rescaleData() {
-	m.resetTimeBuckets()
-	width := len(m.timeBuckets)
-	if width < 1 {
-		return
-	}
-	// rescale time points buffer and replace values into buckets
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
-	offset := canvas.Float64Point{X: 0, Y: m.ViewMinY()}
-	scale := canvas.Float64Point{X: 1, Y: ys}
+	// rescale time points buffer
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // x scale factor
+	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
+	offset := canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()}
+	scale := canvas.Float64Point{X: xs, Y: ys}
 	for _, ds := range m.dSets {
 		if ds.tBuf.Offset() != offset {
 			ds.tBuf.SetOffset(offset)
@@ -166,73 +148,7 @@ func (m *Model) rescaleData() {
 		if ds.tBuf.Scale() != scale {
 			ds.tBuf.SetScale(scale)
 		}
-		m.resetPoints(ds)
 	}
-}
-
-// resetPoints will repopulate the dataset's points
-// based on current view time range
-func (m *Model) resetPoints(ds *dataSet) {
-	// add all points to the graphing area
-	// if there are points that are before
-	// the graph, then need to use those points
-	// otherwise the lines do not look continuous
-	// and graph line starts or ends with Y value as 0
-	width := len(m.timeBuckets)
-	if width == 0 {
-		return
-	}
-	ds.points = make([][]float64, width, width)
-	var valBefore float64
-	for _, v := range ds.tBuf.ReadAll() {
-		rejBefore := m.addToPoints(ds.points, v)
-		if rejBefore {
-			valBefore = v.Y
-		}
-	}
-	// add Y value to points from the beginning that is missing points
-	idx := 0
-	for len(ds.points[idx]) == 0 {
-		ds.points[idx] = append(ds.points[idx], valBefore)
-		idx++
-		if idx == len(ds.points) {
-			break
-		}
-	}
-}
-
-// addToPoints attempts to add given Float64Point containing
-// seconds since epoch and Y value to points buckets.
-// Returns whether point is rejected due to
-// being less than the min view time.
-func (m *Model) addToPoints(points [][]float64, f canvas.Float64Point) bool {
-	// do nothing if point is out time slice range
-	if f.X < m.ViewMinX() {
-		return true
-	} else if f.X > m.ViewMaxX() {
-		return false
-	}
-	// check every bucket that the current point can fit
-	t := int64(f.X)
-	for idx, curTime := range m.timeBuckets {
-		if t < curTime.Unix() {
-			break
-		}
-		nextTime := curTime
-		if (idx + 1) < len(m.timeBuckets) {
-			nextTime = m.timeBuckets[idx+1]
-		}
-		if curTime == nextTime {
-			if curTime.Unix() <= t {
-				points[idx] = append(points[idx], f.Y)
-			}
-		} else { // assumes curTime < nextTime
-			if (curTime.Unix() <= t) && (t < nextTime.Unix()) {
-				points[idx] = append(points[idx], f.Y)
-			}
-		}
-	}
-	return false
 }
 
 // ClearAllData will reset stored data values in all data sets.
@@ -330,7 +246,6 @@ func (m *Model) PushDataSet(n string, t TimePoint) {
 	}
 	ds := m.dSets[n]
 	ds.tBuf.Push(f)
-	m.resetPoints(ds)
 }
 
 // Draw will draw lines runes displayed from right to left
@@ -339,8 +254,8 @@ func (m *Model) Draw() {
 	m.DrawDataSets([]string{DefaultDataSetName})
 }
 
-// DrawAll will draw lines runes for all data sets from right
-// to left of the graphing area of the canvas.
+// DrawAll will draw lines runes for all data sets
+// from right to left of the graphing area of the canvas.
 func (m *Model) DrawAll() {
 	names := make([]string, 0, len(m.dSets))
 	for n, ds := range m.dSets {
@@ -363,26 +278,15 @@ func (m *Model) DrawDataSets(names []string) {
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
-			var lastVal int
-			l := make([]int, 0, len(ds.points))
-			for _, bucket := range ds.points {
-				// if no data for bucket, use previous value
-				// so graph lines do not have any gaps
-				if len(bucket) == 0 {
-					l = append(l, lastVal)
-					continue
-				}
-				// get average point value
-				var sum float64
-				for _, v := range bucket {
-					sum += v
-				}
-				avg := sum / float64(len(bucket))
-				lastVal = int(math.Round(avg))
-				l = append(l, lastVal)
+			dataPoints := ds.tBuf.ReadAll()
+			dataLen := len(dataPoints)
+			if dataLen == 0 {
+				return
 			}
+			// get sequence of line values for graphing
+			seqY := m.getLineSequence(dataPoints)
 			// convert to canvas coordinates and avoid drawing below X axis
-			yCoords := canvas.CanvasYCoordinates(m.Origin().Y, l)
+			yCoords := canvas.CanvasYCoordinates(m.Origin().Y, seqY)
 			if m.XStep() > 0 {
 				for i, v := range yCoords {
 					if v > m.Origin().Y {
@@ -399,6 +303,121 @@ func (m *Model) DrawDataSets(names []string) {
 				ds.Style)
 		}
 	}
+}
+
+// DrawBraille will draw braille runes displayed from right to left
+// of the graphing area of the canvas. Uses default data set.
+func (m *Model) DrawBraille() {
+	m.DrawBrailleDataSets([]string{DefaultDataSetName})
+}
+
+// DrawBrailleAll will draw braille runes for all data sets
+// from right to left of the graphing area of the canvas.
+func (m *Model) DrawBrailleAll() {
+	names := make([]string, 0, len(m.dSets))
+	for n, ds := range m.dSets {
+		if ds.tBuf.Length() > 0 {
+			names = append(names, n)
+		}
+	}
+	sort.Strings(names)
+	m.DrawBrailleDataSets(names)
+}
+
+// DrawBrailleDataSets will draw braille runes from right to left
+// of the graphing area of the canvas for each data set given
+// by name strings.
+func (m *Model) DrawBrailleDataSets(names []string) {
+	if len(names) == 0 {
+		return
+	}
+	m.Clear()
+	m.DrawXYAxisAndLabel()
+	for _, n := range names {
+		if ds, ok := m.dSets[n]; ok {
+			dataPoints := ds.tBuf.ReadAll()
+			dataLen := len(dataPoints)
+			if dataLen == 0 {
+				return
+			}
+			// draw lines from each point to the next point
+			bGrid := graph.NewBrailleGrid(m.GraphWidth(), m.GraphHeight(),
+				0, float64(m.GraphWidth()), // X values already scaled to graph
+				0, float64(m.GraphHeight())) // Y values already scaled to graph
+			for i := 0; i < dataLen; i++ {
+				j := i + 1
+				if j >= dataLen {
+					j = i
+				}
+				p1 := dataPoints[i]
+				p2 := dataPoints[j]
+				// ignore points that will not be displayed
+				bothBeforeMin := (p1.X < 0 && p2.X < 0)
+				bothAfterMax := (p1.X > float64(m.GraphWidth()) && p2.X > float64(m.GraphWidth()))
+				if bothBeforeMin || bothAfterMax {
+					continue
+				}
+				// get braille grid points from two Float64Point data points
+				gp1 := bGrid.GridPoint(p1)
+				gp2 := bGrid.GridPoint(p2)
+				// set all points in the braille grid
+				// between two points that approximates a line
+				points := graph.GetLinePoints(gp1, gp2)
+				for _, p := range points {
+					bGrid.Set(p)
+				}
+			}
+
+			// get all rune patterns for braille grid
+			// and draw them on to the canvas
+			startX := 0
+			if m.YStep() > 0 {
+				startX = m.Origin().X + 1
+			}
+			patterns := bGrid.BraillePatterns()
+			graph.DrawBraillePatterns(&m.Canvas,
+				canvas.Point{X: startX, Y: 0}, patterns, ds.Style)
+		}
+	}
+}
+
+// getLineSequence returns a sequence of Y values
+// to draw line runes from a given set of scaled []FloatPoint64.
+func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
+	width := m.Width() - m.Origin().X // line runes can draw on axes
+	dataLen := len(points)
+	// each index of the bucket corresponds to a graph column.
+	// each index value is the average of data point values
+	// that is mapped to that graph column.
+	buckets := make([]cAverage, width, width)
+	for i := 0; i < dataLen; i++ {
+		j := i + 1
+		if j >= dataLen {
+			j = i
+		}
+		p1 := canvas.NewPointFromFloat64Point(points[i])
+		p2 := canvas.NewPointFromFloat64Point(points[j])
+		// ignore points that will not be displayed on the graph
+		bothBeforeMin := (p1.X < 0 && p2.X < 0)
+		bothAfterMax := (p1.X > m.GraphWidth() && p2.X > m.GraphWidth())
+		if bothBeforeMin || bothAfterMax {
+			continue
+		}
+		// place all points between two points
+		// that approximates a line into buckets
+		points := graph.GetLinePoints(p1, p2)
+		for _, p := range points {
+			if (p.X >= 0) && (p.X) < width {
+				buckets[p.X].Add(float64(p.Y))
+			}
+		}
+	}
+	// populate sequence of Y values to for drawing
+	r := make([]int, width, width)
+	for i, v := range buckets {
+		r[i] = int(math.Round(v.Avg))
+	}
+	return r
 }
 
 // Update processes bubbletea Msg to by invoking
