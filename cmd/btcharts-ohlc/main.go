@@ -60,13 +60,17 @@ var dataSetStyles = map[string]lipgloss.Style{
 
 // displayOptions contains which OHLC lines to display
 type displayOptions struct {
-	All      bool
-	Open     bool
-	High     bool
-	Low      bool
-	Close    bool
-	AdjClose bool // replaces Close with Adjusted Close
+	All        bool
+	Open       bool
+	High       bool
+	Low        bool
+	Close      bool
+	AdjClose   bool // replaces Close with Adjusted Close
+	LineStyle  runes.LineStyle
+	UseBraille bool // whether to draw braille lines
 }
+
+var displayOpts displayOptions
 
 // record represents a record entry in the CSV file
 type record struct {
@@ -134,11 +138,10 @@ func NewRecord(s []string) (r record) {
 
 type model struct {
 	chart       tslc.Model
-	opts        displayOptions
 	zoneManager *zone.Manager
 }
 
-func NewModel(minTime, maxTime time.Time, minY, maxY float64, tsm map[string][]tslc.TimePoint, opts displayOptions) *model {
+func newModel(minTime, maxTime time.Time, minY, maxY float64, tsm map[string][]tslc.TimePoint) *model {
 	m := model{
 		chart: tslc.New(20, 10,
 			tslc.WithTimeRange(minTime, maxTime),
@@ -146,13 +149,12 @@ func NewModel(minTime, maxTime time.Time, minY, maxY float64, tsm map[string][]t
 			tslc.WithAxesStyles(axisStyle, labelStyle),
 		),
 		zoneManager: zone.New(),
-		opts:        opts,
 	}
 	m.chart.Focus()
 
 	// set time series data for each line
 	for name, tsd := range tsm {
-		m.chart.SetDataSetStyles(name, runes.ArcLineStyle, dataSetStyles[name])
+		m.chart.SetDataSetStyles(name, displayOpts.LineStyle, dataSetStyles[name])
 		for _, p := range tsd {
 			m.chart.PushDataSet(name, p)
 		}
@@ -182,7 +184,6 @@ func (m *model) resetTimeRange() {
 }
 
 func (m model) Init() tea.Cmd {
-	m.chart.DrawAll()
 	return nil
 }
 
@@ -199,23 +200,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	m.chart, _ = m.chart.Update(msg)
-	m.chart.DrawAll()
+	if displayOpts.UseBraille {
+		m.chart.DrawBrailleAll()
+	} else {
+		m.chart.DrawAll()
+	}
 	return m, nil
 }
 
 func (m model) View() string {
 	var legend string
-	if m.opts.All || m.opts.Open {
+	if displayOpts.All || displayOpts.Open {
 		legend += openLineStyle.Render(" OPEN")
 	}
-	if m.opts.All || m.opts.High {
+	if displayOpts.All || displayOpts.High {
 		legend += highLineStyle.Render(" HIGH")
 	}
-	if m.opts.All || m.opts.Low {
+	if displayOpts.All || displayOpts.Low {
 		legend += lowLineStyle.Render(" LOW")
 	}
-	if m.opts.All || m.opts.Close {
-		if m.opts.AdjClose {
+	if displayOpts.All || displayOpts.Close {
+		if displayOpts.AdjClose {
 			legend += closeLineStyle.Render(" ADJCLOSE")
 		} else {
 			legend += closeLineStyle.Render(" CLOSE")
@@ -273,8 +278,8 @@ func addLow(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
 	s[LowOptionName] = append(s[LowOptionName], tslc.TimePoint{Time: r.Date, Value: r.Low})
 }
 
-func addClose(r record, s map[string][]tslc.TimePoint, minY, maxY *float64, useAdjClose bool) {
-	if useAdjClose {
+func addClose(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
+	if displayOpts.AdjClose {
 		if r.AdjustedClose > *maxY {
 			*maxY = r.AdjustedClose
 		}
@@ -287,7 +292,7 @@ func addClose(r record, s map[string][]tslc.TimePoint, minY, maxY *float64, useA
 	}
 }
 
-func timeseriesFromRecords(opts displayOptions, r []record) (s map[string][]tslc.TimePoint, minY float64, maxY float64, minTime, maxTime time.Time) {
+func timeseriesFromRecords(r []record) (s map[string][]tslc.TimePoint, minY float64, maxY float64, minTime, maxTime time.Time) {
 	s = make(map[string][]tslc.TimePoint)
 	if len(r) == 0 {
 		return
@@ -296,17 +301,17 @@ func timeseriesFromRecords(opts displayOptions, r []record) (s map[string][]tslc
 	maxTime = r[len(r)-1].Date
 	// initialize min/max values
 	switch {
-	case opts.All || opts.Open:
+	case displayOpts.All || displayOpts.Open:
 		minY = r[0].Open
 		maxY = r[0].Open
-	case opts.High:
+	case displayOpts.High:
 		minY = r[0].High
 		maxY = r[0].High
-	case opts.Low:
+	case displayOpts.Low:
 		minY = r[0].Low
 		maxY = r[0].Low
-	case opts.Close:
-		if opts.AdjClose {
+	case displayOpts.Close:
+		if displayOpts.AdjClose {
 			minY = r[0].AdjustedClose
 			maxY = r[0].AdjustedClose
 		} else {
@@ -315,26 +320,28 @@ func timeseriesFromRecords(opts displayOptions, r []record) (s map[string][]tslc
 		}
 	}
 	for _, rec := range r {
-		if opts.All || opts.Open {
+		if displayOpts.All || displayOpts.Open {
 			addOpen(rec, s, &minY, &maxY)
 		}
-		if opts.All || opts.High {
+		if displayOpts.All || displayOpts.High {
 			addHigh(rec, s, &minY, &maxY)
 		}
-		if opts.All || opts.Low {
+		if displayOpts.All || displayOpts.Low {
 			addLow(rec, s, &minY, &maxY)
 		}
-		if opts.All || opts.Close {
-			addClose(rec, s, &minY, &maxY, opts.AdjClose)
+		if displayOpts.All || displayOpts.Close {
+			addClose(rec, s, &minY, &maxY)
 		}
 	}
 	return
 }
 
 func main() {
-	var displayOpts displayOptions
+	var useThinStyle bool
 	var filePath string
 	flag.StringVar(&filePath, "filepath", "", "filepath to OHLC csv file, '-' to read from stdin")
+	flag.BoolVar(&useThinStyle, "thin", false, "use thin lines (default: arc lines)")
+	flag.BoolVar(&displayOpts.UseBraille, "braille", false, "use braille lines (default: arc lines)")
 	flag.BoolVar(&displayOpts.Open, OpenOptionName, false, "whether to display OPEN line")
 	flag.BoolVar(&displayOpts.High, HighOptionName, false, "whether to display HIGH line")
 	flag.BoolVar(&displayOpts.Low, LowOptionName, false, "whether to display LOW line")
@@ -345,6 +352,11 @@ func main() {
 	// if nothing specified, default to display all lines
 	if !displayOpts.Open && !displayOpts.High && !displayOpts.Low && !displayOpts.Close {
 		displayOpts.All = true
+	}
+	if useThinStyle {
+		displayOpts.LineStyle = runes.ThinLineStyle
+	} else {
+		displayOpts.LineStyle = runes.ArcLineStyle
 	}
 
 	// convert CSV rows into timeseries data
@@ -367,10 +379,10 @@ func main() {
 	if len(records) == 0 {
 		os.Exit(0)
 	}
-	ts, minY, maxY, minTime, maxTime := timeseriesFromRecords(displayOpts, records)
+	ts, minY, maxY, minTime, maxTime := timeseriesFromRecords(records)
 
 	// create model and start bubbletea Program
-	m := NewModel(minTime, maxTime, minY, maxY, ts, displayOpts)
+	m := newModel(minTime, maxTime, minY, maxY, ts)
 	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
