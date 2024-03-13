@@ -167,6 +167,9 @@ func (m *Model) ZoomOut(x, y float64) {
 func (m *Model) MoveLeft(i float64) {
 	if (m.viewMinX - i) >= m.MinX() {
 		m.SetViewXRange(m.viewMinX-i, m.viewMaxX-i)
+	} else {
+		i = m.viewMinX - m.MinX()
+		m.SetViewXRange(m.viewMinX-i, m.viewMaxX-i)
 	}
 }
 
@@ -174,6 +177,9 @@ func (m *Model) MoveLeft(i float64) {
 // moving right on the linechart by given increment.
 func (m *Model) MoveRight(i float64) {
 	if (m.viewMaxX + i) <= m.MaxX() {
+		m.SetViewXRange(m.viewMinX+i, m.viewMaxX+i)
+	} else {
+		i = m.MaxX() - m.viewMaxX
 		m.SetViewXRange(m.viewMinX+i, m.viewMaxX+i)
 	}
 }
@@ -183,6 +189,9 @@ func (m *Model) MoveRight(i float64) {
 func (m *Model) MoveUp(i float64) {
 	if (m.viewMaxY + i) <= m.MaxY() {
 		m.SetViewYRange(m.viewMinY+i, m.viewMaxY+i)
+	} else {
+		i = m.MaxY() - m.viewMaxY
+		m.SetViewYRange(m.viewMinY+i, m.viewMaxY+i)
 	}
 }
 
@@ -191,7 +200,11 @@ func (m *Model) MoveUp(i float64) {
 func (m *Model) MoveDown(i float64) {
 	if (m.viewMinY - i) >= m.MinY() {
 		m.SetViewYRange(m.viewMinY-i, m.viewMaxY-i)
+	} else {
+		i = m.viewMinY - m.MinY()
+		m.SetViewYRange(m.viewMinY-i, m.viewMaxY-i)
 	}
+
 }
 
 // keyXYHandler handles keyboard messages for X and Y axis
