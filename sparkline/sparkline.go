@@ -19,7 +19,7 @@ import (
 
 // Option is used to set options when initializing a sparkline. Example:
 //
-//	sl := New(width, height, maxValue, WithStyle(someStyle), WithAuto())
+//	sl := New(width, height, WithMaxValue(someValue), WithNoAuto())
 type Option func(*Model)
 
 // WithStyle sets the default column style.
@@ -45,11 +45,19 @@ func WithUpdateHandler(h canvas.UpdateHandler) Option {
 	}
 }
 
-// WithAuto enables automatically setting the max value
+// WithNoAuto disables automatically setting the max value
 // if new data greater than the current max is added.
-func WithAuto() Option {
+func WithNoAuto() Option {
 	return func(m *Model) {
-		m.Auto = true
+		m.Auto = false
+	}
+}
+
+// WithMaxValue sets the expected maximum data value
+// to given float64.
+func WithMaxValue(f float64) Option {
+	return func(m *Model) {
+		m.SetMax(f)
 	}
 }
 
@@ -63,15 +71,16 @@ type Model struct {
 	buf *buffer.Float64ScaleRingBuffer // buffer with size as width of canvas
 }
 
-// New returns a sparkline Model initialized with given width, height,
+// New returns a sparkline Model initialized with given width, height.
+// By default, sparkline wil automatically scale to new maximum data values.
 // expected data max value and various options.
-func New(w, h int, max float64, opts ...Option) Model {
+func New(w, h int, opts ...Option) Model {
 	m := Model{
-		Auto:   false,
+		Auto:   true,
 		Style:  lipgloss.NewStyle(),
 		Canvas: canvas.New(w, h),
-		max:    max,
-		buf:    buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/max),
+		max:    1,
+		buf:    buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/1),
 	}
 	for _, opt := range opts {
 		opt(&m)
@@ -111,10 +120,18 @@ func (m *Model) SetMax(f float64) {
 // If new width is less than previous width, then
 // older data will be lost after resize.
 func (m *Model) Resize(w, h int) {
-	m.buf.SetScale(float64(h) / m.max)
 	m.Canvas.Resize(w, h)
 	m.Canvas.ViewWidth = w
 	m.Canvas.ViewHeight = h
+	if m.buf.Size() != w {
+		buf := buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/m.max)
+		for _, f := range m.buf.ReadAllRaw() {
+			buf.Push(f)
+		}
+		m.buf = buf
+	} else {
+		m.buf.SetScale(float64(h) / m.max)
+	}
 }
 
 // Clear will reset sparkline canvas and data.

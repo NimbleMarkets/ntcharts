@@ -92,10 +92,10 @@ func main() {
 	// sparkline4 calls Draw with background style
 
 	m := model{
-		sparkline.New(width, height, max, sparkline.WithStyle(blockStyle)),
-		sparkline.New(width, (height/2)-1, max, sparkline.WithStyle(blockStyle2)),
-		sparkline.New(width, (height/2)-1, max, sparkline.WithStyle(blockStyle2)),
-		sparkline.New(width, height/4, max, sparkline.WithStyle(blockStyle3)),
+		sparkline.New(width, height, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle)),
+		sparkline.New(width, (height/2)-1, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle2)),
+		sparkline.New(width, (height/2)-1, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle2)),
+		sparkline.New(width, height/4, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle3)),
 		max}
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
