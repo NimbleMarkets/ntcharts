@@ -162,7 +162,7 @@ func main() {
 	wlc1.AxisStyle = axisStyle
 	wlc1.LabelStyle = labelStyle
 	wlc1.SetXStep(xStep)
-	wlc1.SetYStep(xStep)
+	wlc1.SetYStep(yStep)
 	wlc1.SetXYRange(minXValue, maxXValue, minYValue, maxYValue)     // set expected ranges (can be less than or greater than displayed)
 	wlc1.SetViewXYRange(minXValue, maxXValue, minYValue, maxYValue) // setting displayed ranges fails unless setting expected values first
 	wlc1.SetStyles(runes.ThinLineStyle, graphLineStyle1)            // graphLineStyle1 replaces linechart rune style

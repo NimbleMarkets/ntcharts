@@ -2,6 +2,7 @@
 package wavelinechart
 
 import (
+	"math"
 	"sort"
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas"
@@ -19,12 +20,6 @@ const DefaultDataSetName = "default"
 type dataSet struct {
 	LineStyle runes.LineStyle // type of line runes to draw
 	Style     lipgloss.Style
-
-	// []int stores canvas coordinates to draw line runes
-	// Each index of the []int corresponds to a canvas column
-	// and the value of each index is the canvas row
-	// I.E. (X,seqY[X]) coorindates will be used to draw the line runes
-	seqY []int
 
 	// stores data points from Plot() and contains scaled data points
 	pBuf *buffer.Float64PointScaleBuffer
@@ -178,42 +173,52 @@ func (m *Model) newDataSet() *dataSet {
 	ds := &dataSet{
 		LineStyle: m.dLineStyle,
 		Style:     m.dStyle,
-		seqY:      make([]int, m.Width(), m.Width()),
 		pBuf: buffer.NewFloat64PointScaleBuffer(
 			canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()},
 			canvas.Float64Point{X: xs, Y: ys}),
 	}
-	m.resetDataSetSeqY(ds)
 	return ds
 }
 
-// resetPoints will set graph sequence of Y coordinates of a data set
-// such that Draw will display each Y coordinate on Y = 0.
-func (m *Model) resetDataSetSeqY(ds *dataSet) {
+// getLineSequence returns a sequence of Y values
+// to draw line runes from a given set of scaled []FloatPoint64.
+func (m *Model) getLineSequence(points []canvas.Float64Point) (seqY []int) {
+	// Create a []int storing canvas coordinates to draw line runes.
+	// Each index of the []int corresponds to a canvas column
+	// and the value of each index is the canvas row
+	// I.E. (X,seqY[X]) coorindates will be used to draw the line runes
+	width := m.Width() - m.Origin().X // lines can draw on Y axis
+	seqY = make([]int, width, width)
+
+	// initialize every index to the value such that
+	// a horizontal line at Y = 0 will be drawn
 	f := m.ScaleFloat64Point(canvas.Float64Point{X: 0.0, Y: 0.0})
-	ds.seqY = make([]int, m.Width(), m.Width())
-	for i := range ds.seqY {
-		// note: can't use setDataSetSeqY because this method
-		// is scaling every index value in the sequence and
-		// setDataSetSeqY maps an X coordinate to a sequence index
+	for i := range seqY {
+		seqY[i] = canvas.CanvasYCoordinate(m.Origin().Y, int(math.Round(f.Y)))
 		// avoid drawing below X axis
-		ds.seqY[i] = canvas.CanvasPointFromFloat64Point(m.Origin(), f).Y
-		if (m.XStep() > 0) && (ds.seqY[i] > m.Origin().Y) {
-			ds.seqY[i] = m.Origin().Y
+		if (m.XStep() > 0) && (seqY[i] > m.Origin().Y) {
+			seqY[i] = m.Origin().Y
 		}
 	}
+	// map data set containing scaled Float64Point data points
+	// onto graph row and column
+	for _, p := range points {
+		m.setLineSequencePoint(seqY, p)
+	}
+	return
 }
 
-// setDataSetSeqY will set a data set canvas row and column
-// from given scaled Float64Point data point.
-func (m *Model) setDataSetSeqY(ds *dataSet, f canvas.Float64Point) {
-	p := canvas.CanvasPointFromFloat64Point(m.Origin(), f)
+// setLineSequencePoint will map a scaled Float64Point data point
+// on to a sequence of graph Y values.  Points mapping onto
+// existing indices of the sequence will override the existing value.
+func (m *Model) setLineSequencePoint(seqY []int, f canvas.Float64Point) {
+	x := int(math.Round(f.X))
 	// avoid drawing outside graphing area
-	if (p.X >= 0) && (p.X < len(ds.seqY)) {
+	if (x >= 0) && (x < len(seqY)) {
 		// avoid drawing below X axis
-		ds.seqY[p.X] = p.Y
-		if (m.XStep() > 0) && (ds.seqY[p.X] > m.Origin().Y) {
-			ds.seqY[p.X] = m.Origin().Y
+		seqY[x] = canvas.CanvasYCoordinate(m.Origin().Y, int(math.Round(f.Y)))
+		if (m.XStep() > 0) && (seqY[x] > m.Origin().Y) {
+			seqY[x] = m.Origin().Y
 		}
 	}
 }
@@ -226,10 +231,6 @@ func (m *Model) rescaleData() {
 	for _, ds := range m.dSets {
 		ds.pBuf.SetOffset(canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()})
 		ds.pBuf.SetScale(canvas.Float64Point{X: xs, Y: ys}) // buffer rescales all raw data points
-		m.resetDataSetSeqY(ds)
-		for _, v := range ds.pBuf.ReadAll() {
-			m.setDataSetSeqY(ds, v)
-		}
 	}
 }
 
@@ -312,8 +313,6 @@ func (m *Model) PlotDataSet(n string, f canvas.Float64Point) {
 	}
 	ds := m.dSets[n]
 	ds.pBuf.Push(f)
-	s := ds.pBuf.At(ds.pBuf.Length() - 1) // scaled value of inserted data
-	m.setDataSetSeqY(ds, s)
 }
 
 // Draw will draw lines runes for each column
@@ -324,10 +323,11 @@ func (m *Model) Draw() {
 
 // DrawAll will draw lines runes for each column
 // of the graphing area of the canvas for all data sets.
+// Will always draw default data set.
 func (m *Model) DrawAll() {
 	names := make([]string, 0, len(m.dSets))
 	for n, ds := range m.dSets {
-		if ds.pBuf.Length() > 0 {
+		if (n == DefaultDataSetName) || (ds.pBuf.Length() > 0) {
 			names = append(names, n)
 		}
 	}
@@ -347,7 +347,7 @@ func (m *Model) DrawDataSets(names []string) {
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
 			startX := m.Origin().X
-			seqY := ds.seqY[startX:]
+			seqY := m.getLineSequence(ds.pBuf.ReadAll())
 			graph.DrawLineSequence(&m.Canvas,
 				true,
 				startX,
