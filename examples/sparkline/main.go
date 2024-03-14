@@ -31,11 +31,15 @@ var blockStyle3 = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("6")). // cyan
 	Background(lipgloss.Color("3"))  // yellow
 
+var blockStyle4 = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("3")) // yellow
+
 type model struct {
 	s1  sparkline.Model
 	s2  sparkline.Model
 	s3  sparkline.Model
 	s4  sparkline.Model
+	s5  sparkline.Model
 	max float64
 }
 
@@ -58,12 +62,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.s2.Push(randomFloat64)
 	m.s3.Push(randomFloat64)
 	m.s4.Push(randomFloat64)
+	m.s5.Push(randomFloat64)
 
 	// call different Draw functions with different Style combinations
 	m.s1.Draw()
 	m.s2.DrawColumnsOnly()
 	m.s3.Draw()
 	m.s4.Draw()
+	m.s5.DrawBraille()
 	return m, nil
 }
 
@@ -74,7 +80,7 @@ func (m model) View() string {
 		defaultStyle.Render(titleStyle.Render("style w/ background")+"\nDrawColumnsOnly()\n"+m.s2.View()+"\nDraw()\n"+m.s3.View()),
 		lipgloss.JoinVertical(lipgloss.Left,
 			defaultStyle.Render(fmt.Sprintf("Max: %.0f, Random: %.2f", m.max, randomFloat64)),
-			defaultStyle.Render("Draw() w/ background\n"+m.s4.View()),
+			defaultStyle.Render("Draw() w/ background\n"+m.s4.View()+"\nDrawBraille()\n"+m.s5.View()),
 		),
 	) + "\n"
 	return s
@@ -90,12 +96,14 @@ func main() {
 	// sparkline2 calls DrawColumnsOnly with background style
 	// sparkline3 calls Draw with background style (same style as sparkline2)
 	// sparkline4 calls Draw with background style
+	// sparkline5 calls DrawBraille with no background style
 
 	m := model{
 		sparkline.New(width, height, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle)),
 		sparkline.New(width, (height/2)-1, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle2)),
 		sparkline.New(width, (height/2)-1, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle2)),
 		sparkline.New(width, height/4, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle3)),
+		sparkline.New(width, height/4, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle4)),
 		max}
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)

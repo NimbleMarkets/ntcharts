@@ -160,7 +160,8 @@ func (m *Model) PushAll(f []float64) {
 	}
 }
 
-// Draw will display the the scaled data values on to the sparkline canvas.
+// Draw will display the the scaled data values on to the sparkline canvas
+// using columns.
 // Sparkline style will be applied across entire canvas.
 // Columns representing the data will be displayed going from
 // from the bottom to the top and coming from the left to the right of the canvas.
@@ -180,7 +181,36 @@ func (m *Model) DrawColumnsOnly() {
 		m.Style)
 }
 
-// Init initializes the sparkline.
+// DrawBraille will display the the scaled data values on to the sparkline canvas
+// using braille lines.
+// Sparkline style will be applied across entire canvas.
+// Braille lines representing the data will be displayed going from
+// from the bottom to the top and coming from the left to the right of the canvas.
+func (m *Model) DrawBraille() {
+	m.Canvas.Clear()
+	d := m.buf.ReadAll()
+	dLen := len(d)
+	grid := graph.NewBrailleGrid(m.Width(), m.Height(),
+		0, float64(m.Width()),
+		0, float64(m.Height())) // Y values already scaled from buffer
+	startX := m.Canvas.Width() - len(d)
+	for i := 0; i < dLen; i++ {
+		j := i + 1
+		if j >= dLen {
+			j = i
+		}
+		gp1 := grid.GridPoint(canvas.Float64Point{X: float64(startX + i), Y: d[i]})
+		gp2 := grid.GridPoint(canvas.Float64Point{X: float64(startX + j), Y: d[j]})
+		points := graph.GetLinePoints(gp1, gp2)
+		for _, p := range points {
+			grid.Set(p)
+		}
+	}
+	graph.DrawBraillePatterns(&m.Canvas,
+		canvas.Point{X: 0, Y: 0}, grid.BraillePatterns(), m.Style)
+	m.Canvas.SetStyle(m.Style)
+}
+
 func (m Model) Init() tea.Cmd {
 	return m.Canvas.Init()
 }
