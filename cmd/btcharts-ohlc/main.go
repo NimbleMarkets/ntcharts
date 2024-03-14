@@ -14,6 +14,7 @@ import (
 
 	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
 	tslc "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
+	spark "github.com/NimbleMarkets/bubbletea-charts/sparkline"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -48,7 +49,11 @@ const ( // used for flag options and data set names
 	LowOptionName      = "low"
 	CloseOptionName    = "close"
 	AdjCloseOptionName = "adjclose"
+	VolumeOptionName   = "vol"
 )
+
+const mil = 1000000.0
+const daySeconds = 86400
 
 var dataSetStyles = map[string]lipgloss.Style{
 	OpenOptionName:     openLineStyle,
@@ -65,6 +70,7 @@ type displayOptions struct {
 	High       bool
 	Low        bool
 	Close      bool
+	Volume     bool
 	AdjClose   bool // replaces Close with Adjusted Close
 	LineStyle  runes.LineStyle
 	UseBraille bool // whether to draw braille lines
@@ -138,7 +144,12 @@ func NewRecord(s []string) (r record) {
 
 type model struct {
 	chart       tslc.Model
+	sparkline   spark.Model
 	zoneManager *zone.Manager
+
+	vol  map[int64]float64
+	minV float64
+	maxV float64
 }
 
 func newModel(minTime, maxTime time.Time, minY, maxY float64, tsm map[string][]tslc.TimePoint) *model {
@@ -148,15 +159,31 @@ func newModel(minTime, maxTime time.Time, minY, maxY float64, tsm map[string][]t
 			tslc.WithYRange(minY, maxY),
 			tslc.WithAxesStyles(axisStyle, labelStyle),
 		),
+		sparkline:   spark.New(20, 10),
 		zoneManager: zone.New(),
+		vol:         make(map[int64]float64),
+		minV:        float64(minTime.Unix()),
+		maxV:        float64(maxTime.Unix()),
 	}
 	m.chart.Focus()
 
 	// set time series data for each line
 	for name, tsd := range tsm {
-		m.chart.SetDataSetStyles(name, displayOpts.LineStyle, dataSetStyles[name])
-		for _, p := range tsd {
-			m.chart.PushDataSet(name, p)
+		if name == VolumeOptionName {
+			for _, p := range tsd {
+				m.vol[p.Time.Unix()] = p.Value
+				switch {
+				case p.Value < m.minV:
+					m.minV = p.Value
+				case p.Value > m.maxV:
+					m.maxV = p.Value
+				}
+			}
+		} else {
+			m.chart.SetDataSetStyles(name, displayOpts.LineStyle, dataSetStyles[name])
+			for _, p := range tsd {
+				m.chart.PushDataSet(name, p)
+			}
 		}
 	}
 
@@ -183,6 +210,22 @@ func (m *model) resetTimeRange() {
 	m.chart.SetViewTimeRange(viewMin, viewMax)
 }
 
+// drawVolume draws the data set Volume onto the sparkline such that
+// each column below the corresponding date for that volume
+func (m *model) drawVolume() {
+	m.sparkline.Clear()
+	startX := int64(m.chart.ViewMinX())
+	endX := int64(m.chart.ViewMaxX())
+	for i := startX; i < endX; i += daySeconds {
+		v := m.vol[i]
+		if v != 0 {
+			v -= m.minV
+		}
+		m.sparkline.Push(float64(v))
+	}
+	m.sparkline.Draw()
+}
+
 func (m model) Init() tea.Cmd {
 	return nil
 }
@@ -191,8 +234,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		// resize window to terminal screen sizes
-		m.chart.Resize(msg.Width-3, msg.Height-4)
-		m.resetTimeRange()
+		if displayOpts.Volume {
+			cHeight := (msg.Height * 4 / 6)
+			sHeight := (msg.Height * 1 / 6)
+			extra := msg.Height - (sHeight + cHeight) - 5
+			m.chart.Resize(msg.Width-2, cHeight+extra)
+			m.resetTimeRange()
+			m.sparkline.Resize(msg.Width-2, sHeight)
+		} else {
+			m.chart.Resize(msg.Width-2, msg.Height-4)
+			m.resetTimeRange()
+		}
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -204,6 +256,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chart.DrawBrailleAll()
 	} else {
 		m.chart.DrawAll()
+	}
+	if displayOpts.Volume {
+		m.drawVolume()
 	}
 	return m, nil
 }
@@ -227,10 +282,22 @@ func (m model) View() string {
 		}
 	}
 
+	// combine line chart and sparkline if showing volume
+	var graphView string
+	if displayOpts.Volume {
+		graphView = lipgloss.JoinVertical(lipgloss.Left,
+			m.chart.View(),
+			fmt.Sprintf("Daily Volume Range: %.02fM - %0.2fM\n", m.minV/mil, m.maxV/mil),
+			m.sparkline.View(),
+		)
+	} else {
+		graphView = m.chart.View()
+	}
+
 	startDate := time.Unix(int64(m.chart.MinX()), 0).UTC()
 	endDate := time.Unix(int64(m.chart.MaxX()), 0).UTC()
 	header := fmt.Sprintf("OHLC Chart from %s to %s. Legend [%s ]\n", startDate, endDate, legend)
-	s := defaultStyle.Render(header + m.chart.View())
+	s := defaultStyle.Render(header + graphView)
 
 	// wrap output string in bubblezone.Manager.Scan()
 	// if SetZoneManager(bubblezone.Manager) is used
@@ -292,6 +359,10 @@ func addClose(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
 	}
 }
 
+func addVolume(r record, s map[string][]tslc.TimePoint) {
+	s[VolumeOptionName] = append(s[VolumeOptionName], tslc.TimePoint{Time: r.Date, Value: float64(r.Volume)})
+}
+
 func timeseriesFromRecords(r []record) (s map[string][]tslc.TimePoint, minY float64, maxY float64, minTime, maxTime time.Time) {
 	s = make(map[string][]tslc.TimePoint)
 	if len(r) == 0 {
@@ -332,6 +403,9 @@ func timeseriesFromRecords(r []record) (s map[string][]tslc.TimePoint, minY floa
 		if displayOpts.All || displayOpts.Close {
 			addClose(rec, s, &minY, &maxY)
 		}
+		if displayOpts.Volume {
+			addVolume(rec, s)
+		}
 	}
 	return
 }
@@ -347,6 +421,7 @@ func main() {
 	flag.BoolVar(&displayOpts.Low, LowOptionName, false, "whether to display LOW line")
 	flag.BoolVar(&displayOpts.Close, CloseOptionName, false, "whether to display CLOSE line")
 	flag.BoolVar(&displayOpts.AdjClose, AdjCloseOptionName, false, "whether to replace CLOSE line with Adjusted CLOSE line (only used if --close enabled)")
+	flag.BoolVar(&displayOpts.Volume, VolumeOptionName, false, "whether to display sparkline containing VOLUME")
 	flag.Parse()
 
 	// if nothing specified, default to display all lines
