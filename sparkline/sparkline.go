@@ -19,9 +19,9 @@ import (
 
 // Model contains state of a sparkline
 type Model struct {
-	Auto   bool           // whether to automatically set max value when adding data
-	Style  lipgloss.Style // style applied when drawing columns
-	Canvas canvas.Model
+	AutoMaxValue bool           // whether to automatically set max value when adding data
+	Style        lipgloss.Style // style applied when drawing columns
+	Canvas       canvas.Model
 
 	max float64                        // expected maximum data value
 	buf *buffer.Float64ScaleRingBuffer // buffer with size as width of canvas
@@ -32,11 +32,11 @@ type Model struct {
 // By default, sparkline will automatically scale bars to new maximum data values.
 func New(w, h int, opts ...Option) Model {
 	m := Model{
-		Auto:   true,
-		Style:  lipgloss.NewStyle(),
-		Canvas: canvas.New(w, h),
-		max:    1,
-		buf:    buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/1),
+		AutoMaxValue: true,
+		Style:        lipgloss.NewStyle(),
+		Canvas:       canvas.New(w, h),
+		max:          1,
+		buf:          buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/1),
 	}
 	for _, opt := range opts {
 		opt(&m)
@@ -54,8 +54,8 @@ func (m *Model) Height() int {
 	return m.Canvas.Height()
 }
 
-// Max returns expected maximum data value.
-func (m *Model) Max() float64 {
+// MaxValue returns expected maximum data value.
+func (m *Model) MaxValue() float64 {
 	return m.max
 }
 
@@ -101,7 +101,7 @@ func (m *Model) Clear() {
 // Data will be scaled using expected max value and sparkline height.
 func (m *Model) Push(f float64) {
 	v := math.Max(f, 0)
-	if m.Auto && v > m.max {
+	if m.AutoMaxValue && v > m.max {
 		m.SetMax(v)
 	}
 	m.buf.Push(v)

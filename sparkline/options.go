@@ -34,11 +34,11 @@ func WithUpdateHandler(h canvas.UpdateHandler) Option {
 	}
 }
 
-// WithNoAuto disables automatically setting the max value
+// WithNoAutoMaxValue disables automatically setting the max value
 // if new data greater than the current max is added.
-func WithNoAuto() Option {
+func WithNoAutoMaxValue() Option {
 	return func(m *Model) {
-		m.Auto = false
+		m.AutoMaxValue = false
 	}
 }
 

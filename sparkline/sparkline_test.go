@@ -18,15 +18,15 @@ func TestNew(t *testing.T) {
 	if sl.Height() != h {
 		t.Errorf("Height not initialized:%d", sl.Height())
 	}
-	if sl.Max() != max {
-		t.Errorf("Max not initialized:%f", sl.Max())
+	if sl.MaxValue() != max {
+		t.Errorf("MaxValue not initialized:%f", sl.MaxValue())
 	}
 	if sl.Scale() != scale {
 		t.Errorf("Scale not initialized:%f", sl.Scale())
 	}
 }
 
-func TestAuto(t *testing.T) {
+func TestAutoMaxValue(t *testing.T) {
 	w := 30
 	h := 15
 	max := 81.4
@@ -36,14 +36,14 @@ func TestAuto(t *testing.T) {
 	sl.Push(max / 2)
 	scale := float64(h) / (max / 2)
 	if sl.Scale() != scale {
-		t.Errorf("Scale not correct with Auto true after greater value than max:%f", sl.Scale())
+		t.Errorf("Scale not correct with AutoMaxValue true after greater value than max:%f", sl.Scale())
 	}
 
 	max = 99.2
 	scale = float64(h) / max
 	sl.Push(max)
 	if sl.Scale() != scale {
-		t.Errorf("Scale not correct with Auto true after greater value than max:%f", sl.Scale())
+		t.Errorf("Scale not correct with AutoMaxValue true after greater value than max:%f", sl.Scale())
 	}
 
 	sl.Push(max / 2)
@@ -52,23 +52,23 @@ func TestAuto(t *testing.T) {
 		t.Errorf("Scale changed after lesser value than max:%f", sl.Scale())
 	}
 
-	sl.Auto = false
+	sl.AutoMaxValue = false
 	max = 104.7
 	scale = float64(h) / max
 	sl.Push(max)
 	if sl.Scale() == scale {
-		t.Errorf("Scale changed with Auto false after greater value than max:%f", sl.Scale())
+		t.Errorf("Scale changed with AutoMaxValue false after greater value than max:%f", sl.Scale())
 	}
 }
 
-func TestNoAuto(t *testing.T) {
+func TestNoAutoMaxValue(t *testing.T) {
 	w := 30
 	h := 15
 	max := 100.0
 	newMax := 150.0
 	scale := float64(h) / max
 
-	sl := New(w, h, WithMaxValue(max), WithNoAuto())
+	sl := New(w, h, WithMaxValue(max), WithNoAutoMaxValue())
 
 	sl.Push(max / 2)
 	if sl.Scale() != scale {
@@ -77,14 +77,14 @@ func TestNoAuto(t *testing.T) {
 
 	sl.Push(newMax)
 	if sl.Scale() != scale {
-		t.Errorf("Scale changed with Auto false after greater value than max:%f", sl.Scale())
+		t.Errorf("Scale changed with AutoMaxValue false after greater value than max:%f", sl.Scale())
 	}
 
-	sl.Auto = true
+	sl.AutoMaxValue = true
 	scale = float64(h) / newMax
 	sl.Push(newMax)
 	if sl.Scale() != scale {
-		t.Errorf("Scale failed to changed with Auto true after greater value than max:%f", sl.Scale())
+		t.Errorf("Scale failed to changed with AutoMaxValue true after greater value than max:%f", sl.Scale())
 	}
 
 }
