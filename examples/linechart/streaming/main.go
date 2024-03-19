@@ -149,8 +149,8 @@ func main() {
 		streamlinechart.WithAxesStyles(axisStyle, labelStyle),
 		streamlinechart.WithStyles(runes.ArcLineStyle, graphLineStyle1), // graphLineStyle1 replaces linechart rune style
 		streamlinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
+		streamlinechart.WithZoneManager(zoneManager),
 	)
-	slc2.SetZoneManager(zoneManager)
 
 	m := model{slc1, slc2, zoneManager}
 	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {

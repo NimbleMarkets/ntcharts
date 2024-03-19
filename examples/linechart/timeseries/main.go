@@ -200,8 +200,8 @@ func main() {
 		timeserieslinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
 		timeserieslinechart.WithUpdateHandler(timeserieslinechart.SecondUpdateHandler(1)),
 		timeserieslinechart.WithXLabelFormatter(timeserieslinechart.HourTimeLabelFormatter()), // replace default Date with Hour formatter
+		timeserieslinechart.WithZoneManager(zoneManager),
 	)
-	tslc2.SetZoneManager(zoneManager)
 
 	//timeserieslinechart 3 and 4 are copies of 1 and 2 respectively
 	tslc3 := timeserieslinechart.New(width, height)
@@ -221,8 +221,8 @@ func main() {
 		timeserieslinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
 		timeserieslinechart.WithUpdateHandler(timeserieslinechart.SecondUpdateHandler(1)),
 		timeserieslinechart.WithXLabelFormatter(timeserieslinechart.HourTimeLabelFormatter()), // replace default Date with Hour formatter
+		timeserieslinechart.WithZoneManager(zoneManager),
 	)
-	tslc4.SetZoneManager(zoneManager)
 
 	m := model{tslc1, tslc2, tslc3, tslc4, zoneManager}
 	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {

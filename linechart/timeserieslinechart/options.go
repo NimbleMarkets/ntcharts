@@ -9,6 +9,7 @@ import (
 	"github.com/NimbleMarkets/bubbletea-charts/linechart"
 
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // Option is used to set options when initializing a timeserieslinechart. Example:
@@ -28,6 +29,14 @@ func WithLineChart(lc *linechart.Model) Option {
 func WithUpdateHandler(h linechart.UpdateHandler) Option {
 	return func(m *Model) {
 		m.UpdateHandler = h
+	}
+}
+
+// WithZoneManager sets the bubblezone Manager used
+// when processing bubbletea Msg mouse events in Update().
+func WithZoneManager(zm *zone.Manager) Option {
+	return func(m *Model) {
+		m.SetZoneManager(zm)
 	}
 }
 

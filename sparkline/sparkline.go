@@ -27,9 +27,9 @@ type Model struct {
 	buf *buffer.Float64ScaleRingBuffer // buffer with size as width of canvas
 }
 
-// New returns a sparkline Model initialized with given width, height.
-// By default, sparkline wil automatically scale to new maximum data values.
-// expected data max value and various options.
+// New returns a sparkline Model initialized with given width, height
+// and various options.
+// By default, sparkline will automatically scale bars to new maximum data values.
 func New(w, h int, opts ...Option) Model {
 	m := Model{
 		Auto:   true,

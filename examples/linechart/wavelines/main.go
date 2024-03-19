@@ -177,9 +177,8 @@ func main() {
 		wavelinechart.WithAxesStyles(axisStyle, labelStyle),
 		wavelinechart.WithStyles(runes.ThinLineStyle, graphLineStyle1), // graphLineStyle1 replaces linechart rune style
 		wavelinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
+		wavelinechart.WithZoneManager(zoneManager),
 	)
-	// wlc2.SetDataSetStyle(dataSet2, runes.ArcLineStyle, graphLineStyle2)
-	wlc2.SetZoneManager(zoneManager)
 
 	m := model{wlc1, wlc2, zoneManager}
 	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
