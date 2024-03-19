@@ -2,6 +2,7 @@ version: '3'
 
 tasks:
   default:
+    desc: 'Default task runs the "build" task'
     deps:
       - build
 
@@ -9,6 +10,11 @@ tasks:
     desc: 'Lists available tasks'
     cmds:
       - task --list-all
+
+  dev-deps:
+    desc: 'Install developer dependencies'
+    cmds:
+      - go install 'golang.org/x/tools/cmd/godoc@latest'
 
 ###############################################################################
 
@@ -32,6 +38,15 @@ tasks:
     desc: 'Clean all'
     deps:
       - clean-examples
+
+  go-doc-server:
+    desc: 'Run Go documentation server'
+    cmds:
+      - echo 'http://localhost:6060/pkg/github.com/NimbleMarkets/bubbletea-charts/'
+      - godoc -http=:6060
+    deps:
+      - dev-deps
+      - go-tidy
 
 ###############################################################################
 # Commands
