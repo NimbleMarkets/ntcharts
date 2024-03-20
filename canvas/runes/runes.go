@@ -254,6 +254,18 @@ func LowerBlockElementFromFloat64(f float64) rune {
 	return lowerBlockElements[e]
 }
 
+var leftBlockElements = [9]rune{
+	Null,
+	LeftBlockOne,
+	LeftBlockTwo,
+	LeftBlockThree,
+	LeftBlockFour,
+	LeftBlockFive,
+	LeftBlockSix,
+	LeftBlockSeven,
+	FullBlock,
+}
+
 // IsLeftBlockElement returns whether a given rune is
 // considered a left block or full block element.
 func IsLeftBlockElement(r rune) bool {
@@ -261,6 +273,25 @@ func IsLeftBlockElement(r rune) bool {
 		return true
 	}
 	return false
+}
+
+// LeftBlockElementFromFloat64 returns either an empty rune
+// or a left Block Element rune using given float64.
+// A float64 < 1.0 will return the nearest one eights left block element
+// corresponding to the float value. An empty rune will be returned if
+// float64 does not round to lowest 1/8 left block.
+func LeftBlockElementFromFloat64(f float64) rune {
+	if f >= 1 {
+		return leftBlockElements[8]
+	} else if f <= 0 {
+		return leftBlockElements[0]
+	}
+	e := int(f / .125) // number of 1/8s blocks to show
+	// round remaining fraction smaller than 1/8 to nearest 1/16
+	if n := f - (float64(e) * .125); n >= 0.0625 {
+		e++
+	}
+	return leftBlockElements[e]
 }
 
 // LineStyle enumerates the different style of line runes to display.
