@@ -50,6 +50,13 @@ func WithCursor(p Point) Option {
 	}
 }
 
+// WithFocus sets the canvas to be focused.
+func WithFocus() Option {
+	return func(m *Model) {
+		m.Focus()
+	}
+}
+
 // WithContent copies the given []string into
 // the contents of the canvas with default style.
 // Each string will be copied into a row starting
