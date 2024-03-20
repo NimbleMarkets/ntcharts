@@ -370,8 +370,8 @@ func DrawColumns(m *canvas.Model, p canvas.Point, seqLen []float64, s lipgloss.S
 	}
 }
 
-// DrawColumnBottomToTop draws block element runes up from given point.
-// The value of float64 is the number of characters to draw up.
+// DrawColumnBottomToTop draws block element runes going up from given point.
+// The value of float64 is the number of characters to draw going up.
 // A fractional value is used since there are 1/8th lower block elements and
 // fractional values will map to the nearest 1/8th block for the last rune drawn.
 // Handles overlapping columns of diferent rune heights.
@@ -380,6 +380,9 @@ func DrawColumns(m *canvas.Model, p canvas.Point, seqLen []float64, s lipgloss.S
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawColumnBottomToTop(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
+	if v <= 0 {
+		return
+	}
 	x := p.X
 	y := p.Y
 
@@ -400,7 +403,7 @@ func DrawColumnBottomToTop(m *canvas.Model, p canvas.Point, v float64, s lipglos
 			m.SetCell(canvas.Point{x, y - i}, fb)
 		}
 		// set column top rune
-		m.SetCell(canvas.Point{x, y - end}, canvas.NewCellWithStyle(r, s))
+		DrawColumnRune(m, canvas.Point{x, y - end}, r, s)
 	} else if nh < h { // new column shorter than old column
 		// replace existing full blocks with new full blocks
 		end := int(n)
@@ -432,7 +435,7 @@ func DrawColumnBottomToTop(m *canvas.Model, p canvas.Point, v float64, s lipglos
 // Overlapping runes can only occur if either one of the runes is a full block element rune,
 // and the other rune is not a full block element rune.
 // If the runes cannot overlap, then it will the existing rune will be replaced.
-// Does nothing if given rune is Null or is not a columne rune.
+// Does nothing if given rune is Null or is not a column rune.
 func DrawColumnRune(m *canvas.Model, p canvas.Point, r rune, s lipgloss.Style) {
 	if (r == runes.Null) || !runes.IsLowerBlockElement(r) {
 		return
@@ -460,6 +463,120 @@ func getColumnHeight(m *canvas.Model, p canvas.Point) int {
 	for runes.IsLowerBlockElement(c.Rune) {
 		i++
 		c = m.Cell(canvas.Point{x, y - i})
+	}
+	return i
+}
+
+// DrawRows draws rows going right on to canvas
+// starting from a given (X,Y) coordinate and a sequence of row widths.
+// Rows will be drawn from top to bottom and
+// sequential row widths will increment Y coordinates for drawing.
+// Handles overlapping rows of diferent rune widths.
+// If there exists an existing row at given Point with same width as new row,
+// then the existing row will be replaced.
+// Applies style to all block runes.
+// Coordinates (0,0) is top left of canvas.
+func DrawRows(m *canvas.Model, p canvas.Point, seqLen []float64, s lipgloss.Style) {
+	y := p.Y
+	x := p.X
+	for i, f := range seqLen {
+		DrawRowLeftToRight(m, canvas.Point{x, y + i}, f, s)
+	}
+}
+
+// DrawRowLeftToRight draws block element runes going right from given point.
+// The value of float64 is the number of characters to draw going right.
+// A fractional value is used since there are 1/8th left block elements and
+// fractional values will map to the nearest 1/8th block for the last rune drawn.
+// Handles overlapping rows of diferent rune widths.
+// If there exists an existing row at given Point with same width as new row,
+// then the existing row will be replaced.
+// Applies style to all block runes.
+// Coordinates (0,0) is top left of canvas.
+func DrawRowLeftToRight(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
+	if v <= 0 {
+		return
+	}
+	x := p.X
+	y := p.Y
+
+	w := getRowWidth(m, p) // width of existing row on canvas
+	n := math.Floor(v)     // number of full blocks to show
+	nw := int(n)           // width of new row to draw on canvas
+
+	r := runes.LeftBlockElementFromFloat64(v - n)
+	if r != runes.Null {
+		nw++
+	}
+
+	fb := canvas.NewCellWithStyle(runes.FullBlock, s)
+	if (w == 0) || (nw == w) { // replace entire row if same width or no existing row
+		// set full block rows
+		end := int(n)
+		for i := 0; i < end; i++ {
+			m.SetCell(canvas.Point{x + i, y}, fb)
+		}
+		// set row rightmost rune
+		DrawRowRune(m, canvas.Point{x + end, y}, r, s)
+	} else if nw < w { // new row thinner than old row
+		// replace existing full blocks with new full blocks
+		end := int(n)
+		for i := 0; i < end; i++ {
+			m.SetCell(canvas.Point{x + i, y}, fb)
+		}
+		// overlap new row rightmost rune on top of old full block
+		DrawRowRune(m, canvas.Point{x + end, y}, r, s)
+	} else if nw > w { // new row wider than old row
+		oc := (w - 1) // index of existing row rightmost rune
+		if oc <= 0 {
+			oc = 0
+		}
+		// overlap existing row rightmost rune on top of new full block
+		DrawRowRune(m, canvas.Point{x + oc, y}, runes.FullBlock, s)
+		// draw new full blocks above existing rows
+		end := int(n)
+		for i := w; i < end; i++ {
+			m.SetCell(canvas.Point{x + i, y}, fb)
+		}
+		// set new row rightmost rune
+		m.SetCell(canvas.Point{x + end, y}, canvas.NewCellWithStyle(r, s))
+	}
+}
+
+// DrawRowRune draws a row rune on to the canvas at given (X,Y) coordinates with given style.
+// The function checks for existing row runes already on the canvas and attempts to
+// draws runes such that the runes appear overlapping.
+// Overlapping runes can only occur if either one of the runes is a full block element rune,
+// and the other rune is not a full block element rune.
+// If the runes cannot overlap, then it will the existing rune will be replaced.
+// Does nothing if given rune is Null or is not a row rune.
+func DrawRowRune(m *canvas.Model, p canvas.Point, r rune, s lipgloss.Style) {
+	if (r == runes.Null) || !runes.IsLeftBlockElement(r) {
+		return
+	}
+	rs := s.Copy()
+	c := m.Cell(p)
+	if runes.IsLeftBlockElement(c.Rune) {
+		if (r == runes.FullBlock) && (c.Rune != runes.FullBlock) { // existing rune on top of new full block
+			r = c.Rune
+			rs.Background(s.GetForeground()).Foreground(c.Style.GetForeground())
+		} else if (c.Rune == runes.FullBlock) && r != runes.FullBlock { // new rune on top of existing full block
+			rs.Background(c.Style.GetForeground()).Foreground(s.GetForeground())
+		}
+	}
+	m.SetCell(p, canvas.NewCellWithStyle(r, rs))
+}
+
+// getRowWidth obtains number of runes drawn
+// by the DrawRowRightToLeft function at given Point.
+func getRowWidth(m *canvas.Model, p canvas.Point) int {
+	x := p.X
+	y := p.Y
+	i := 0
+	c := m.Cell(canvas.Point{x, y})
+	for runes.IsLeftBlockElement(c.Rune) {
+		i++
+		c = m.Cell(canvas.Point{x + i, y})
 	}
 	return i
 }
