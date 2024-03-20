@@ -33,37 +33,6 @@ type model struct {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "up":
-			m.cursor.Y--
-			if m.cursor.Y < 0 {
-				m.cursor.Y = 0
-			}
-		case "down":
-			m.cursor.Y++
-			if m.cursor.Y > m.c1.Height()-1 {
-				m.cursor.Y = m.c1.Height() - 1
-			}
-		case "right":
-			m.cursor.X++
-			if m.cursor.X > m.c1.Width()-1 {
-				m.cursor.X = m.c1.Width() - 1
-			}
-		case "left":
-			m.cursor.X--
-			if m.cursor.X < 0 {
-				m.cursor.X = 0
-			}
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		}
-	}
 	columnLens1 := []float64{1, 1.891, 2, 2.694, 1.561, 2.109, 0.889, 6.836, 0, 12, 6.708, 8.943, 1.066, 2.55, 8.242, 3.513, 9.768, 9.989, 4.372}
 	columnLens2 := []float64{2.907, 1.382, 7.086, 5.401, 8.561, 4.848, 2.398, 4.302, 8.822, 1.149, 0, 6.733, 2.805, 5, 7.138, 10.385, 2, 3.707, 9.529, 4.272}
 
@@ -82,11 +51,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	graph.DrawXYAxisLeft(&m.c3, m.cursor, axisStyle)
 	graph.DrawColumns(&m.c3, m.cursor.Add(canvas.Point{1, -1}), columnLens1, blockStyle)
 	graph.DrawColumns(&m.c3, m.cursor.Add(canvas.Point{1, -1}), columnLens2, blockStyle2)
+	return nil
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		}
+	}
+	m.c1, _ = m.c1.Update(msg)
+	m.c2, _ = m.c2.Update(msg)
+	m.c3, _ = m.c3.Update(msg)
 	return m, nil
 }
 
 func (m model) View() string {
-	s := "arrow keys to move origin around, `q/ctrl+c` to quit\n"
+	s := "arrow keys to move canvas cursor around, `q/ctrl+c` to quit\n"
 	s += "columns of same height will replace existing columns,\n"
 	s += "even if previous column top block was taller\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
@@ -98,11 +81,15 @@ func (m model) View() string {
 }
 
 func main() {
+	cWidth := 100
+	cHeight := 100
+	vWidth := 20
+	vHeight := 11
 	yAxis := 0
 	xAxis := 10
-	c1 := canvas.New(20, 11)
-	c2 := canvas.New(20, 11)
-	c3 := canvas.New(20, 11)
+	c1 := canvas.New(cWidth, cHeight, canvas.WithViewWidth(vWidth), canvas.WithViewHeight(vHeight), canvas.WithFocus())
+	c3 := canvas.New(cWidth, cHeight, canvas.WithViewWidth(vWidth), canvas.WithViewHeight(vHeight), canvas.WithFocus())
+	c2 := canvas.New(cWidth, cHeight, canvas.WithViewWidth(vWidth), canvas.WithViewHeight(vHeight), canvas.WithFocus())
 
 	// canvas 1 shows columns set 1
 	// canvas 2 draws columns set 2
