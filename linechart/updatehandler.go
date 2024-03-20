@@ -243,18 +243,18 @@ func keyYHandler(m *Model, msg tea.KeyMsg, yIncrement float64) {
 
 // mouseActionXYHandler handles mouse click messages for X and Y axes
 func mouseActionXYHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, xIncrement, yIncrement float64) {
-	if m.GetZoneManager() == nil {
+	if m.ZoneManager() == nil {
 		return
 	}
 	switch msg.Action {
 	case tea.MouseActionPress:
-		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		zInfo := m.ZoneManager().Get(m.ZoneID())
 		if zInfo.InBounds(msg) {
 			x, y := zInfo.Pos(msg)
 			*lastPos = canvas.Point{X: x, Y: y}
 		}
 	case tea.MouseActionMotion:
-		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		zInfo := m.ZoneManager().Get(m.ZoneID())
 		if zInfo.InBounds(msg) {
 			x, y := zInfo.Pos(msg)
 			if x > lastPos.X {
@@ -274,18 +274,18 @@ func mouseActionXYHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, xIn
 
 // mouseActionXHandler handles mouse click messages for X axis
 func mouseActionXHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, increment float64) {
-	if m.GetZoneManager() == nil {
+	if m.ZoneManager() == nil {
 		return
 	}
 	switch msg.Action {
 	case tea.MouseActionPress:
-		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		zInfo := m.ZoneManager().Get(m.ZoneID())
 		if zInfo.InBounds(msg) {
 			x, y := zInfo.Pos(msg)
 			*lastPos = canvas.Point{X: x, Y: y}
 		}
 	case tea.MouseActionMotion:
-		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		zInfo := m.ZoneManager().Get(m.ZoneID())
 		if zInfo.InBounds(msg) {
 			x, y := zInfo.Pos(msg)
 			if x > lastPos.X {
@@ -301,18 +301,18 @@ func mouseActionXHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, incr
 
 // mouseActionYHandler handles mouse click messages for Y axis
 func mouseActionYHandler(m *Model, msg tea.MouseMsg, lastPos *canvas.Point, increment float64) {
-	if m.GetZoneManager() == nil {
+	if m.ZoneManager() == nil {
 		return
 	}
 	switch msg.Action {
 	case tea.MouseActionPress:
-		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		zInfo := m.ZoneManager().Get(m.ZoneID())
 		if zInfo.InBounds(msg) {
 			x, y := zInfo.Pos(msg)
 			*lastPos = canvas.Point{X: x, Y: y} // set position of last click
 		}
 	case tea.MouseActionMotion: // event occurs when mouse is pressed
-		zInfo := m.GetZoneManager().Get(m.GetZoneID())
+		zInfo := m.ZoneManager().Get(m.ZoneID())
 		if zInfo.InBounds(msg) {
 			x, y := zInfo.Pos(msg)
 			if y > lastPos.Y {

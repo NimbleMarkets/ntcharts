@@ -367,13 +367,13 @@ func (m *Model) SetZoneManager(zm *zone.Manager) {
 	}
 }
 
-// GetZoneManager will return linechart zone Manager.
-func (m *Model) GetZoneManager() *zone.Manager {
+// ZoneManager will return linechart zone Manager.
+func (m *Model) ZoneManager() *zone.Manager {
 	return m.zoneManager
 }
 
-// GetZoneID will return linechart zone ID used by zone Manager.
-func (m *Model) GetZoneID() string {
+// ZoneID will return linechart zone ID used by zone Manager.
+func (m *Model) ZoneID() string {
 	return m.zoneID
 }
 

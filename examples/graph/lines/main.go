@@ -70,12 +70,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.MouseMsg:
 		// move all cursors at the same time on any mouse action
-		if m.zM.Get(m.c1.GetZoneID()).InBounds(msg) {
-			m.cursor.X, m.cursor.Y = m.zM.Get(m.c1.GetZoneID()).Pos(msg)
-		} else if m.zM.Get(m.c2.GetZoneID()).InBounds(msg) {
-			m.cursor.X, m.cursor.Y = m.zM.Get(m.c2.GetZoneID()).Pos(msg)
-		} else if m.zM.Get(m.c3.GetZoneID()).InBounds(msg) {
-			m.cursor.X, m.cursor.Y = m.zM.Get(m.c3.GetZoneID()).Pos(msg)
+		if m.zM.Get(m.c1.ZoneID()).InBounds(msg) {
+			m.cursor.X, m.cursor.Y = m.zM.Get(m.c1.ZoneID()).Pos(msg)
+		} else if m.zM.Get(m.c2.ZoneID()).InBounds(msg) {
+			m.cursor.X, m.cursor.Y = m.zM.Get(m.c2.ZoneID()).Pos(msg)
+		} else if m.zM.Get(m.c3.ZoneID()).InBounds(msg) {
+			m.cursor.X, m.cursor.Y = m.zM.Get(m.c3.ZoneID()).Pos(msg)
 		}
 	}
 	startX := 1 // start drawing sequence at X = 1 for demo, usually start at Y axis

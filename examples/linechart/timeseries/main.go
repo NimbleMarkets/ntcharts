@@ -92,13 +92,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// switch to whichever canvas was clicked on
 			switch {
-			case m.zM.Get(m.tslc1.GetZoneID()).InBounds(msg):
+			case m.zM.Get(m.tslc1.ZoneID()).InBounds(msg):
 				m.tslc1.Focus()
-			case m.zM.Get(m.tslc2.GetZoneID()).InBounds(msg):
+			case m.zM.Get(m.tslc2.ZoneID()).InBounds(msg):
 				m.tslc2.Focus()
-			case m.zM.Get(m.tslc3.GetZoneID()).InBounds(msg):
+			case m.zM.Get(m.tslc3.ZoneID()).InBounds(msg):
 				m.tslc3.Focus()
-			case m.zM.Get(m.tslc4.GetZoneID()).InBounds(msg):
+			case m.zM.Get(m.tslc4.ZoneID()).InBounds(msg):
 				m.tslc4.Focus()
 			}
 		}

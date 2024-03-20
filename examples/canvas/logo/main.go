@@ -52,10 +52,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionPress {
-			if m.zM.Get(m.c1.GetZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
+			if m.zM.Get(m.c1.ZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
 				m.c2.Blur()
 				m.c1.Focus()
-			} else if m.zM.Get(m.c2.GetZoneID()).InBounds(msg) { // switch to canvas 2 if clicked on it
+			} else if m.zM.Get(m.c2.ZoneID()).InBounds(msg) { // switch to canvas 2 if clicked on it
 				m.c1.Blur()
 				m.c2.Focus()
 			} else {
