@@ -74,10 +74,25 @@ tasks:
   build-examples:
     desc: 'Build all examples'
     deps:
+      - build-ex-barchart
       - build-ex-canvas
       - build-ex-graph
       - build-ex-linechart
       - build-ex-sparkline
+
+  build-ex-barchart:
+    desc: 'Build barchart examples'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/btcharts-barchart-horizontal examples/barchart/horizontal/*.go
+      - go build -o bin/btcharts-barchart-vertical examples/barchart/vertical/*.go
+    sources:
+      - canvas/**/*.go
+      - examples/barchart/**/*.go
+      - barchart/**/*.go
+    generates:
+      - bin/btcharts-barchart-horizontal
+      - bin/btcharts-barchart-vertical
 
   build-ex-canvas:
     desc: 'Build canvas example'
@@ -88,7 +103,7 @@ tasks:
       - examples/canvas/logo/*.go
       - canvas/**/*.go
     generates:
-      - bin/btcharts-ex-canvas
+      - bin/btcharts-canvas-logo
 
   build-ex-graph:
     desc: 'Build graph examples'
@@ -98,6 +113,7 @@ tasks:
       - go build -o bin/btcharts-graph-circles examples/graph/circles/*.go
       - go build -o bin/btcharts-graph-columns examples/graph/columns/*.go
       - go build -o bin/btcharts-graph-lines examples/graph/lines/*.go
+      - go build -o bin/btcharts-graph-rows examples/graph/rows/*.go
     sources:
       - canvas/**/*.go
       - examples/graph/**/*.go
@@ -106,6 +122,7 @@ tasks:
       - bin/btcharts-graph-circles
       - bin/btcharts-graph-columns
       - bin/btcharts-graph-lines
+      - bin/btcharts-graph-rows
 
   build-ex-linechart:
     desc: 'Build linechart examples'
@@ -144,7 +161,8 @@ tasks:
   clean-examples:
     desc: 'Removes all examples from bin'
     cmds:
-      - rm -f bin/btcharts-ex-canvas
-      - rm -f bin/btcharts-graph-braille bin/btcharts-graph-circles bin/btcharts-graph-columns bin/btcharts-graph-lines bin/btcharts-linechart-circles
-      - rm -f bin/btcharts-linechart-lines bin/btcharts-linechart-scatter bin/btcharts-linechart-streaming bin/btcharts-linechart-wavelines bin/btcharts-sparkline
+      - rm -f bin/btcharts-barchart-horizontal bin/btcharts-barchart-vertical
+      - rm -f bin/btcharts-canvas-logo
+      - rm -f bin/btcharts-graph-braille bin/btcharts-graph-circles bin/btcharts-graph-columns bin/btcharts-graph-lines bin/btcharts-graph-rows bin/btcharts-linechart-circles
+      - rm -f bin/btcharts-linechart-lines bin/btcharts-linechart-scatter bin/btcharts-linechart-streaming bin/btcharts-linechart-wavelines bin/btcharts-linechart-timeseries
       - rm -f bin/btcharts-sparkline
