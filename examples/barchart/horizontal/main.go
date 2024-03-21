@@ -57,8 +57,19 @@ func legend(bd barchart.BarData) (r string) {
 	return
 }
 
+func totals(lv []barchart.BarData) (r string) {
+	r = "Totals\n"
+	for _, bd := range lv {
+		var sum float64
+		for _, bv := range bd.Values {
+			sum += bv.Value
+		}
+		r += "\n" + fmt.Sprintf("%s %.01f", bd.Label, sum)
+	}
+	return
+}
 func selectedData() (r string) {
-	r = "Selected:\n"
+	r = "Selected\n"
 	if len(selectedBarData.Values) == 0 {
 		return
 	}
@@ -111,7 +122,10 @@ func (m model) View() string {
 		defaultStyle.Render(title(&m.b2)+m.b2.View()),
 		defaultStyle.Render(title(&m.b3)+m.b3.View()),
 		lipgloss.JoinVertical(lipgloss.Left,
-			defaultStyle.Render(legend(m.lv[0])),
+			lipgloss.JoinHorizontal(lipgloss.Top,
+				defaultStyle.Render(totals(m.lv)),
+				defaultStyle.Render(legend(m.lv[0])),
+			),
 			defaultStyle.Render(selectedData()),
 		),
 	)
