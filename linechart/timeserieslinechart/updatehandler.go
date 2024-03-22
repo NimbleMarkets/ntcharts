@@ -11,7 +11,7 @@ import (
 )
 
 // DateUpdateHandler is used by timeserieslinechart to enable
-// zooming in and out with the mouse wheels,
+// zooming in and out with the mouse wheel or page up and page down,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by day increments.
@@ -33,7 +33,7 @@ func DateNoZoomUpdateHandler(i int) linechart.UpdateHandler {
 }
 
 // HourUpdateHandler is used by timeserieslinechart to enable
-// zooming in and out with the mouse wheels,
+// zooming in and out with the mouse wheel or page up and page down,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by hour increments.
@@ -55,7 +55,7 @@ func HourNoZoomUpdateHandler(i int) linechart.UpdateHandler {
 }
 
 // SecondUpdateHandler is used by timeserieslinechart to enable
-// zooming in and out with the mouse wheels,
+// zooming in and out with the mouse wheel or page up and page down,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis by second increments.

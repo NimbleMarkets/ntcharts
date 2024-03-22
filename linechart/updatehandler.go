@@ -18,7 +18,7 @@ import (
 type UpdateHandler func(*Model, tea.Msg)
 
 // XYAxesUpdateHandler is used by linechart to enable
-// zooming in and out with the mouse wheels,
+// zooming in and out with the mouse wheel or page up and page down,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // Uses linechart Canvas Keymap for keyboard messages.
@@ -28,6 +28,7 @@ func XYAxesUpdateHandler(xIncrement, yIncrement float64) UpdateHandler {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
 			keyXYHandler(m, msg, xIncrement, yIncrement)
+			keyXYZoomHandler(m, msg, xIncrement, yIncrement)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -43,7 +44,7 @@ func XYAxesUpdateHandler(xIncrement, yIncrement float64) UpdateHandler {
 }
 
 // XAxisUpdateHandler is used by linechart to enable
-// zooming in and out with the mouse wheels,
+// zooming in and out with the mouse wheel or page up and page down,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the X axis with the given increment.
@@ -54,6 +55,7 @@ func XAxisUpdateHandler(increment float64) UpdateHandler {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
 			keyXHandler(m, msg, increment)
+			keyXZoomHandler(m, msg, increment)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -92,7 +94,7 @@ func XAxisNoZoomUpdateHandler(increment float64) UpdateHandler {
 }
 
 // YAxisUpdateHandler is used by steamlinechart to enable
-// zooming in and out with the mouse wheels,
+// zooming in and out with the mouse wheel or page up and page down,
 // moving the viewing window by holding down mouse button and moving,
 // and moving the viewing window with the arrow keys.
 // There is only movement along the Y axis with the given increment.
@@ -103,6 +105,7 @@ func YAxisUpdateHandler(increment float64) UpdateHandler {
 		switch msg := tm.(type) {
 		case tea.KeyMsg:
 			keyYHandler(m, msg, increment)
+			keyYZoomHandler(m, msg, increment)
 		case tea.MouseMsg:
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
@@ -207,7 +210,7 @@ func (m *Model) MoveDown(i float64) {
 
 }
 
-// keyXYHandler handles keyboard messages for X and Y axis
+// keyXYHandler handles keyboard messages for X and Y axis moving
 func keyXYHandler(m *Model, msg tea.KeyMsg, xIncrement, yIncrement float64) {
 	switch {
 	case key.Matches(msg, m.Canvas.KeyMap.Up):
@@ -221,7 +224,7 @@ func keyXYHandler(m *Model, msg tea.KeyMsg, xIncrement, yIncrement float64) {
 	}
 }
 
-// keyXHandler handles keyboard messages for X axis
+// keyXHandler handles keyboard messages for X axis moving
 func keyXHandler(m *Model, msg tea.KeyMsg, xIncrement float64) {
 	switch {
 	case key.Matches(msg, m.Canvas.KeyMap.Left):
@@ -231,13 +234,43 @@ func keyXHandler(m *Model, msg tea.KeyMsg, xIncrement float64) {
 	}
 }
 
-// keyYHandler handles keyboard messages for Y axis
+// keyYHandler handles keyboard messages for Y axis moving
 func keyYHandler(m *Model, msg tea.KeyMsg, yIncrement float64) {
 	switch {
 	case key.Matches(msg, m.Canvas.KeyMap.Up):
 		m.MoveUp(yIncrement)
 	case key.Matches(msg, m.Canvas.KeyMap.Down):
 		m.MoveDown(yIncrement)
+	}
+}
+
+// keyXYZoomHandler handles keyboard messages for X and Y axis zooming
+func keyXYZoomHandler(m *Model, msg tea.KeyMsg, xIncrement, yIncrement float64) {
+	switch {
+	case key.Matches(msg, m.Canvas.KeyMap.PgUp):
+		m.ZoomIn(xIncrement, yIncrement)
+	case key.Matches(msg, m.Canvas.KeyMap.PgDown):
+		m.ZoomOut(xIncrement, yIncrement)
+	}
+}
+
+// keyXZoomHandler handles keyboard messages for X axis zooming
+func keyXZoomHandler(m *Model, msg tea.KeyMsg, xIncrement float64) {
+	switch {
+	case key.Matches(msg, m.Canvas.KeyMap.PgUp):
+		m.ZoomIn(xIncrement, 0)
+	case key.Matches(msg, m.Canvas.KeyMap.PgDown):
+		m.ZoomOut(xIncrement, 0)
+	}
+}
+
+// keyYZoomHandler handles keyboard messages for Y axis zooming
+func keyYZoomHandler(m *Model, msg tea.KeyMsg, yIncrement float64) {
+	switch {
+	case key.Matches(msg, m.Canvas.KeyMap.PgUp):
+		m.ZoomIn(0, yIncrement)
+	case key.Matches(msg, m.Canvas.KeyMap.PgDown):
+		m.ZoomOut(0, yIncrement)
 	}
 }
 
