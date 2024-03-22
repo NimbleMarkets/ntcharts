@@ -61,7 +61,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.slc2.Clear()
 			m.slc2.DrawXYAxisAndLabel()
 			return m, nil
-		case "up", "down", "left", "right":
+		case "up", "down", "left", "right", "pgup", "pgdown":
 			forwardMsg = true
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -115,7 +115,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	s := "any key to push randomized data value,`r` to clear data, `q/ctrl+c` to quit\n"
-	s += "mouse wheel scroll to zoom in and out along Y axis\n"
+	s += "pgup/pdown/mouse wheel scroll to zoom in and out along Y axis\n"
 	s += "mouse click+drag or arrow keys to move view along Y axis while zoomed in\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render(fmt.Sprintf("DataSet1(%.02f)\n", randf1)+m.slc1.View()),
@@ -141,6 +141,7 @@ func main() {
 	slc1.SetViewYRange(minYValue, maxYValue)             // setting display Y values will fail unless set expected Y values first
 	slc1.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
 	slc1.SetZoneManager(zoneManager)
+	slc1.Focus()
 
 	// streamlinechart 2 created with New() using options
 	// and setting second data set style

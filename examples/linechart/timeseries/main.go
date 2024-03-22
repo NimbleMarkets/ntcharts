@@ -76,7 +76,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tslc4.Clear()
 			m.tslc4.DrawXYAxisAndLabel()
 			return m, nil
-		case "up", "down", "left", "right":
+		case "up", "down", "left", "right", "pgup", "pgdown":
 			forwardMsg = true
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -152,7 +152,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	s := "any key to push randomized data value,`r` to clear data, `q/ctrl+c` to quit\n"
-	s += "mouse wheel scroll to zoom in and out along X axis\n"
+	s += "pgup/pdown/mouse wheel scroll to zoom in and out along X axis\n"
 	s += "mouse click+drag or arrow keys to move view along X axis while zoomed in\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		lipgloss.JoinVertical(lipgloss.Left,
@@ -190,6 +190,7 @@ func main() {
 	tslc1.SetViewYRange(minYValue, maxYValue)             // setting display Y values will fail unless set expected Y values first
 	tslc1.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
 	tslc1.SetZoneManager(zoneManager)
+	tslc1.Focus()
 
 	// timeserieslinechart 2 created with New() using options
 	// and setting second data set style

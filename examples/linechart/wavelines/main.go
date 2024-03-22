@@ -69,7 +69,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "up", "down", "left", "right":
+		case "up", "down", "left", "right", "pgup", "pgdown":
 			forwardMsg = true
 		default:
 			addPoint = true
@@ -135,7 +135,7 @@ func (m model) View() string {
 		randomFloat64Point1.X, randomFloat64Point1.Y,
 		randomFloat64Point2.X, randomFloat64Point2.Y)
 	s := "any key to add randomized point,`r` to clear data, `q/ctrl+c` to quit\n"
-	s += "mouse wheel scroll to zoom in and out\n"
+	s += "pgup/pdown/mouse wheel scroll to zoom in and out\n"
 	s += "mouse click+drag or arrow keys to move view while zoomed in\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render(t1+m.wlc1.View()),
