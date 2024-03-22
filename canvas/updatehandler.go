@@ -11,10 +11,12 @@ import (
 )
 
 type KeyMap struct {
-	Up    key.Binding
-	Down  key.Binding
-	Left  key.Binding
-	Right key.Binding
+	Up     key.Binding
+	Down   key.Binding
+	Left   key.Binding
+	Right  key.Binding
+	PgUp   key.Binding
+	PgDown key.Binding
 }
 
 // DefaultKeyMap returns a default KeyMap for canvas.
@@ -35,6 +37,14 @@ func DefaultKeyMap() KeyMap {
 		Right: key.NewBinding(
 			key.WithKeys("right", "l"),
 			key.WithHelp("→/l", "move right"),
+		),
+		PgUp: key.NewBinding(
+			key.WithKeys("pgup"),
+			key.WithHelp("PgUp", "zoom in"),
+		),
+		PgDown: key.NewBinding(
+			key.WithKeys("pgdown"),
+			key.WithHelp("PgDown", "zoom out"),
 		),
 	}
 }
@@ -62,6 +72,10 @@ func DefaultUpdateHandler() UpdateHandler {
 				m.MoveLeft(1)
 			case key.Matches(msg, m.KeyMap.Right):
 				m.MoveRight(1)
+			case key.Matches(msg, m.KeyMap.PgUp):
+				m.MoveUp(1)
+			case key.Matches(msg, m.KeyMap.PgDown):
+				m.MoveDown(1)
 			}
 		case tea.MouseMsg:
 			switch msg.Button {
