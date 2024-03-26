@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 package linechart
 
 // File contains methods and objects used during linechart Model Update()

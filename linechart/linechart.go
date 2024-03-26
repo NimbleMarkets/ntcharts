@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package linechart implements a canvas that displays
 // (X,Y) Cartesian coordinates as a line chart.
 package linechart

@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package runes contains commonly used runes and functions to obtain runes.
 package runes
 

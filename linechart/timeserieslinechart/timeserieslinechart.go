@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package timeserieslinechart implements a linechart that draws lines
 // for time series data points
 package timeserieslinechart

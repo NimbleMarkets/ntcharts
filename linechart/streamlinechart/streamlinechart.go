@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package streamlinechart implements a linechart that draws lines
 // going from the right of the chart to the left of the chart
 package streamlinechart

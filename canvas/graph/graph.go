@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package graph contains data structures and functions to help draw runes on to a canvas.
 package graph
 

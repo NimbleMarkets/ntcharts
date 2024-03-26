@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package barchart implements a canvas that displays a bar chart
 // with bars going either horizontally or vertically.
 package barchart

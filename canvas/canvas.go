@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package canvas implements an abstract 2D area used to plot
 // arbitary runes that can be displayed using the bubbletea framework.
 package canvas

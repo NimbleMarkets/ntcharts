@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 package timeserieslinechart
 
 // File contains options used by the timeserieslinechart during initialization with New().

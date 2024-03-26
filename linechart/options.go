@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 package linechart
 
 // File contains options used by the linechart during initialization with New().

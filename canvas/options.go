@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 package canvas
 
 // File contains options used by the canvas during initialization with New().

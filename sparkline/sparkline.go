@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package sparkline implements a canvas that displays time series data
 // as a chart with columns moving from right to left.
 package sparkline

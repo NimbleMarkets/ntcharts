@@ -1,3 +1,5 @@
+// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+
 // Package wavelinechart implements a linechart that draws wave lines on the graph
 package wavelinechart
 
