@@ -63,7 +63,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// linechart1 draws point as 'X'
 	m.lc1.DrawRune(randomFloat64Point, 'X')
 
-	// linecharte2 draws point as braille rune
+	// linechart2 draws point as braille rune
 	// (a line between the two identical points is a single point)
 	m.lc2.DrawBrailleLine(randomFloat64Point, randomFloat64Point)
 	return m, nil

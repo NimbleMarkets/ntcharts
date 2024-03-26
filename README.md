@@ -5,6 +5,7 @@
 We supply the following chart types within the glory of your terminal:
  * Sparkline
  * Line Chart
+ * Bar Chart
 
 ## Acknowledgements
 
