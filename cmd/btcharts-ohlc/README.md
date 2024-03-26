@@ -5,3 +5,5 @@
 The input CSV file is required to have column headers `Date,Open,High,Low,Close,Adj Close,Volume`.  The `Date` value format is required to be in the format `YYYY-MM-DD` and in chronological order.
 
 <img src="demo.gif" alt="btcharts-ohcl gif"/>
+
+> _btcharts-ohlc -filepath cmd/btcharts-ohlc/example.csv -high -low -vol -braille_
