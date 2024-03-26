@@ -89,9 +89,9 @@ tasks:
       - go build -o bin/btcharts-barchart-horizontal examples/barchart/horizontal/*.go
       - go build -o bin/btcharts-barchart-vertical examples/barchart/vertical/*.go
     sources:
+      - barchart/**/*.go
       - canvas/**/*.go
       - examples/barchart/**/*.go
-      - barchart/**/*.go
     generates:
       - bin/btcharts-barchart-horizontal
       - bin/btcharts-barchart-vertical
@@ -165,6 +165,6 @@ tasks:
     cmds:
       - rm -f bin/btcharts-barchart-horizontal bin/btcharts-barchart-vertical
       - rm -f bin/btcharts-canvas-logo
-      - rm -f bin/btcharts-graph-braille bin/btcharts-graph-circles bin/btcharts-graph-columns bin/btcharts-graph-lines bin/btcharts-graph-rows bin/btcharts-linechart-circles
-      - rm -f bin/btcharts-linechart-lines bin/btcharts-linechart-scatter bin/btcharts-linechart-streaming bin/btcharts-linechart-wavelines bin/btcharts-linechart-timeseries
+      - rm -f bin/btcharts-graph-braille bin/btcharts-graph-circles bin/btcharts-graph-columns bin/btcharts-graph-lines bin/btcharts-graph-rows
+      - rm -f bin/btcharts-linechart-circles bin/btcharts-linechart-lines bin/btcharts-linechart-scatter bin/btcharts-linechart-streaming bin/btcharts-linechart-timeseries bin/btcharts-linechart-wavelines
       - rm -f bin/btcharts-sparkline

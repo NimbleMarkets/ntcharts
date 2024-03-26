@@ -1,5 +1,11 @@
 # bubbletea-charts
 
+<p>
+    <a href="https://github.com/NimbleMarkets/bubbletea-charts/releases"><img src="https://img.shields.io/github/release/NimbleMarkets/bubbletea-charts.svg" alt="Latest Release"></a>
+    <a href="https://pkg.go.dev/github.com/NimbleMarkets/bubbletea-charts?tab=doc"><img src="https://godoc.org/github.com/golang/gddo?status.svg" alt="GoDoc"></a>
+    <a href="https://stuff.charm.sh/bubbletea/bubbletea-4k.png"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
+</p>
+
 `bubbletea-charts` is a Golang TUI Charting library for the BubbleTea Framework.
 
 We supply many chart types within the glory of your terminal!  See the [`examples` folder](./examples/README.md) for code samples and visuals of each type.
@@ -14,6 +20,13 @@ We supply many chart types within the glory of your terminal!  See the [`example
 | [Time Series Chart](./examples/README.md#time-series) | Displays lines with values on the Y axis and time values on the X axis. |
 | [Waveline Chart](./examples/README.md#wave-line) | A line chart that connects points in a wave pattern. |
 | [Sparkline](./examples/README.md#sparkline) | A small, simple visual of data chart for quick understanding. |
+
+## Open Collaboration
+
+We welcome contributions and feedback.  Please adhere to our [Code of Conduct](./CODE_OF_CONDUCT.md) when engaging our community.
+
+ * [GitHub Issues](https://github.com/NimbleMarkets/bubbletea-charts/issues)
+ * [GitHub Pull Requests](https://github.com/NimbleMarkets/bubbletea-charts/pulls)
 
 
 ## Acknowledgements
