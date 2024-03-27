@@ -419,7 +419,8 @@ func (m *Model) drawXLabel(n int) {
 			v := m.viewMinX + (increment * float64(i)) // value to set under X axis
 			s := m.XLabelFormatter(i, v)
 			// dont display if number will be cut off or value repeats
-			if (s != lastVal) && ((len(s) + i) < m.graphWidth) {
+			sLen := len(s) + m.origin.X + i
+			if (s != lastVal) && (sLen <= m.Canvas.Width()) {
 				m.Canvas.SetStringWithStyle(canvas.Point{m.origin.X + i, m.origin.Y + 1}, s, m.LabelStyle)
 				lastVal = s
 			}
