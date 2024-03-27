@@ -1,5 +1,12 @@
 # Examples
 
+## Quickstart
+
+This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.
+
+[(source)](./quickstart/main.go)
+[<img src="examples/quickstart/demo.gif" alt="quickstart gif"/>](./examples/quickstart/README.md)
+
 ## Canvas
 
 A Canvas provides a 2D grid to plot arbitrary runes supporting [charmbraclet/lipgloss](https://github.com/charmbracelet/lipgloss) styles and uses [lrstanley/bubblezone](https://github.com/lrstanley/bubblezone) for mouse support.

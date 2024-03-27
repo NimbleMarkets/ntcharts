@@ -28,152 +28,201 @@ We welcome contributions and feedback.  Please adhere to our [Code of Conduct](.
  * [GitHub Issues](https://github.com/NimbleMarkets/bubbletea-charts/issues)
  * [GitHub Pull Requests](https://github.com/NimbleMarkets/bubbletea-charts/pulls)
 
----
+## Usage
 
-## Quickstart
-
-This tutorial creates a simple [Time Series Chart](https://github.com/NimbleMarkets/bubbletea-charts/blob/tony-branch/examples/linechart/timeseries/main.go) below that uses keyboard and mouse for zooming in and out, and moving the chart right and left.
-The source code can be found at [examples/quickstart/main.go](./examples/quickstart/main.go). 
-
-<img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>
-
-First, define the package and import some libraries used for this tutorial. BubbleTea-Charts use the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, [Lip Gloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mouse support.
+### Canvas
 
 ```go
 package main
 
 import (
     "fmt"
-    "os"
-    "time"
-
-    tslc "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
-
-    tea "github.com/charmbracelet/bubbletea"
+    "github.com/NimbleMarkets/bubbletea-charts/canvas"
     "github.com/charmbracelet/lipgloss"
-    zone "github.com/lrstanley/bubblezone"
 )
-```
 
-Create a new time series chart. The default time series chart increments the X axis by each day and automatically scales the maximum Y value.  By default, the chart zooms in and out along the X axis and moves the viewing window by day increments.
-
-```go
 func main() {
-    // create new time series chart
-    width := 30
-    height := 12
-    chart := tslc.New(width, height)
+    c := canvas.New(5, 2)
+    c.SetLinesWithStyle(
+        []string{"hello", "world"},
+        lipgloss.NewStyle().Foreground(lipgloss.Color("6"))) // cyan
 
-    // additional chart code goes here
+    fmt.Println(c.View())
 }
 ```
 
-Add data to default data set with `chart.Push()`.  The Lip Gloss style used when displaying the data set can be set with `chart.SetStyle()`.
+This example produces the following canvas with Lip Gloss foreground color:
+<img src="examples/usage/canvas.png" alt="canvas png" width='50'/>
+
+### Bar Chart
 
 ```go
-// add default data set
-dataSet := []float64{0, 2, 4, 6, 8, 10, 8, 6, 4, 2, 0}
-for i, v := range dataSet {
-    date := time.Now().Add(time.Hour * time.Duration(24*i))
-    chart.Push(tslc.TimePoint{date, v})
-}
+package main
 
-// set default data set line color to red
-chart.SetStyle(
-    lipgloss.NewStyle().
-        Foreground(lipgloss.Color("9")), // red
+import (
+    "fmt"
+    "github.com/NimbleMarkets/bubbletea-charts/barchart"
+    "github.com/charmbracelet/lipgloss"
 )
-```
 
-Additional data sets can be added by name with `PushDataSet()`. The Lip Gloss style used for additional data sets can set with `chart.SetDataSetStyle()`.
-
-```go
-// add additional data set by name
-dataSet2 := []float64{10, 8, 6, 4, 2, 0, 2, 4, 6, 8, 10}
-for i, v := range dataSet2 {
-    date := time.Now().Add(time.Hour * time.Duration(24*i))
-    chart.PushDataSet("dataSet2", tslc.TimePoint{date, v})
-}
-
-// set additional data set line color to green
-chart.SetDataSetStyle("dataSet2",
-    lipgloss.NewStyle().
-        Foreground(lipgloss.Color("10")), // green
-)
-```
-
-Enable mouse support by using the BubbleZone library.  BubbleTea-Charts components requires a `zone.Manager` to enable mouse support.
-
-```go
-// mouse support is enabled with BubbleZone
-zoneManager := zone.New()
-chart.SetZoneManager(zoneManager)
-chart.Focus() // set focus to process keyboard and mouse messages
-```
-
-Create a Bubble Tea `Model` to contain the time series chart and BubbleZone `Manager`.
-
-```go
-type model struct {
-    chart       tslc.Model
-    zoneManager *zone.Manager
-}
-
-func (m model) Init() tea.Cmd {
-    return nil
-}
-```
-
-Forward Bubble Tea keyboard and mouse events to the time series chart on `Update()`.  This example will draw all data sets using braille runes with `DrawBrailleAll()`.
-
-```go
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    switch msg := msg.(type) {
-    case tea.KeyMsg:
-        switch msg.String() {
-        case "q", "ctrl+c":
-            return m, tea.Quit
-        }
+func main() {
+    d1 := barchart.BarData{
+        Label: "A",
+        Values: []barchart.BarValue{
+            {"Item1", 21.2, lipgloss.NewStyle().Foreground(lipgloss.Color("10"))}}, // green
+    }
+    d2 := barchart.BarData{
+        Label: "B",
+        Values: []barchart.BarValue{
+            {"Item1", 15.2, lipgloss.NewStyle().Foreground(lipgloss.Color("9"))}}, // red
     }
 
-    // forward Bubble Tea Msg to time series chart
-    // and draw all data sets using braille runes
-    m.chart, _ = m.chart.Update(msg)
-    m.chart.DrawBrailleAll()
-    return m, nil
+    bc := barchart.New(11, 10)
+    bc.PushAll([]barchart.BarData{d1, d2})
+    bc.Draw()
+
+    fmt.Println(bc.View())
 }
 ```
 
-In the root model, wrap the time series chart `View()` output with BubbleZone `Manager.Scan()` using the `Manager` that the time series chart is set to.  A Lip Gloss style is used to apply a purple border around the chart.
+This example produces the following bar chart with green and red bars:
+<img src="examples/usage/barchart.png" alt="barchart png" width='100'/>
 
+### Streamline Chart
 ```go
-func (m model) View() string {
-    // call bubblezone Manager.Scan() at root model
-    return m.zoneManager.Scan(
-        lipgloss.NewStyle().
-            BorderStyle(lipgloss.NormalBorder()).
-            BorderForeground(lipgloss.Color("63")). // purple
-            Render(m.chart.View()),
-    )
-}
-```
+package main
 
-Finally, create a new Bubble Tea program with mouse cell motion enabled for mouse support and run program.
+import (
+    "fmt"
+    "github.com/NimbleMarkets/bubbletea-charts/linechart/streamlinechart"
+)
 
-```go
 func main() {
-    // [...]
-
-    // start new Bubble Tea program with mouse support enabled
-    m := model{chart, zoneManager}
-    if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
-        fmt.Println("Error running program:", err)
-        os.Exit(1)
+    slc := streamlinechart.New(13, 10)
+    for _, v := range []float64{4, 6, 8, 10, 8, 6, 4, 2, 0, 2, 4} {
+        slc.Push(v)
     }
+    slc.Draw()
+
+    fmt.Println(slc.View())
 }
 ```
 
----
+This example produces the following streamline chart:
+```
+  │  ╭╮      
+ 8│  ││      
+  │ ╭╯╰╮     
+ 6│ │  │     
+  │╭╯  ╰╮    
+ 4├╯    ╰╮  ╭
+  │      │  │
+ 2│      ╰╮╭╯
+  │       ││ 
+ 0│       ╰╯ 
+```
+
+### Time Series Chart
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+    "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
+)
+
+func main() {
+    tslc := timeserieslinechart.New(41, 10)
+    for i, v := range []float64{0, 4, 8, 10, 8, 4, 0, -4, -8, -10, -8, -4, 0} {
+        date := time.Now().Add(time.Hour * time.Duration(24*i))
+        tslc.Push(timeserieslinechart.TimePoint{date, v})
+    }
+    tslc.Draw()
+
+    fmt.Println(tslc.View())
+}
+```
+
+This example produces the following time series chart with today's date:
+```
+ 10│       ╭──╮                          
+   │    ╭──╯  ╰──╮                       
+  5│  ╭─╯        ╰──╮                    
+   │╭─╯             ╰─╮                  
+  0├╯                 ╰╮                ╭
+   │                   ╰─╮            ╭─╯
+ -5│                     ╰─╮        ╭─╯  
+   │                       ╰──╮  ╭──╯    
+-10└──────────────────────────┴──┴───────
+   '24 03/27   03/31   04/03   04/05 
+```
+
+### Waveline Chart
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/NimbleMarkets/bubbletea-charts/canvas"
+    "github.com/NimbleMarkets/bubbletea-charts/linechart/wavelinechart"
+)
+
+func main() {
+    wlc := wavelinechart.New(12, 10, wavelinechart.WithYRange(-3, 3))
+    wlc.Plot(canvas.Float64Point{1.0, 2.0})
+    wlc.Plot(canvas.Float64Point{3.0, -2.0})
+    wlc.Plot(canvas.Float64Point{5.0, 2.0})
+    wlc.Plot(canvas.Float64Point{7.0, -2.0})
+    wlc.Plot(canvas.Float64Point{9.0, 2.0})
+    wlc.Draw()
+
+    fmt.Println(wlc.View())
+}
+```
+
+This example produces the following waveline chart:
+```
+ 3│         
+  │╭╮  ╭╮  ╭
+ 2│││  ││  │
+  │││  ││  │
+ 0├╯╰╮╭╯╰╮╭╯
+  │  ││  ││ 
+-2│  ││  ││ 
+  │  ╰╯  ╰╯ 
+-3└─────────
+  0 2 4 6    
+```
+
+### Sparkline
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/NimbleMarkets/bubbletea-charts/sparkline"
+)
+
+func main() {
+    sl := sparkline.New(10, 5)
+    sl.PushAll([]float64{7.81, 3.82, 8.39, 2.06, 4.19, 4.34, 6.83, 2.51, 9.21, 1.3})
+    sl.Draw()
+
+    fmt.Println(sl.View())
+}
+```
+
+This example produces the following sparkline:
+<img src="examples/usage/sparkline.png" alt="sparkline png" width='100'/>
+
+
+## Quickstart
+
+This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](./examples/README.md#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.
+
+[<img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>](./examples/quickstart/README.md)
 
 ## Acknowledgements
 
