@@ -400,6 +400,9 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 // to draw line runes from a given set of scaled []FloatPoint64.
 func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 	width := m.Width() - m.Origin().X // line runes can draw on axes
+	if width <= 0 {
+		return []int{}
+	}
 	dataLen := len(points)
 	// each index of the bucket corresponds to a graph column.
 	// each index value is the average of data point values
