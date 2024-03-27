@@ -80,6 +80,7 @@ tasks:
       - build-ex-canvas
       - build-ex-graph
       - build-ex-linechart
+      - build-ex-quickstart
       - build-ex-sparkline
 
   build-ex-barchart:
@@ -148,6 +149,18 @@ tasks:
       - bin/btcharts-linechart-timeseries
       - bin/btcharts-linechart-wavelines
 
+  build-ex-quickstart:
+    desc: 'Build quickstart example'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/btcharts-quickstart examples/quickstart/*.go
+    sources:
+      - canvas/**/*.go
+      - examples/quickstart/*.go
+      - linechart/**/*.go
+    generates:
+      - bin/btcharts-quickstart
+
   build-ex-sparkline:
     desc: 'Build sparkline example'
     deps: [go-tidy]
@@ -167,4 +180,5 @@ tasks:
       - rm -f bin/btcharts-canvas-logo
       - rm -f bin/btcharts-graph-braille bin/btcharts-graph-circles bin/btcharts-graph-columns bin/btcharts-graph-lines bin/btcharts-graph-rows
       - rm -f bin/btcharts-linechart-circles bin/btcharts-linechart-lines bin/btcharts-linechart-scatter bin/btcharts-linechart-streaming bin/btcharts-linechart-timeseries bin/btcharts-linechart-wavelines
+      - rm -f bin/btcharts-quickstart
       - rm -f bin/btcharts-sparkline

@@ -1,0 +1,22 @@
+Output demo.gif
+
+Require echo
+
+Set Shell "bash"
+Set Padding 0
+Set FontSize 29
+Set Width 600
+Set Height 500
+
+Hide
+Type "./bin/btcharts-quickstart"
+Enter
+Show
+
+PageUp@250ms 4
+Left@250ms 4
+Right@250ms 8
+Left@250ms 4
+PageDown@250ms 4
+
+Type "q"
