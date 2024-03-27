@@ -188,9 +188,10 @@ func main() {
 	tslc1.LabelStyle = labelStyle
 	tslc1.XLabelFormatter = timeserieslinechart.HourTimeLabelFormatter()
 	tslc1.UpdateHandler = timeserieslinechart.SecondUpdateHandler(1)
-	tslc1.SetYRange(minYValue, maxYValue)                 // set expected Y values (values can be less or greater than what is displayed)
-	tslc1.SetViewYRange(minYValue, maxYValue)             // setting display Y values will fail unless set expected Y values first
-	tslc1.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
+	tslc1.SetYRange(minYValue, maxYValue)     // set expected Y values (values can be less or greater than what is displayed)
+	tslc1.SetViewYRange(minYValue, maxYValue) // setting display Y values will fail unless set expected Y values first
+	tslc1.SetStyle(graphLineStyle1)
+	tslc1.SetLineStyle(runes.ThinLineStyle) // ThinLineStyle replaces default linechart arcline rune style
 	tslc1.SetZoneManager(zoneManager)
 	tslc1.Focus()
 
@@ -199,8 +200,10 @@ func main() {
 	tslc2 := timeserieslinechart.New(width, height,
 		timeserieslinechart.WithYRange(minYValue, maxYValue),
 		timeserieslinechart.WithAxesStyles(axisStyle, labelStyle),
-		timeserieslinechart.WithStyles(runes.ThinLineStyle, graphLineStyle1), // default data set
-		timeserieslinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
+		timeserieslinechart.WithStyle(graphLineStyle1),         // default data set
+		timeserieslinechart.WithLineStyle(runes.ThinLineStyle), // default data set
+		timeserieslinechart.WithDataSetStyle(dataSet2, graphLineStyle2),
+		timeserieslinechart.WithDataSetLineStyle(dataSet2, runes.ArcLineStyle),
 		timeserieslinechart.WithUpdateHandler(timeserieslinechart.SecondUpdateHandler(1)),
 		timeserieslinechart.WithXLabelFormatter(timeserieslinechart.HourTimeLabelFormatter()), // replace default Date with Hour formatter
 		timeserieslinechart.WithZoneManager(zoneManager),
@@ -212,16 +215,19 @@ func main() {
 	tslc3.LabelStyle = labelStyle
 	tslc3.XLabelFormatter = timeserieslinechart.HourTimeLabelFormatter()
 	tslc3.UpdateHandler = timeserieslinechart.SecondUpdateHandler(1)
-	tslc3.SetYRange(minYValue, maxYValue)                 // set expected Y values (values can be less or greater than what is displayed)
-	tslc3.SetViewYRange(minYValue, maxYValue)             // setting display Y values will fail unless set expected Y values first
-	tslc3.SetStyles(runes.ThinLineStyle, graphLineStyle1) // graphLineStyle1 replaces linechart rune style
+	tslc3.SetYRange(minYValue, maxYValue)     // set expected Y values (values can be less or greater than what is displayed)
+	tslc3.SetViewYRange(minYValue, maxYValue) // setting display Y values will fail unless set expected Y values first
+	tslc3.SetStyle(graphLineStyle1)
+	tslc3.SetLineStyle(runes.ThinLineStyle) // ThinLineStyle replaces default linechart arcline rune style
 	tslc3.SetZoneManager(zoneManager)
 
 	tslc4 := timeserieslinechart.New(width, height,
 		timeserieslinechart.WithYRange(minYValue, maxYValue),
 		timeserieslinechart.WithAxesStyles(axisStyle, labelStyle),
-		timeserieslinechart.WithStyles(runes.ThinLineStyle, graphLineStyle1), // default data set
-		timeserieslinechart.WithDataSetStyles(dataSet2, runes.ArcLineStyle, graphLineStyle2),
+		timeserieslinechart.WithStyle(graphLineStyle1),         // default data set
+		timeserieslinechart.WithLineStyle(runes.ThinLineStyle), // default data set
+		timeserieslinechart.WithDataSetStyle(dataSet2, graphLineStyle2),
+		timeserieslinechart.WithDataSetLineStyle(dataSet2, runes.ArcLineStyle),
 		timeserieslinechart.WithUpdateHandler(timeserieslinechart.SecondUpdateHandler(1)),
 		timeserieslinechart.WithXLabelFormatter(timeserieslinechart.HourTimeLabelFormatter()), // replace default Date with Hour formatter
 		timeserieslinechart.WithZoneManager(zoneManager),

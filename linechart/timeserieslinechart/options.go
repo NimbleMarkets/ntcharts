@@ -92,18 +92,31 @@ func WithTimeRange(min, max time.Time) Option {
 	}
 }
 
-// WithStyles sets the default line style and lipgloss style of data sets.
-func WithStyles(ls runes.LineStyle, s lipgloss.Style) Option {
+// WithLineStyle sets the default line style of data sets.
+func WithLineStyle(ls runes.LineStyle) Option {
 	return func(m *Model) {
-		m.SetStyles(ls, s)
+		m.SetLineStyle(ls)
 	}
 }
 
-// // WithDataSetStyles sets the line style and lipgloss style
-// of the data set given by name.
-func WithDataSetStyles(n string, ls runes.LineStyle, s lipgloss.Style) Option {
+// WithDataSetLineStyle sets the line style of the data set given by name.
+func WithDataSetLineStyle(n string, ls runes.LineStyle) Option {
 	return func(m *Model) {
-		m.SetDataSetStyles(n, ls, s)
+		m.SetDataSetLineStyle(n, ls)
+	}
+}
+
+// WithStyle sets the default lipgloss style of data sets.
+func WithStyle(s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.SetStyle(s)
+	}
+}
+
+// WithDataSetStyle sets the lipgloss style of the data set given by name.
+func WithDataSetStyle(n string, s lipgloss.Style) Option {
+	return func(m *Model) {
+		m.SetDataSetStyle(n, s)
 	}
 }
 

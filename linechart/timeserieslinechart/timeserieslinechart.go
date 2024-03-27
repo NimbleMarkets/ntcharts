@@ -211,20 +211,33 @@ func (m *Model) Resize(w, h int) {
 	m.rescaleData()
 }
 
-// SetStyles will set the default styles of data sets.
-func (m *Model) SetStyles(ls runes.LineStyle, s lipgloss.Style) {
+// SetLineStyle will set the default line styles of data sets.
+func (m *Model) SetLineStyle(ls runes.LineStyle) {
 	m.dLineStyle = ls
-	m.dStyle = s
-	m.SetDataSetStyles(DefaultDataSetName, ls, s)
+	m.SetDataSetLineStyle(DefaultDataSetName, ls)
 }
 
-// SetDataSetStyles will set the styles of the given data set by name string.
-func (m *Model) SetDataSetStyles(n string, ls runes.LineStyle, s lipgloss.Style) {
+// SetStyle will set the default lipgloss styles of data sets.
+func (m *Model) SetStyle(s lipgloss.Style) {
+	m.dStyle = s
+	m.SetDataSetStyle(DefaultDataSetName, s)
+}
+
+// SetDataSetLineStyle will set the line style of the given data set by name string.
+func (m *Model) SetDataSetLineStyle(n string, ls runes.LineStyle) {
 	if _, ok := m.dSets[n]; !ok {
 		m.dSets[n] = m.newDataSet()
 	}
 	ds := m.dSets[n]
 	ds.LineStyle = ls
+}
+
+// SetDataSetStyle will set the lipgloss style of the given data set by name string.
+func (m *Model) SetDataSetStyle(n string, s lipgloss.Style) {
+	if _, ok := m.dSets[n]; !ok {
+		m.dSets[n] = m.newDataSet()
+	}
+	ds := m.dSets[n]
 	ds.Style = s
 }
 
