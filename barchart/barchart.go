@@ -148,9 +148,12 @@ func (m *Model) resetBarWidth() {
 		if m.horizontal {
 			graphSize = m.Canvas.Height()
 		}
-		gaps := (len(m.data) - 1) * m.barGap // total space used by gaps
-		size := graphSize - gaps             // total available space for bars
-		m.barWidth = size / len(m.data)      // each bar width
+		dLen := len(m.data)
+		gaps := (dLen - 1) * m.barGap // total space used by gaps
+		size := graphSize - gaps      // total available space for bars
+		if dLen > 0 {
+			m.barWidth = size / dLen // each bar width
+		}
 	}
 }
 
