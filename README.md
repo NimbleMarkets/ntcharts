@@ -31,23 +31,23 @@ We welcome contributions and feedback.  Please adhere to our [Code of Conduct](.
 
 ## Time Series Chart Quickstart
 
-This quickstart tutorial creates a simple (Time Series Chart)[https://github.com/NimbleMarkets/bubbletea-charts/blob/tony-branch/examples/linechart/timeseries/main.go].  The source code can be found at [examples/quickstart/main.go](./examples/quickstart/main.go).
+This quickstart tutorial creates a simple [Time Series Chart](https://github.com/NimbleMarkets/bubbletea-charts/blob/tony-branch/examples/linechart/timeseries/main.go).  The source code can be found at [examples/quickstart/main.go](./examples/quickstart/main.go).
 
-Define the package and import some libraries used for this tutorial. BubbleTea-Charts use the (Bubble Tea)[https://github.com/charmbracelet/bubbletea] framework, (Lip Gloss)[https://github.com/charmbracelet/lipgloss] for styling and (BubbleZone)[https://github.com/lrstanley/bubblezone] for mouse support.
+Define the package and import some libraries used for this tutorial. BubbleTea-Charts use the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, [Lip Gloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mouse support.
 
 ```go
 package main
 
 import (
-	"fmt"
-	"os"
-	"time"
+    "fmt"
+    "os"
+    "time"
 
-	tslc "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
+    tslc "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
 
     tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+    "github.com/charmbracelet/lipgloss"
+    zone "github.com/lrstanley/bubblezone"
 )
 ```
 
@@ -56,9 +56,9 @@ Create a new time series chart. The default time series chart increments the X a
 ```go
 func main() {
     // create new time series chart
-	width := 30
-	height := 12
-	chart := tslc.New(width, height)
+    width := 30
+    height := 12
+    chart := tslc.New(width, height)
 
     // additional chart code goes here
 }
@@ -111,12 +111,12 @@ Create a Bubble Tea `Model` to contain the time series chart and BubbleZone `Man
 
 ```go
 type model struct {
-	chart       tslc.Model
-	zoneManager *zone.Manager
+    chart       tslc.Model
+    zoneManager *zone.Manager
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+    return nil
 }
 ```
 
@@ -124,19 +124,19 @@ Forward Bubble Tea keyboard and mouse events to the time series chart on `Update
 
 ```go
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		}
-	}
+    switch msg := msg.(type) {
+    case tea.KeyMsg:
+        switch msg.String() {
+        case "q", "ctrl+c":
+            return m, tea.Quit
+        }
+    }
 
-	// forward Bubble Tea Msg to time series chart
-	// and draw all data sets using braille runes
-	m.chart, _ = m.chart.Update(msg)
-	m.chart.DrawBrailleAll()
-	return m, nil
+    // forward Bubble Tea Msg to time series chart
+    // and draw all data sets using braille runes
+    m.chart, _ = m.chart.Update(msg)
+    m.chart.DrawBrailleAll()
+    return m, nil
 }
 ```
 
@@ -144,13 +144,13 @@ In the root model, wrap the time series chart `View()` output with BubbleZone `M
 
 ```go
 func (m model) View() string {
-	// call bubblezone Manager.Scan() at root model
-	return m.zoneManager.Scan(
-		lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("63")). // purple
-			Render(m.chart.View()),
-	)
+    // call bubblezone Manager.Scan() at root model
+    return m.zoneManager.Scan(
+        lipgloss.NewStyle().
+            BorderStyle(lipgloss.NormalBorder()).
+            BorderForeground(lipgloss.Color("63")). // purple
+            Render(m.chart.View()),
+    )
 }
 ```
 
@@ -160,12 +160,12 @@ Finally, create a new Bubble Tea program with mouse cell motion enabled for mous
 func main() {
     // [...]
 
-	// start new Bubble Tea program with mouse support enabled
-	m := model{chart, zoneManager}
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
-	}
+    // start new Bubble Tea program with mouse support enabled
+    m := model{chart, zoneManager}
+    if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+        fmt.Println("Error running program:", err)
+        os.Exit(1)
+    }
 }
 ```
 
