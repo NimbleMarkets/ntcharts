@@ -30,7 +30,7 @@ We welcome contributions and feedback.  Please adhere to our [Code of Conduct](.
 
 ## Usage
 
-### Canvas
+#### Canvas
 
 ```go
 package main
@@ -52,9 +52,10 @@ func main() {
 ```
 
 This example produces the following canvas with Lip Gloss foreground color:
+
 <img src="examples/usage/canvas.png" alt="canvas png" width='50'/>
 
-### Bar Chart
+#### Bar Chart
 
 ```go
 package main
@@ -86,9 +87,10 @@ func main() {
 ```
 
 This example produces the following bar chart with green and red bars:
-<img src="examples/usage/barchart.png" alt="barchart png" width='100'/>
 
-### Streamline Chart
+<img src="examples/usage/barchart.png" alt="barchart png" width='80'/>
+
+#### Streamline Chart
 ```go
 package main
 
@@ -122,7 +124,7 @@ This example produces the following streamline chart:
  0│       ╰╯ 
 ```
 
-### Time Series Chart
+#### Time Series Chart
 ```go
 package main
 
@@ -138,27 +140,27 @@ func main() {
         date := time.Now().Add(time.Hour * time.Duration(24*i))
         tslc.Push(timeserieslinechart.TimePoint{date, v})
     }
-    tslc.Draw()
+    tslc.DrawBraille()
 
     fmt.Println(tslc.View())
 }
 ```
 
-This example produces the following time series chart with today's date:
+This example produces the following time series chart using braille runes starting with today's date:
 ```
- 10│       ╭──╮                          
-   │    ╭──╯  ╰──╮                       
-  5│  ╭─╯        ╰──╮                    
-   │╭─╯             ╰─╮                  
-  0├╯                 ╰╮                ╭
-   │                   ╰─╮            ╭─╯
- -5│                     ╰─╮        ╭─╯  
-   │                       ╰──╮  ╭──╯    
--10└──────────────────────────┴──┴───────
-   '24 03/27   03/31   04/03   04/05 
+ 10│      ⣀⠤⠒⠉⠒⠤⡀                        
+   │    ⡠⠊      ⠈⠢⡀                      
+  5│  ⡠⠊          ⠈⠢⡀                    
+   │⡠⠊              ⠈⠑⢄                 ⢀
+  0│                   ⠑⡄              ⡔⠁
+   │                    ⠈⠢⡀          ⡠⠊  
+ -5│                      ⠈⠢⡀      ⡠⠊    
+   │                        ⠈⠑⠢⢄⡠⠔⠊      
+-10└─────────────────────────────────────
+   '24 03/27   03/31   04/03   04/05     
 ```
 
-### Waveline Chart
+#### Waveline Chart
 ```go
 package main
 
@@ -195,7 +197,7 @@ This example produces the following waveline chart:
   0 2 4 6    
 ```
 
-### Sparkline
+#### Sparkline
 
 ```go
 package main
@@ -215,6 +217,7 @@ func main() {
 ```
 
 This example produces the following sparkline:
+
 <img src="examples/usage/sparkline.png" alt="sparkline png" width='100'/>
 
 
