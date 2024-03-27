@@ -28,12 +28,16 @@ We welcome contributions and feedback.  Please adhere to our [Code of Conduct](.
  * [GitHub Issues](https://github.com/NimbleMarkets/bubbletea-charts/issues)
  * [GitHub Pull Requests](https://github.com/NimbleMarkets/bubbletea-charts/pulls)
 
+---
 
-## Time Series Chart Quickstart
+## Quickstart
 
-This quickstart tutorial creates a simple [Time Series Chart](https://github.com/NimbleMarkets/bubbletea-charts/blob/tony-branch/examples/linechart/timeseries/main.go).  The source code can be found at [examples/quickstart/main.go](./examples/quickstart/main.go).
+This tutorial creates a simple [Time Series Chart](https://github.com/NimbleMarkets/bubbletea-charts/blob/tony-branch/examples/linechart/timeseries/main.go) below that uses keyboard and mouse for zooming in and out, and moving the chart right and left.
+The source code can be found at [examples/quickstart/main.go](./examples/quickstart/main.go). 
 
-Define the package and import some libraries used for this tutorial. BubbleTea-Charts use the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, [Lip Gloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mouse support.
+<img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>
+
+First, define the package and import some libraries used for this tutorial. BubbleTea-Charts use the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, [Lip Gloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mouse support.
 
 ```go
 package main
@@ -169,10 +173,7 @@ func main() {
 }
 ```
 
-The new program should display the time series chart below with keyboard and mouse support for zooming in and out, and moveing the chart right and left.
-
-<img src="examples/quickstart/demo.gif" alt="quickstart gif"/>
-
+---
 
 ## Acknowledgements
 
