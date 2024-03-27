@@ -182,7 +182,10 @@ func newModel(minTime, maxTime time.Time, minY, maxY float64, tsm map[string][]t
 				}
 			}
 		} else {
-			m.chart.SetDataSetStyles(name, displayOpts.LineStyle, dataSetStyles[name])
+			m.chart.SetDataSetStyle(name, dataSetStyles[name])
+			if !displayOpts.UseBraille {
+				m.chart.SetDataSetLineStyle(name, displayOpts.LineStyle)
+			}
 			for _, p := range tsd {
 				m.chart.PushDataSet(name, p)
 			}
