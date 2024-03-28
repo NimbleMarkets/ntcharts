@@ -12,7 +12,7 @@ We supply many chart types within the glory of your terminal!
 
 | Type | Description |
 | :-------- | :----- |
-| [Canvas](./examples/README.md#canvas) | A 2D grid to plot arbitrary runes, with [Lipgloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mousing.  It is the foundation for all the following charts. |
+| [Canvas](./examples/README.md#canvas) | A 2D grid to plot arbitrary runes, with [LipGloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mousing.  It is the foundation for all the following charts. |
 | [Bar Chart](./examples/README.md#bar-chart) | Displays values as either horizontal rows or vertical columns. |
 | [Line Chart](./examples/README.md#lines) | Displays (X,Y) data points onto a 2D grid in various types of charts. |
 | [Scatter Chart](./examples/README.md#scatter) | Plots abitrary runes onto (X,Y) coordinates. |

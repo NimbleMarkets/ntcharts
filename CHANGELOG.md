@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v0.1.1 (2024-03-28)
+## v0.1.2 (2024-03-28)
 
  * Fix pkgsite documentation and badges.
 
