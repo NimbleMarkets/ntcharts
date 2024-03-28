@@ -1,10 +1,10 @@
 
-## Quickstart
+# Quickstart Tutorial
 
 This tutorial creates a simple `timeserieslinechart` that uses keyboard and mouse for zooming in and out, and moving the chart right and left.
 The source code can be found at [main.go](./main.go). 
 
-<img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>
+<img src="./demo.gif" alt="quickstart gif" width='300'/>
 
 First, define the package and import some libraries used for this tutorial. ntcharts use the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, [Lip Gloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mouse support.
 
