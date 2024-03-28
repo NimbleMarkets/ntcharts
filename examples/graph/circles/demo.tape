@@ -10,7 +10,7 @@ Set Width 1200
 Set Height 600
 
 Hide
-Type "./bin/btcharts-graph-circles"
+Type "./bin/ntcharts-graph-circles"
 Enter
 Show
 

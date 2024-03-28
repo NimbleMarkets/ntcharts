@@ -1,4 +1,4 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 package main
 
@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
-	tslc "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
-	spark "github.com/NimbleMarkets/bubbletea-charts/sparkline"
+	"github.com/NimbleMarkets/ntcharts/canvas/runes"
+	tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
+	spark "github.com/NimbleMarkets/ntcharts/sparkline"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

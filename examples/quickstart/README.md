@@ -6,7 +6,7 @@ The source code can be found at [main.go](./main.go).
 
 <img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>
 
-First, define the package and import some libraries used for this tutorial. BubbleTea-Charts use the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, [Lip Gloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mouse support.
+First, define the package and import some libraries used for this tutorial. ntcharts use the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, [Lip Gloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mouse support.
 
 ```go
 package main
@@ -16,7 +16,7 @@ import (
     "os"
     "time"
 
-    tslc "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
+    tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
 
     tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/lipgloss"
@@ -71,7 +71,7 @@ chart.SetDataSetStyle("dataSet2",
 )
 ```
 
-Enable mouse support by using the BubbleZone library.  BubbleTea-Charts components requires a `zone.Manager` to enable mouse support.
+Enable mouse support by using the BubbleZone library.  ntcharts components requires a `zone.Manager` to enable mouse support.
 
 ```go
 // mouse support is enabled with BubbleZone

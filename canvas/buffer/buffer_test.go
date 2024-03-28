@@ -1,4 +1,4 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 package buffer
 
@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/NimbleMarkets/bubbletea-charts/canvas"
+	"github.com/NimbleMarkets/ntcharts/canvas"
 )
 
 func TestFloat64ScaleRingBuffer(t *testing.T) {

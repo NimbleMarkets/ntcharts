@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	tslc "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
+	tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"

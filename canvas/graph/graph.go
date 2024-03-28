@@ -1,4 +1,4 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 // Package graph contains data structures and functions to help draw runes on to a canvas.
 package graph
@@ -10,8 +10,8 @@ import (
 	"math"
 	"sort"
 
-	"github.com/NimbleMarkets/bubbletea-charts/canvas"
-	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
+	"github.com/NimbleMarkets/ntcharts/canvas"
+	"github.com/NimbleMarkets/ntcharts/canvas/runes"
 
 	"github.com/charmbracelet/lipgloss"
 )

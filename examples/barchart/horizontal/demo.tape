@@ -10,7 +10,7 @@ Set Width  1200
 Set Height 400
 
 Hide
-Type "./bin/btcharts-barchart-horizontal"
+Type "./bin/ntcharts-barchart-horizontal"
 Enter
 Show
 

@@ -10,7 +10,7 @@ Set Width 600
 Set Height 300
 
 Hide
-Type "./bin/btcharts-graph-lines"
+Type "./bin/ntcharts-graph-lines"
 Enter
 Show
 

@@ -1,4 +1,4 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 package timeserieslinechart
 
@@ -9,7 +9,7 @@ package timeserieslinechart
 // the viewport of the linechart
 
 import (
-	"github.com/NimbleMarkets/bubbletea-charts/linechart"
+	"github.com/NimbleMarkets/ntcharts/linechart"
 )
 
 // DateUpdateHandler is used by timeserieslinechart to enable

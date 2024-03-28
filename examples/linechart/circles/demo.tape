@@ -10,7 +10,7 @@ Set Width 1200
 Set Height 600
 
 Hide
-Type "./bin/btcharts-linechart-circles"
+Type "./bin/ntcharts-linechart-circles"
 Enter
 Show
 

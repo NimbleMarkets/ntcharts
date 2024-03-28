@@ -11,7 +11,7 @@ Set Width 1300
 Set Height 500
 
 Hide
-Type "./bin/btcharts-sparkline"
+Type "./bin/ntcharts-sparkline"
 Enter
 Show
 

@@ -1,4 +1,4 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 package main
 
@@ -7,9 +7,9 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/NimbleMarkets/bubbletea-charts/canvas"
-	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
-	"github.com/NimbleMarkets/bubbletea-charts/linechart/wavelinechart"
+	"github.com/NimbleMarkets/ntcharts/canvas"
+	"github.com/NimbleMarkets/ntcharts/canvas/runes"
+	"github.com/NimbleMarkets/ntcharts/linechart/wavelinechart"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

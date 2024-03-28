@@ -1,4 +1,4 @@
-module github.com/NimbleMarkets/bubbletea-charts
+module github.com/NimbleMarkets/ntcharts
 
 go 1.22.0
 

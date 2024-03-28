@@ -10,7 +10,7 @@ Set Width 600
 Set Height 500
 
 Hide
-Type "./bin/btcharts-quickstart"
+Type "./bin/ntcharts-quickstart"
 Enter
 Show
 

@@ -10,7 +10,7 @@ Set Width 1200
 Set Height 400
 
 Hide
-Type "./bin/btcharts-canvas-logo"
+Type "./bin/ntcharts-canvas-logo"
 Enter
 Show
 

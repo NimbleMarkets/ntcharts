@@ -1,10 +1,10 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 package streamlinechart
 
 import (
-	"github.com/NimbleMarkets/bubbletea-charts/canvas/runes"
-	"github.com/NimbleMarkets/bubbletea-charts/linechart"
+	"github.com/NimbleMarkets/ntcharts/canvas/runes"
+	"github.com/NimbleMarkets/ntcharts/linechart"
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"

@@ -1,4 +1,4 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 // Package barchart implements a canvas that displays a bar chart
 // with bars going either horizontally or vertically.
@@ -7,9 +7,9 @@ package barchart
 import (
 	"math"
 
-	"github.com/NimbleMarkets/bubbletea-charts/canvas"
-	"github.com/NimbleMarkets/bubbletea-charts/canvas/buffer"
-	"github.com/NimbleMarkets/bubbletea-charts/canvas/graph"
+	"github.com/NimbleMarkets/ntcharts/canvas"
+	"github.com/NimbleMarkets/ntcharts/canvas/buffer"
+	"github.com/NimbleMarkets/ntcharts/canvas/graph"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

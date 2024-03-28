@@ -1,14 +1,14 @@
-# bubbletea-charts
+# ntcharts - Nimble Terminal Charts
 
 <p>
-    <a href="https://github.com/NimbleMarkets/bubbletea-charts/releases"><img src="https://img.shields.io/github/release/NimbleMarkets/bubbletea-charts.svg" alt="Latest Release"></a>
-    <a href="https://pkg.go.dev/github.com/NimbleMarkets/bubbletea-charts?tab=doc"><img src="https://godoc.org/github.com/golang/gddo?status.svg" alt="GoDoc"></a>
+    <a href="https://github.com/NimbleMarkets/ntcharts/releases"><img src="https://img.shields.io/github/release/NimbleMarkets/ntcharts.svg" alt="Latest Release"></a>
+    <a href="https://pkg.go.dev/github.com/NimbleMarkets/ntcharts?tab=doc"><img src="https://godoc.org/github.com/golang/gddo?status.svg" alt="GoDoc"></a>
     <a href="https://stuff.charm.sh/bubbletea/bubbletea-4k.png"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
 </p>
 
-`bubbletea-charts` is a Golang TUI Charting library for the Bubble Tea Framework.
+`ntcharts` is a Golang Terminal Charting library for the Bubble Tea Framework and other TUIs.
 
-We supply many chart types within the glory of your terminal!  See the [`examples` folder](./examples/README.md) for code samples and visuals of each type.
+We supply many chart types within the glory of your terminal!  
 
 | Type | Description |
 | :-------- | :----- |
@@ -29,6 +29,8 @@ This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series C
 
 ## Usage
 
+See the [`examples` folder](./examples/README.md) for code samples and visuals of each type.
+
 #### Canvas
 
 ```go
@@ -36,7 +38,7 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/bubbletea-charts/canvas"
+    "github.com/NimbleMarkets/ntcharts/canvas"
     "github.com/charmbracelet/lipgloss"
 )
 
@@ -61,7 +63,7 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/bubbletea-charts/barchart"
+    "github.com/NimbleMarkets/ntcharts/barchart"
     "github.com/charmbracelet/lipgloss"
 )
 
@@ -95,7 +97,7 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/bubbletea-charts/linechart/streamlinechart"
+    "github.com/NimbleMarkets/ntcharts/linechart/streamlinechart"
 )
 
 func main() {
@@ -130,7 +132,7 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/NimbleMarkets/bubbletea-charts/linechart/timeserieslinechart"
+    "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
 )
 
 func main() {
@@ -165,8 +167,8 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/bubbletea-charts/canvas"
-    "github.com/NimbleMarkets/bubbletea-charts/linechart/wavelinechart"
+    "github.com/NimbleMarkets/ntcharts/canvas"
+    "github.com/NimbleMarkets/ntcharts/linechart/wavelinechart"
 )
 
 func main() {
@@ -203,7 +205,7 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/bubbletea-charts/sparkline"
+    "github.com/NimbleMarkets/ntcharts/sparkline"
 )
 
 func main() {
@@ -224,12 +226,12 @@ This example produces the following sparkline:
 
 We welcome contributions and feedback.  Please adhere to our [Code of Conduct](./CODE_OF_CONDUCT.md) when engaging our community.
 
- * [GitHub Issues](https://github.com/NimbleMarkets/bubbletea-charts/issues)
- * [GitHub Pull Requests](https://github.com/NimbleMarkets/bubbletea-charts/pulls)
+ * [GitHub Issues](https://github.com/NimbleMarkets/ntcharts/issues)
+ * [GitHub Pull Requests](https://github.com/NimbleMarkets/ntcharts/pulls)
 
 ## Acknowledgements
 
-Thanks to [Charm.sh](https://charm.sh) for making the command line glamorous and sharing [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss) and more.
+Thanks to [Charm.sh](https://charm.sh) for making the command line glamorous and sharing [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss) and more.  Thanks to [BubbleZone](https://github.com/lrstanley/bubblezone) for bringing the mouse support :mouse:.
 
 Thanks also to [asciigraph](https://github.com/guptarohit/asciigraph), [ratatui](https://docs.rs/ratatui/latest/ratatui/index.html), and [termdash](https://github.com/mum4k/termdash) for inspiration.
 

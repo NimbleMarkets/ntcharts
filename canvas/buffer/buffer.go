@@ -1,10 +1,10 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 // Package buffer contain buffers used with charts.
 package buffer
 
 import (
-	"github.com/NimbleMarkets/bubbletea-charts/canvas"
+	"github.com/NimbleMarkets/ntcharts/canvas"
 )
 
 // Float64ScaleBuffer is a variable size buffer

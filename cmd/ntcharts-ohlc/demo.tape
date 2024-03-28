@@ -10,7 +10,7 @@ Set Width 1600
 Set Height 600
 
 Hide
-Type "./bin/btcharts-ohlc -filepath cmd/btcharts-ohlc/example.csv -high -low -vol -braille"
+Type "./bin/ntcharts-ohlc -filepath cmd/ntcharts-ohlc/example.csv -high -low -vol -braille"
 Enter
 Show
 

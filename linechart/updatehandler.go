@@ -1,4 +1,4 @@
-// bubbletea-charts - Copyright (c) 2024 Neomantra Corp.
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
 
 package linechart
 
@@ -9,7 +9,7 @@ package linechart
 // the viewport of the linechart
 
 import (
-	"github.com/NimbleMarkets/bubbletea-charts/canvas"
+	"github.com/NimbleMarkets/ntcharts/canvas"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"

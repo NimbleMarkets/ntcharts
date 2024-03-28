@@ -10,7 +10,7 @@ Set Width 600
 Set Height 300
 
 Hide
-Type "./bin/btcharts-graph-braille"
+Type "./bin/ntcharts-graph-braille"
 Enter
 Show
 

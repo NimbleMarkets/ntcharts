@@ -11,7 +11,7 @@ Set Width 1200
 Set Height 400
 
 Hide
-Type "./bin/btcharts-linechart-streaming"
+Type "./bin/ntcharts-linechart-streaming"
 Enter
 Show
 
