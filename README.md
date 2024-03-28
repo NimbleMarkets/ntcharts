@@ -21,12 +21,11 @@ We supply many chart types within the glory of your terminal!  See the [`example
 | [Waveline Chart](./examples/README.md#wave-line) | A line chart that connects points in a wave pattern. |
 | [Sparkline](./examples/README.md#sparkline) | A small, simple visual of data chart for quick understanding. |
 
-## Open Collaboration
+## Quickstart Tutorial
 
-We welcome contributions and feedback.  Please adhere to our [Code of Conduct](./CODE_OF_CONDUCT.md) when engaging our community.
+This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](./examples/README.md#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.
 
- * [GitHub Issues](https://github.com/NimbleMarkets/bubbletea-charts/issues)
- * [GitHub Pull Requests](https://github.com/NimbleMarkets/bubbletea-charts/pulls)
+[<img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>](./examples/quickstart/README.md)
 
 ## Usage
 
@@ -221,17 +220,18 @@ This example produces the following sparkline:
 <img src="examples/usage/sparkline.png" alt="sparkline png" width='100'/>
 
 
-## Quickstart
+## Open Collaboration
 
-This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](./examples/README.md#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.
+We welcome contributions and feedback.  Please adhere to our [Code of Conduct](./CODE_OF_CONDUCT.md) when engaging our community.
 
-[<img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>](./examples/quickstart/README.md)
+ * [GitHub Issues](https://github.com/NimbleMarkets/bubbletea-charts/issues)
+ * [GitHub Pull Requests](https://github.com/NimbleMarkets/bubbletea-charts/pulls)
 
 ## Acknowledgements
 
 Thanks to [Charm.sh](https://charm.sh) for making the command line glamorous and sharing [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss) and more.
 
-Thanks also to [ratatui](https://docs.rs/ratatui/latest/ratatui/index.html) and [termdash](https://github.com/mum4k/termdash) for inspiration.
+Thanks also to [asciigraph](https://github.com/guptarohit/asciigraph), [ratatui](https://docs.rs/ratatui/latest/ratatui/index.html), and [termdash](https://github.com/mum4k/termdash) for inspiration.
 
 ## License
 

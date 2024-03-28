@@ -4,15 +4,21 @@ Require echo
 
 Set Shell "bash"
 Set Padding 0
-Set FontSize 20
-Set Width 1800
-Set Height 600
+Set Framerate 30
+Set FontSize 18
+Set Width 1200
+Set Height 400
 
 Hide
 Type "./bin/btcharts-linechart-lines"
 Enter
 Show
 
-Down@500ms 4
+Sleep 50ms
 
+Down@250ms 6
+
+Sleep 50ms
+
+Hide
 Type "q"

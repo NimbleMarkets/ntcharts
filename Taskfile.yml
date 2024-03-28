@@ -37,8 +37,9 @@ tasks:
       - build-examples
 
   clean:
-    desc: 'Clean all'
+    desc: 'Clean commands and examples)'
     deps:
+      - clean-cmds
       - clean-examples
 
   go-doc-server:
@@ -70,6 +71,11 @@ tasks:
     generates:
       - bin/btcharts-ohlc
 
+  clean-cmds:
+    desc: 'Cleans all commands'
+    cmds:
+      - rm bin/btcharts-ohlc
+    
 ###############################################################################
 # Examples
 
@@ -182,3 +188,97 @@ tasks:
       - rm -f bin/btcharts-linechart-circles bin/btcharts-linechart-lines bin/btcharts-linechart-scatter bin/btcharts-linechart-streaming bin/btcharts-linechart-timeseries bin/btcharts-linechart-wavelines
       - rm -f bin/btcharts-quickstart
       - rm -f bin/btcharts-sparkline
+
+###############################################################################
+# GIF Generation from VHS Cassettes
+
+  deps-gifs:
+    desc: 'Install dependencies for GIF generation'
+    cmds:
+      - go install github.com/charmbracelet/vhs@latest
+      - brew install imagemagick
+
+  validate-tapes:
+    desc: 'Validate vhs tapes for GIF generation'
+    cmds:
+      - vhs validate ./cmd/btcharts-ohlc/demo.tape
+      - vhs validate ./examples/barchart/horizontal/demo.tape
+      - vhs validate ./examples/barchart/vertical/demo.tape
+      - vhs validate ./examples/canvas/logo/demo.tape
+      - vhs validate ./examples/graph/braille/demo.tape
+      - vhs validate ./examples/graph/circles/demo.tape
+      - vhs validate ./examples/graph/columns/demo.tape
+      - vhs validate ./examples/graph/lines/demo.tape
+      - vhs validate ./examples/graph/rows/demo.tape
+      - vhs validate ./examples/linechart/circles/demo.tape
+      - vhs validate ./examples/linechart/lines/demo.tape
+      - vhs validate ./examples/linechart/scatter/demo.tape
+      - vhs validate ./examples/linechart/streaming/demo.tape
+      - vhs validate ./examples/linechart/timeseries/demo.tape
+      - vhs validate ./examples/linechart/wavelines/demo.tape
+      - vhs validate ./examples/quickstart/demo.tape
+      - vhs validate ./examples/sparkline/demo.tape
+    sources:
+      - ./**/*.tape
+
+  build-gifs:
+    desc: 'Build vhs cassette gifs'
+    deps: [build, validate-tapes]
+    cmds:
+      - vhs --output ./cmd/btcharts-ohlc/demo.gif ./cmd/btcharts-ohlc/demo.tape
+      - vhs --output ./examples/barchart/horizontal/demo.gif ./examples/barchart/horizontal/demo.tape
+      - vhs --output ./examples/barchart/vertical/demo.gif ./examples/barchart/vertical/demo.tape
+      - vhs --output ./examples/canvas/logo/demo.gif ./examples/canvas/logo/demo.tape
+      - vhs --output ./examples/graph/braille/demo.gif ./examples/graph/braille/demo.tape
+      - vhs --output ./examples/graph/circles/demo.gif ./examples/graph/circles/demo.tape
+      - vhs --output ./examples/graph/columns/demo.gif ./examples/graph/columns/demo.tape
+      - vhs --output ./examples/graph/lines/demo.gif ./examples/graph/lines/demo.tape
+      - vhs --output ./examples/graph/rows/demo.gif ./examples/graph/rows/demo.tape
+      - vhs --output ./examples/linechart/circles/demo.gif ./examples/linechart/circles/demo.tape
+      - vhs --output ./examples/linechart/lines/demo.gif ./examples/linechart/lines/demo.tape
+      - vhs --output ./examples/linechart/scatter/demo.gif ./examples/linechart/scatter/demo.tape
+      - vhs --output ./examples/linechart/streaming/demo.gif ./examples/linechart/streaming/demo.tape
+      - vhs --output ./examples/linechart/timeseries/demo.gif ./examples/linechart/timeseries/demo.tape
+      - vhs --output ./examples/linechart/wavelines/demo.gif ./examples/linechart/wavelines/demo.tape
+      - vhs --output ./examples/quickstart/demo.gif ./examples/quickstart/demo.tape
+      - vhs --output ./examples/sparkline/demo.gif ./examples/sparkline/demo.tape
+    sources:
+      - ./**/*.tape
+    generates:
+      - ./cmd/btcharts-ohlc/demo.gif
+      - ./examples/barchart/horizontal/demo.gif
+      - ./examples/barchart/vertical/demo.gif
+      - ./examples/canvas/logo/demo.gif
+      - ./examples/graph/braille/demo.gif
+      - ./examples/graph/circles/demo.gif
+      - ./examples/graph/columns/demo.gif
+      - ./examples/graph/lines/demo.gif
+      - ./examples/graph/rows/demo.gif
+      - ./examples/linechart/circles/demo.gif
+      - ./examples/linechart/lines/demo.gif
+      - ./examples/linechart/scatter/demo.gif
+      - ./examples/linechart/streaming/demo.gif
+      - ./examples/linechart/timeseries/demo.gif
+      - ./examples/linechart/wavelines/demo.gif
+      - ./examples/sparkline/demo.gif
+
+  clean-gifs:
+    desc: 'Cleans vhs cassette gifs'
+    cmds:
+      - rm -f ./cmd/btcharts-ohlc/demo.gif
+      - rm -f ./examples/barchart/horizontal/demo.gif
+      - rm -f ./examples/barchart/vertical/demo.gif
+      - rm -f ./examples/canvas/logo/demo.gif
+      - rm -f ./examples/graph/braille/demo.gif
+      - rm -f ./examples/graph/circles/demo.gif
+      - rm -f ./examples/graph/columns/demo.gif
+      - rm -f ./examples/graph/lines/demo.gif
+      - rm -f ./examples/graph/rows/demo.gif
+      - rm -f ./examples/linechart/circles/demo.gif
+      - rm -f ./examples/linechart/lines/demo.gif
+      - rm -f ./examples/linechart/scatter/demo.gif
+      - rm -f ./examples/linechart/streaming/demo.gif
+      - rm -f ./examples/linechart/timeseries/demo.gif
+      - rm -f ./examples/linechart/wavelines/demo.gif
+      - rm -f ./examples/quickstart/demo.gif
+      - rm -f ./examples/sparkline/demo.gif

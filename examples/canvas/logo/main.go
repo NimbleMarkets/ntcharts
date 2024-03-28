@@ -118,7 +118,7 @@ func getExampleCanvas1() (c canvas.Model) {
 	c1.SetCellStyle(canvas.Point{7, 5}, highlightStyle) // 'M'
 
 	c1.ViewHeight = 6
-	c1.ViewWidth = 12
+	c1.ViewWidth = 18
 	return c1
 }
 

@@ -4,15 +4,20 @@ Require echo
 
 Set Shell "bash"
 Set Padding 0
+Set Framerate 60
+Set PlaybackSpeed 4.0
 Set FontSize 24
-Set Width 1200
-Set Height 600
+Set Width 1300
+Set Height 500
 
 Hide
 Type "./bin/btcharts-sparkline"
 Enter
 Show
 
-Right@250ms 24
+Right@800ms 24
 
+Sleep 140ms
+
+Hide
 Type "q"
