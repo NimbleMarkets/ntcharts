@@ -1,9 +1,9 @@
 # ntcharts - Nimble Terminal Charts
 
 <p>
-    <a href="https://github.com/NimbleMarkets/ntcharts/releases"><img src="https://img.shields.io/github/release/NimbleMarkets/ntcharts.svg" alt="Latest Release"></a>
+    <a href="https://github.com/NimbleMarkets/ntcharts/tags"><img src="https://img.shields.io/github/tag/NimbleMarkets/ntcharts.svg" alt="Latest Release"></a>
     <a href="https://pkg.go.dev/github.com/NimbleMarkets/ntcharts?tab=doc"><img src="https://godoc.org/github.com/golang/gddo?status.svg" alt="GoDoc"></a>
-    <a href="https://stuff.charm.sh/bubbletea/bubbletea-4k.png"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
+    <a href="https://github.com/NimbleMarkets/ntcharts/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
 </p>
 
 `ntcharts` is a Golang Terminal Charting library for the Bubble Tea Framework and other TUIs.
@@ -25,7 +25,7 @@ We supply many chart types within the glory of your terminal!
 
 This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](./examples/README.md#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.
 
-[<img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/>](./examples/quickstart/README.md)
+<a href="./examples/quickstart/README.md" alt="quickstart readme"><img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/></a>
 
 ## Usage
 

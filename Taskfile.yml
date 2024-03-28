@@ -17,6 +17,7 @@ tasks:
     desc: 'Install developer dependencies'
     cmds:
       - go install 'golang.org/x/tools/cmd/godoc@latest'
+      - go install 'golang.org/x/pkgsite/cmd/pkgsite@latest'
 
 ###############################################################################
 
@@ -43,13 +44,23 @@ tasks:
       - clean-examples
 
   go-doc-server:
-    desc: 'Run Go documentation server'
+    desc: 'Run Go gdoc documentation server'
     cmds:
       - echo 'http://localhost:6060/pkg/github.com/NimbleMarkets/ntcharts/'
       - godoc -http=:6060
     deps:
       - dev-deps
       - go-tidy
+
+  go-pkgsite-server:
+    desc: 'Run Go pkgsite documentation server'
+    cmds:
+      - echo 'http://localhost:6061/pkg/github.com/NimbleMarkets/ntcharts/'
+      - pkgsite -http=:6061
+    deps:
+      - dev-deps
+      - go-tidy
+
 
 ###############################################################################
 # Commands

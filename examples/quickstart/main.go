@@ -1,3 +1,7 @@
+// ntcharts - Copyright (c) 2024 Neomantra Corp.
+
+// Quickstart is a tutorial creating a simple timeserieslinechart that uses
+// keyboard and mouse for zooming in and out, and moving the chart right and left.
 package main
 
 import (

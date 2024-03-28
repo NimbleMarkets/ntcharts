@@ -1,5 +1,8 @@
 // ntcharts - Copyright (c) 2024 Neomantra Corp.
 
+// Displays OHLC data as a line chart from an input CSV file.
+// The command can display the braille lines or continuous line and
+// choose which lines to display.
 package main
 
 import (
