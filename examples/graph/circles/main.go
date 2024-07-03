@@ -66,8 +66,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	}
-	// circlePoints := graph.GetCirclePoints(m.cursor, 3)
-	// startX := 1 // start drawing sequence at X = 1 for demo, usually start at Y axis
 
 	// draw circle around cursor
 	m.c1.Clear()

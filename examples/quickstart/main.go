@@ -60,7 +60,7 @@ func main() {
 	dataSet := []float64{0, 2, 4, 6, 8, 10, 8, 6, 4, 2, 0}
 	for i, v := range dataSet {
 		date := time.Now().Add(time.Hour * time.Duration(24*i))
-		chart.Push(tslc.TimePoint{date, v})
+		chart.Push(tslc.TimePoint{Time: date, Value: v})
 	}
 
 	// set default data set line color to red
@@ -73,7 +73,7 @@ func main() {
 	dataSet2 := []float64{10, 8, 6, 4, 2, 0, 2, 4, 6, 8, 10}
 	for i, v := range dataSet2 {
 		date := time.Now().Add(time.Hour * time.Duration(24*i))
-		chart.PushDataSet("dataSet2", tslc.TimePoint{date, v})
+		chart.PushDataSet("dataSet2", tslc.TimePoint{Time: date, Value: v})
 	}
 
 	// set additional data set line color to green

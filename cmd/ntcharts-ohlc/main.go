@@ -332,28 +332,28 @@ func recordsFromCSV(r io.Reader) (s []record) {
 	return
 }
 
-func addOpen(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
+func addOpen(r record, s map[string][]tslc.TimePoint, minY *float64) {
 	if r.Open < *minY {
 		*minY = r.Open
 	}
 	s[OpenOptionName] = append(s[OpenOptionName], tslc.TimePoint{Time: r.Date, Value: r.Open})
 }
 
-func addHigh(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
+func addHigh(r record, s map[string][]tslc.TimePoint, maxY *float64) {
 	if r.High > *maxY {
 		*maxY = r.High
 	}
 	s[HighOptionName] = append(s[HighOptionName], tslc.TimePoint{Time: r.Date, Value: r.High})
 }
 
-func addLow(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
+func addLow(r record, s map[string][]tslc.TimePoint, minY *float64) {
 	if r.Low < *minY {
 		*minY = r.Low
 	}
 	s[LowOptionName] = append(s[LowOptionName], tslc.TimePoint{Time: r.Date, Value: r.Low})
 }
 
-func addClose(r record, s map[string][]tslc.TimePoint, minY, maxY *float64) {
+func addClose(r record, s map[string][]tslc.TimePoint, maxY *float64) {
 	if displayOpts.AdjClose {
 		if r.AdjustedClose > *maxY {
 			*maxY = r.AdjustedClose
@@ -400,16 +400,16 @@ func timeseriesFromRecords(r []record) (s map[string][]tslc.TimePoint, minY floa
 	}
 	for _, rec := range r {
 		if displayOpts.All || displayOpts.Open {
-			addOpen(rec, s, &minY, &maxY)
+			addOpen(rec, s, &minY)
 		}
 		if displayOpts.All || displayOpts.High {
-			addHigh(rec, s, &minY, &maxY)
+			addHigh(rec, s, &maxY)
 		}
 		if displayOpts.All || displayOpts.Low {
-			addLow(rec, s, &minY, &maxY)
+			addLow(rec, s, &minY)
 		}
 		if displayOpts.All || displayOpts.Close {
-			addClose(rec, s, &minY, &maxY)
+			addClose(rec, s, &maxY)
 		}
 		if displayOpts.Volume {
 			addVolume(rec, s)
