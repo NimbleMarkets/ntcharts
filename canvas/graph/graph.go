@@ -176,7 +176,7 @@ func DrawXYAxisAll(m *canvas.Model, p canvas.Point, s lipgloss.Style) {
 	DrawHorizonalLineLeft(m, canvas.Point{p.X - 1, p.Y}, s)
 }
 
-// DrawColumnRune draws a braille rune on to the canvas at given (X,Y) coordinates with given style.
+// DrawBrailleRune draws a braille rune on to the canvas at given (X,Y) coordinates with given style.
 // The function checks for existing braille runes already on the canvas and
 // will draw a new braille pattern with the dot patterns of both the existing and given runes.
 // Does nothing if given rune is Null or is not a braille rune.
@@ -734,4 +734,96 @@ func getLinePointsHigh(p1 canvas.Point, p2 canvas.Point) (r []canvas.Point) {
 		}
 	}
 	return
+}
+
+// DrawCandlestickBottomToTop draws candlestick line runes going up from given point.
+// `h` and `l` are the candlestick high and low values.
+// `bh` and `bl` are the candlestick body high and low values.
+// These values represent the height of the runes drawn going up.
+// Fractional values are used since there are 1/2th candlestick line segment runes and
+// top and bottom fractional values will map to the nearest 1/2th candlestick line segment runes.
+// Assumes all high values >= all low values, `h` >= `bh`, and `l` <= `bl`.
+// Applies style to all block runes.
+// Coordinates (0,0) is top left of canvas.
+func DrawCandlestickBottomToTop(m *canvas.Model, p canvas.Point, l, bl, bh, h float64, s lipgloss.Style) {
+	// bottom wick
+	lf := math.Floor(l)
+	lr := runes.LineUp
+	if (l - lf) < 0.5 {
+		lr = runes.LineDown
+	}
+	DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - int(lf)}, lr, s)
+
+	// bottom body
+	blf := math.Floor(bl)
+	blr := runes.LineUpHeavy
+	if (bl - blf) < 0.5 {
+		blr = runes.LineDownHeavy
+	}
+	if lf < blf { // add upper segment to bottom wick if bottom wick is below body
+		DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - int(lf)}, runes.LineUp, s)
+		// add bottom segment to bottom body if bottom wick is below bottom body rune that has a top segment
+		if blr == runes.LineUpHeavy {
+			blr = runes.LineUpHeavyDown
+		}
+	}
+	for i := int(lf + 1); i < int(blf); i++ { // fill in spots between bottom of wick and bottom of body
+		DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - i}, runes.LineVertical, s)
+	}
+	DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - int(blf)}, blr, s)
+
+	// top body
+	bhf := math.Floor(bh)
+	bhr := runes.LineDownHeavy
+	if (bh - bhf) >= 0.5 {
+		bhr = runes.LineUpHeavy
+	}
+	if blf < bhf { // add upper segment to bottom body if bottom body is below top body
+		DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - int(blf)}, runes.LineUpHeavy, s)
+		// add bottom segment to top body if bottom body is below top body that has a top segment
+		if bhr == runes.LineUpHeavy {
+			bhr = runes.LineVerticalHeavy
+		}
+	}
+	for i := int(blf + 1); i < int(bhf); i++ { // fill in spots between top and bottom of body
+		DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - i}, runes.LineVerticalHeavy, s)
+	}
+	DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - int(bhf)}, bhr, s)
+
+	// top wick
+	hf := math.Floor(h)
+	hr := runes.LineDown
+	if (h - hf) >= 0.5 {
+		hr = runes.LineUp
+	}
+	if bhf < hf { // add upper segment to top body if top body is below top wick
+		DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - int(bhf)}, runes.LineUp, s)
+		// add bottom segment to top wick if top body is below top wick that has a top segment
+		if hr == runes.LineUp {
+			hr = runes.LineVertical
+		}
+	}
+	for i := int(bhf + 1); i < int(hf); i++ { // fill in spots between top of body and top of wick
+		DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - i}, runes.LineVertical, s)
+	}
+	DrawCandlestickRune(m, canvas.Point{X: p.X, Y: p.Y - int(hf)}, hr, s)
+	return
+}
+
+// DrawCandlestickRune draws a canndlestick rune on to the canvas
+// at given (X,Y) coordinates with given style.
+// The function checks for existing candlestick runes already on the canvas and
+// attempts to draws runes such that the candlestick lines appears combined.
+// If the runes cannot be combined, then it will the existing rune will be replaced.
+// Does nothing if given rune is Null or is not a candlestick rune.
+func DrawCandlestickRune(m *canvas.Model, p canvas.Point, r rune, s lipgloss.Style) {
+	if (r == runes.Null) || !runes.IsCandlestick(r) {
+		return
+	}
+	nr := r
+	cr := m.Cell(p).Rune
+	if runes.IsCandlestick(cr) {
+		nr = runes.CombineCandlesticks(cr, r)
+	}
+	m.SetCell(p, canvas.NewCellWithStyle(nr, s))
 }

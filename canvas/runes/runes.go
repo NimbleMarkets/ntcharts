@@ -11,6 +11,7 @@ const (
 
 	LineHorizontal         = '\u2500' // ─
 	LineVertical           = '\u2502' // │
+	LineVerticalHeavy      = '\u2503' // ┃
 	LineDownRight          = '\u250C' // ┌
 	LineDownLeft           = '\u2510' // ┐
 	LineUpRight            = '\u2514' // └
@@ -24,6 +25,10 @@ const (
 	LineUp                 = '\u2575' // ╵
 	LineRight              = '\u2576' // ╶
 	LineDown               = '\u2577' // ╷
+	LineUpHeavy            = '\u2579' // ╹
+	LineDownHeavy          = '\u257B' // ╻
+	LineUpDownHeavy        = '\u257D' // ╽
+	LineUpHeavyDown        = '\u257F' // ╿
 
 	ArcDownRight = '\u256D' // ╭
 	ArcDownLeft  = '\u256E' // ╮
@@ -405,7 +410,7 @@ func SetLineSegments(r rune, l *LineSegments) {
 	return
 }
 
-// IsLine returns whether a given rune is considered a line rune.
+// IsLine returns whether a given rune is considered a line rune used for drawing lines.
 func IsLine(r rune) bool {
 	if (r >= 0x2500 && r <= 0x253C) || (r >= 0x256D && r <= 0x2570) || (r >= 0x2574 && r <= 0x2577) {
 		return true
@@ -430,7 +435,7 @@ func ThinLineFromLineSegments(l LineSegments) rune {
 }
 
 // CombineLines returns a rune that is a combination of two line runes.
-// Any invalid line rune combinations or invalid LineStyle will return r2.
+// Invalid line rune combinations or invalid LineStyle will return r2.
 // The Linestyle determines the output line rune, even if
 // the two input line runes are not of that style.
 func CombineLines(r1 rune, r2 rune, ls LineStyle) (r rune) {
@@ -453,5 +458,112 @@ func CombineLines(r1 rune, r2 rune, ls LineStyle) (r rune) {
 	case ArcLineStyle:
 		r = ArcLineFromLineSegments(l)
 	}
+	return
+}
+
+// CandlestickSegments indicates whether a candlestick segment
+// going up and down with thin or heavy lines is displayed.
+type CandlestickSegments struct {
+	Up        bool
+	Down      bool
+	UpHeavy   bool
+	DownHeavy bool
+}
+
+var candlestickSegmentsMap = map[CandlestickSegments]rune{
+	{false, false, false, false}: Null,
+	{false, false, false, true}:  LineDownHeavy,
+	{false, false, true, false}:  LineUpHeavy,
+	{false, false, true, true}:   LineVerticalHeavy,
+	{false, true, false, false}:  LineDown,
+	{false, true, false, true}:   LineDownHeavy,
+	{false, true, true, false}:   LineUpHeavyDown,
+	{false, true, true, true}:    LineVerticalHeavy,
+	{true, false, false, false}:  LineUp,
+	{true, false, false, true}:   LineUpDownHeavy,
+	{true, false, true, false}:   LineUpHeavy,
+	{true, false, true, true}:    LineVerticalHeavy,
+	{true, true, false, false}:   LineVertical,
+	{true, true, false, true}:    LineUpDownHeavy,
+	{true, true, true, false}:    LineUpHeavyDown,
+	{true, true, true, true}:     LineVerticalHeavy,
+}
+
+// CandlestickFromCandlestickSegments returns either an empty rune
+// or a candlestick rune using given CandlestickSegments.
+// CandlestickSegments contain whether or not the returned rune
+// should display thin or heavy lines going up or down.
+func CandlestickFromCandlestickSegments(c CandlestickSegments) rune {
+	return candlestickSegmentsMap[c]
+}
+
+// SetCandlestickSegments sets given CandlestickSegments segments based on given rune.
+func SetCandlestickSegments(r rune, c *CandlestickSegments) {
+	switch r {
+	case LineVertical:
+		c.Up = true
+		c.Down = true
+	case LineVerticalHeavy:
+		c.UpHeavy = true
+		c.DownHeavy = true
+	case LineUp:
+		c.Up = true
+	case LineDown:
+		c.Down = true
+	case LineUpHeavy:
+		c.UpHeavy = true
+	case LineDownHeavy:
+		c.DownHeavy = true
+	case LineUpDownHeavy:
+		c.Up = true
+		c.DownHeavy = true
+	case LineUpHeavyDown:
+		c.UpHeavy = true
+		c.Down = true
+	}
+	return
+}
+
+// IsCandlestick returns whether a given rune is considered
+// a candlestick rune used for drawing candlesticks.
+func IsCandlestick(r rune) bool {
+	switch r {
+	case 0x2502:
+		return true
+	case 0x2503:
+		return true
+	case 0x2575:
+		return true
+	case 0x2577:
+		return true
+	case 0x2579:
+		return true
+	case 0x257B:
+		return true
+	case 0x257D:
+		return true
+	case 0x257F:
+		return true
+	}
+	return false
+}
+
+// CombineCandlesticks returns a rune that is a combination of two candlestick runes.
+// Invalid candlestick rune combinations will return r2.
+func CombineCandlesticks(r1 rune, r2 rune) (r rune) {
+	r = r2
+	r1ok := IsCandlestick(r1)
+	r2ok := IsCandlestick(r2)
+	if !r1ok && !r2ok {
+		return
+	}
+	var c CandlestickSegments
+	if r1ok {
+		SetCandlestickSegments(r1, &c)
+	}
+	if r2ok {
+		SetCandlestickSegments(r2, &c)
+	}
+	r = CandlestickFromCandlestickSegments(c)
 	return
 }
