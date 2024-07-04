@@ -79,6 +79,7 @@ type displayOptions struct {
 	AdjClose   bool // replaces Close with Adjusted Close
 	LineStyle  runes.LineStyle
 	UseBraille bool // whether to draw braille lines
+	UseCandle  bool // whether to draw candlesticks instead of lines
 }
 
 var displayOpts displayOptions
@@ -259,10 +260,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	}
+	// choose which rune drawing method to use based on user options
 	m.chart, _ = m.chart.Update(msg)
-	if displayOpts.UseBraille {
+	switch {
+	case displayOpts.UseCandle:
+		// candlesticks for timeserieschart require four data sets containing
+		// the open, close, high and low values.
+		// DrawCandle() assumes that each data set contains the same number of data points
+		// and the TimePoint.Time value is the same at a specific index for each data set.
+		if displayOpts.AdjClose {
+			m.chart.DrawCandle(OpenOptionName, HighOptionName, LowOptionName, AdjCloseOptionName, highLineStyle, lowLineStyle)
+		} else {
+			m.chart.DrawCandle(OpenOptionName, HighOptionName, LowOptionName, CloseOptionName, highLineStyle, lowLineStyle)
+		}
+	case displayOpts.UseBraille:
 		m.chart.DrawBrailleAll()
-	} else {
+	default:
 		m.chart.DrawAll()
 	}
 	if displayOpts.Volume {
@@ -272,24 +285,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	var legend string
-	if displayOpts.All || displayOpts.Open {
-		legend += openLineStyle.Render(" OPEN")
-	}
-	if displayOpts.All || displayOpts.High {
-		legend += highLineStyle.Render(" HIGH")
-	}
-	if displayOpts.All || displayOpts.Low {
-		legend += lowLineStyle.Render(" LOW")
-	}
-	if displayOpts.All || displayOpts.Close {
-		if displayOpts.AdjClose {
-			legend += closeLineStyle.Render(" ADJCLOSE")
-		} else {
-			legend += closeLineStyle.Render(" CLOSE")
-		}
-	}
-
 	// combine line chart and sparkline if showing volume
 	var graphView string
 	if displayOpts.Volume {
@@ -302,6 +297,7 @@ func (m model) View() string {
 		graphView = m.chart.View()
 	}
 
+	legend := getChartLegend()
 	startDate := time.Unix(int64(m.chart.MinX()), 0).UTC()
 	endDate := time.Unix(int64(m.chart.MaxX()), 0).UTC()
 	header := fmt.Sprintf("OHLC Chart from %s to %s. Legend [%s ]\n", startDate, endDate, legend)
@@ -310,6 +306,33 @@ func (m model) View() string {
 	// wrap output string in bubblezone.Manager.Scan()
 	// if SetZoneManager(bubblezone.Manager) is used
 	return m.zoneManager.Scan(s)
+}
+
+// getChartLegend returns string containing legend for chart
+// depending on user display options
+func getChartLegend() (l string) {
+	if displayOpts.UseCandle {
+		l += highLineStyle.Render(" BULLISH")
+		l += lowLineStyle.Render(" BEARISH")
+	} else {
+		if displayOpts.All || displayOpts.Open {
+			l += openLineStyle.Render(" OPEN")
+		}
+		if displayOpts.All || displayOpts.High {
+			l += highLineStyle.Render(" HIGH")
+		}
+		if displayOpts.All || displayOpts.Low {
+			l += lowLineStyle.Render(" LOW")
+		}
+		if displayOpts.All || displayOpts.Close {
+			if displayOpts.AdjClose {
+				l += closeLineStyle.Render(" ADJCLOSE")
+			} else {
+				l += closeLineStyle.Render(" CLOSE")
+			}
+		}
+	}
+	return
 }
 
 // recordsFromCSV reads from a io.Reader and returns
@@ -424,6 +447,7 @@ func main() {
 	flag.StringVar(&filePath, "filepath", "", "filepath to OHLC csv file, '-' to read from stdin")
 	flag.BoolVar(&useThinStyle, "thin", false, "use thin lines (default: arc lines)")
 	flag.BoolVar(&displayOpts.UseBraille, "braille", false, "use braille lines (default: arc lines)")
+	flag.BoolVar(&displayOpts.UseCandle, "candle", false, "use candlesticks (shows all lines) (default: arc lines)")
 	flag.BoolVar(&displayOpts.Open, OpenOptionName, false, "whether to display OPEN line")
 	flag.BoolVar(&displayOpts.High, HighOptionName, false, "whether to display HIGH line")
 	flag.BoolVar(&displayOpts.Low, LowOptionName, false, "whether to display LOW line")
@@ -432,8 +456,8 @@ func main() {
 	flag.BoolVar(&displayOpts.Volume, VolumeOptionName, false, "whether to display sparkline containing VOLUME")
 	flag.Parse()
 
-	// if nothing specified, default to display all lines
-	if !displayOpts.Open && !displayOpts.High && !displayOpts.Low && !displayOpts.Close {
+	// if nothing specified, default to display all OHLC lines (automatically display all lines if showing candlesticks)
+	if displayOpts.UseCandle || (!displayOpts.Open && !displayOpts.High && !displayOpts.Low && !displayOpts.Close) {
 		displayOpts.All = true
 	}
 	if useThinStyle {
