@@ -263,14 +263,14 @@ func (m *Model) PushDataSet(n string, t TimePoint) {
 	ds.tBuf.Push(f)
 }
 
-// Draw will draw lines runes displayed from right to left
+// Draw will draw lines runes displayed from left to right
 // of the graphing area of the canvas. Uses default data set.
 func (m *Model) Draw() {
 	m.DrawDataSets([]string{DefaultDataSetName})
 }
 
 // DrawAll will draw lines runes for all data sets
-// from right to left of the graphing area of the canvas.
+// from left to right of the graphing area of the canvas.
 func (m *Model) DrawAll() {
 	names := make([]string, 0, len(m.dSets))
 	for n, ds := range m.dSets {
@@ -282,7 +282,7 @@ func (m *Model) DrawAll() {
 	m.DrawDataSets(names)
 }
 
-// DrawDataSets will draw lines runes from right to left
+// DrawDataSets will draw lines runes from left to right
 // of the graphing area of the canvas for each data set given
 // by name strings.
 func (m *Model) DrawDataSets(names []string) {
@@ -320,14 +320,14 @@ func (m *Model) DrawDataSets(names []string) {
 	}
 }
 
-// DrawBraille will draw braille runes displayed from right to left
+// DrawBraille will draw braille runes displayed from left to right
 // of the graphing area of the canvas. Uses default data set.
 func (m *Model) DrawBraille() {
 	m.DrawBrailleDataSets([]string{DefaultDataSetName})
 }
 
 // DrawBrailleAll will draw braille runes for all data sets
-// from right to left of the graphing area of the canvas.
+// from left to right of the graphing area of the canvas.
 func (m *Model) DrawBrailleAll() {
 	names := make([]string, 0, len(m.dSets))
 	for n, ds := range m.dSets {
@@ -339,7 +339,74 @@ func (m *Model) DrawBrailleAll() {
 	m.DrawBrailleDataSets(names)
 }
 
-// DrawBrailleDataSets will draw braille runes from right to left
+// DrawBraille will draw braille runes displayed from left to right
+// of the graphing area of the canvas.
+// Requires four data sets containing candlestick data open, high, low, close values.
+// Assumes that all data sets have the same number of TimePoints and
+// the TimePoint at the same index of each data set has the same Time value.
+func (m *Model) DrawCandle(openName, highName, lowName, closeName string, bullStyle, bearStyle lipgloss.Style) {
+	if len(openName) == 0 || len(highName) == 0 || len(lowName) == 0 || len(closeName) == 0 {
+		return
+	}
+	if _, ok := m.dSets[openName]; !ok {
+		return
+	}
+	if _, ok := m.dSets[highName]; !ok {
+		return
+	}
+	if _, ok := m.dSets[lowName]; !ok {
+		return
+	}
+	if _, ok := m.dSets[closeName]; !ok {
+		return
+	}
+	// only draws up to the number of candles of the data sets with the lowest
+	// amount of data values if length if data is not the same across all data sets
+	oData := m.dSets[openName].tBuf.ReadAll()
+	hData := m.dSets[highName].tBuf.ReadAll()
+	lData := m.dSets[lowName].tBuf.ReadAll()
+	cData := m.dSets[closeName].tBuf.ReadAll()
+	limit := len(oData)
+	if len(hData) < limit {
+		limit = len(hData)
+	}
+	if len(lData) < limit {
+		limit = len(lData)
+	}
+	if len(cData) < limit {
+		limit = len(cData)
+	}
+
+	m.Clear()
+	m.DrawXYAxisAndLabel()
+	for i := 0; i < limit; i++ {
+		// assuming all time values are the same, can just any of the values to check
+		// if data point is outside of the current graph view to ignore
+		if oData[i].X < 0 {
+			continue
+		}
+		var s lipgloss.Style
+		var bl, bh float64
+		if oData[i].Y > cData[i].Y { // check if bearish or bullish candle
+			s = bearStyle
+			bl = cData[i].Y
+			bh = oData[i].Y
+		} else {
+			s = bullStyle
+			bh = cData[i].Y
+			bl = oData[i].Y
+		}
+		drawX := int(oData[i].X) + m.Origin().X
+		if m.YStep() > 0 {
+			drawX += 1
+		}
+		graph.DrawCandlestickBottomToTop(&m.Canvas,
+			canvas.Point{X: drawX, Y: m.Origin().Y - 1},
+			lData[i].Y, bl, bh, hData[i].Y, s)
+	}
+}
+
+// DrawBrailleDataSets will draw braille runes from left to right
 // of the graphing area of the canvas for each data set given
 // by name strings.
 func (m *Model) DrawBrailleDataSets(names []string) {
@@ -430,7 +497,7 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 			}
 		}
 	}
-	// populate sequence of Y values to for drawing
+	// populate sequence of Y values for drawing lines
 	r := make([]int, width, width)
 	for i, v := range buckets {
 		r[i] = int(math.Round(v.Avg))
@@ -438,7 +505,7 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 	return r
 }
 
-// Update processes bubbletea Msg to by invoking
+// Update processes bubbletea Msg by invoking
 // UpdateHandlerFunc callback if linechart is focused.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.Focused() {
