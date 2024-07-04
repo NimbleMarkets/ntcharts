@@ -130,6 +130,7 @@ tasks:
     deps: [go-tidy]
     cmds:
       - go build -o bin/ntcharts-graph-braille examples/graph/braille/*.go
+      - go build -o bin/ntcharts-graph-candlesticks examples/graph/candlesticks/*.go
       - go build -o bin/ntcharts-graph-circles examples/graph/circles/*.go
       - go build -o bin/ntcharts-graph-columns examples/graph/columns/*.go
       - go build -o bin/ntcharts-graph-lines examples/graph/lines/*.go
@@ -139,6 +140,7 @@ tasks:
       - examples/graph/**/*.go
     generates:
       - bin/ntcharts-graph-braille
+      - bin/ntcharts-graph-candlesticks
       - bin/ntcharts-graph-circles
       - bin/ntcharts-graph-columns
       - bin/ntcharts-graph-lines
@@ -195,7 +197,7 @@ tasks:
     cmds:
       - rm -f bin/ntcharts-barchart-horizontal bin/ntcharts-barchart-vertical
       - rm -f bin/ntcharts-canvas-logo
-      - rm -f bin/ntcharts-graph-braille bin/ntcharts-graph-circles bin/ntcharts-graph-columns bin/ntcharts-graph-lines bin/ntcharts-graph-rows
+      - rm -f bin/ntcharts-graph-braille bin/ntcharts-graph-candlesticks bin/ntcharts-graph-circles bin/ntcharts-graph-columns bin/ntcharts-graph-lines bin/ntcharts-graph-rows
       - rm -f bin/ntcharts-linechart-circles bin/ntcharts-linechart-lines bin/ntcharts-linechart-scatter bin/ntcharts-linechart-streaming bin/ntcharts-linechart-timeseries bin/ntcharts-linechart-wavelines
       - rm -f bin/ntcharts-quickstart
       - rm -f bin/ntcharts-sparkline
@@ -217,6 +219,7 @@ tasks:
       - vhs validate ./examples/barchart/vertical/demo.tape
       - vhs validate ./examples/canvas/logo/demo.tape
       - vhs validate ./examples/graph/braille/demo.tape
+      - vhs validate ./examples/graph/candlesticks/demo.tape
       - vhs validate ./examples/graph/circles/demo.tape
       - vhs validate ./examples/graph/columns/demo.tape
       - vhs validate ./examples/graph/lines/demo.tape
@@ -241,6 +244,7 @@ tasks:
       - vhs --output ./examples/barchart/vertical/demo.gif ./examples/barchart/vertical/demo.tape
       - vhs --output ./examples/canvas/logo/demo.gif ./examples/canvas/logo/demo.tape
       - vhs --output ./examples/graph/braille/demo.gif ./examples/graph/braille/demo.tape
+      - vhs --output ./examples/graph/candlesticks/demo.gif ./examples/graph/candlesticks/demo.tape
       - vhs --output ./examples/graph/circles/demo.gif ./examples/graph/circles/demo.tape
       - vhs --output ./examples/graph/columns/demo.gif ./examples/graph/columns/demo.tape
       - vhs --output ./examples/graph/lines/demo.gif ./examples/graph/lines/demo.tape
@@ -261,6 +265,7 @@ tasks:
       - ./examples/barchart/vertical/demo.gif
       - ./examples/canvas/logo/demo.gif
       - ./examples/graph/braille/demo.gif
+      - ./examples/graph/candlesticks/demo.gif
       - ./examples/graph/circles/demo.gif
       - ./examples/graph/columns/demo.gif
       - ./examples/graph/lines/demo.gif
@@ -281,6 +286,7 @@ tasks:
       - rm -f ./examples/barchart/vertical/demo.gif
       - rm -f ./examples/canvas/logo/demo.gif
       - rm -f ./examples/graph/braille/demo.gif
+      - rm -f ./examples/graph/candlesticks/demo.gif
       - rm -f ./examples/graph/circles/demo.gif
       - rm -f ./examples/graph/columns/demo.gif
       - rm -f ./examples/graph/lines/demo.gif

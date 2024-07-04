@@ -23,6 +23,11 @@ There are various graphing functions for drawing runes onto the Canvas.
 [(source)](./graph/braille/main.go)<br>
 <img src="graph/braille/demo.gif" alt="braille graph gif"/>
 
+### Candlesticks
+
+[(source)](./graph/candlesticks/main.go)<br>
+<img src="graph/candlesticks/demo.gif" alt="candlesticks graph gif"/>
+
 ### Circles
 
 [(source)](./graph/circles/main.go)<br>
