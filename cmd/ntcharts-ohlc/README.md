@@ -1,6 +1,6 @@
 # ntcharts-ohlc
 
-`ntcharts-ohcl` displays OHLC data as a line chart from an input CSV file.  The command can display the braille lines or continuous line and choose which lines to display.
+`ntcharts-ohcl` displays OHLC data as a line chart from an input CSV file.  The command can display the braille lines or continuous line and choose which lines to display.  The command can also display data as candlesticks with the `--candle` option, where each candle represents the OHLC each date.
 
 The input CSV file is required to have column headers `Date,Open,High,Low,Close,Adj Close,Volume`.  The `Date` value format is required to be in the format `YYYY-MM-DD` and in chronological order.
 
