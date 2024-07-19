@@ -71,8 +71,6 @@ type dataSet struct {
 	LineStyle runes.LineStyle // type of line runes to draw
 	Style     lipgloss.Style
 
-	lastTime time.Time // last seen time value
-
 	// stores TimePoints as FloatPoint64{X:time.Time, Y: value}
 	// time.Time will be converted to seconds since epoch.
 	// both time and value will be scaled to fit the graphing area
@@ -463,6 +461,26 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 	}
 }
 
+// Set column background style to given lipgloss.Style background
+// corresponding to timestamp at given time.Time.
+func (m *Model) SetColumnBackgroundStyle(ts time.Time, s lipgloss.Style) {
+	f := canvas.Float64Point{X: float64(ts.Unix()), Y: 0}
+	if f.X < m.ViewMinX() || f.X > m.ViewMaxX() {
+		return
+	}
+	// use default dataset to scale the given time to the canvas (any dataset do)
+	sf := m.dSets[DefaultDataSetName].tBuf.ScaleDatum(f)
+	drawX := int(sf.X) + m.Origin().X
+	if m.YStep() > 0 {
+		drawX += 1
+	}
+	for i := range m.Origin().Y {
+		cs := m.Canvas.Cell(canvas.Point{X: drawX, Y: i}).Style.Copy() // copy cell foreground
+		cs = cs.Background(s.GetBackground())                          // set cell background to given style background
+		m.Canvas.SetCellStyle(canvas.Point{X: drawX, Y: i}, cs)
+	}
+}
+
 // getLineSequence returns a sequence of Y values
 // to draw line runes from a given set of scaled []FloatPoint64.
 func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
@@ -474,7 +492,7 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 	// each index of the bucket corresponds to a graph column.
 	// each index value is the average of data point values
 	// that is mapped to that graph column.
-	buckets := make([]cAverage, width, width)
+	buckets := make([]cAverage, width)
 	for i := 0; i < dataLen; i++ {
 		j := i + 1
 		if j >= dataLen {
@@ -498,7 +516,7 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 		}
 	}
 	// populate sequence of Y values for drawing lines
-	r := make([]int, width, width)
+	r := make([]int, width)
 	for i, v := range buckets {
 		r[i] = int(math.Round(v.Avg))
 	}
