@@ -44,12 +44,18 @@ func (b *Float64ScaleBuffer) Scale() float64 {
 	return b.scale
 }
 
+// ScaleDatum returns a scaled float64 using
+// internal buffer scaling from a given float64.
+func (b *Float64ScaleBuffer) ScaleDatum(f float64) float64 {
+	return (f - b.offset) * b.scale
+}
+
 // SetScale updates scaling factor and recomputes all scaled data.
 func (b *Float64ScaleBuffer) SetScale(sc float64) {
 	b.scale = sc
 	b.sbuf = make([]float64, 0, len(b.buf))
 	for _, v := range b.buf {
-		b.sbuf = append(b.sbuf, (v-b.offset)*b.scale)
+		b.sbuf = append(b.sbuf, b.ScaleDatum(v))
 	}
 }
 
@@ -63,14 +69,14 @@ func (b *Float64ScaleBuffer) SetOffset(o float64) {
 	b.offset = o
 	b.sbuf = make([]float64, 0, len(b.buf))
 	for _, v := range b.buf {
-		b.sbuf = append(b.sbuf, (v-b.offset)*b.scale)
+		b.sbuf = append(b.sbuf, b.ScaleDatum(v))
 	}
 }
 
 // Push adds Float64Point data to the back of the buffer.
 func (b *Float64ScaleBuffer) Push(p float64) {
 	b.buf = append(b.buf, p)
-	b.sbuf = append(b.sbuf, (p-b.offset)*b.scale)
+	b.sbuf = append(b.sbuf, b.ScaleDatum(p))
 }
 
 // Pop erases the oldest Float64Point from the buffer.
@@ -86,7 +92,7 @@ func (b *Float64ScaleBuffer) SetData(d []float64) {
 	b.sbuf = make([]float64, 0, len(d))
 	for _, p := range d {
 		b.buf = append(b.buf, p)
-		b.sbuf = append(b.sbuf, (p-b.offset)*b.scale)
+		b.sbuf = append(b.sbuf, b.ScaleDatum(p))
 	}
 }
 
@@ -133,8 +139,8 @@ type Float64ScaleRingBuffer struct {
 // NewFloat64ScaleRingBuffer returns *Float64ScaleRingBuffer initialized to default settings.
 func NewFloat64ScaleRingBuffer(s int, o, sc float64) *Float64ScaleRingBuffer {
 	return &Float64ScaleRingBuffer{
-		buf:    make([]float64, s, s),
-		sbuf:   make([]float64, s, s),
+		buf:    make([]float64, s),
+		sbuf:   make([]float64, s),
 		offset: o,
 		scale:  sc,
 		sz:     s,
@@ -164,11 +170,17 @@ func (b *Float64ScaleRingBuffer) Scale() float64 {
 	return b.scale
 }
 
+// ScaleDatum returns a scaled float64 using
+// internal buffer scaling from a given float64.
+func (b *Float64ScaleRingBuffer) ScaleDatum(f float64) float64 {
+	return (f - b.offset) * b.scale
+}
+
 // SetScale updates scaling factor and recomputes all scaled data.
 func (b *Float64ScaleRingBuffer) SetScale(sc float64) {
 	b.scale = sc
 	for i, v := range b.buf {
-		b.sbuf[i] = (v - b.offset) * b.scale
+		b.sbuf[i] = b.ScaleDatum(v)
 	}
 }
 
@@ -181,14 +193,14 @@ func (b *Float64ScaleRingBuffer) Offset() float64 {
 func (b *Float64ScaleRingBuffer) SetOffset(o float64) {
 	b.offset = o
 	for i, v := range b.buf {
-		b.sbuf[i] = (v - b.offset) * b.scale
+		b.sbuf[i] = b.ScaleDatum(v)
 	}
 }
 
 // Push adds float64 data to the back of the buffer.
 func (b *Float64ScaleRingBuffer) Push(f float64) {
 	b.buf[b.wIdx] = f
-	b.sbuf[b.wIdx] = (f - b.offset) * b.scale
+	b.sbuf[b.wIdx] = b.ScaleDatum(f)
 	b.wIdx++
 	if b.wIdx >= b.sz {
 		b.wIdx = 0
@@ -275,12 +287,18 @@ func (b *Float64PointScaleBuffer) Scale() canvas.Float64Point {
 	return b.scale
 }
 
+// ScaleDatum returns a scaled Float64Point using
+// internal buffer scaling from a given Float64Point.
+func (b *Float64PointScaleBuffer) ScaleDatum(f canvas.Float64Point) canvas.Float64Point {
+	return f.Sub(b.offsetP).Mul(b.scale)
+}
+
 // SetScale updates scaling factor and recomputes all scaled data.
 func (b *Float64PointScaleBuffer) SetScale(sc canvas.Float64Point) {
 	b.scale = sc
 	b.sbuf = make([]canvas.Float64Point, 0, len(b.buf))
 	for _, v := range b.buf {
-		b.sbuf = append(b.sbuf, v.Sub(b.offsetP).Mul(b.scale))
+		b.sbuf = append(b.sbuf, b.ScaleDatum(v))
 	}
 }
 
@@ -294,14 +312,14 @@ func (b *Float64PointScaleBuffer) SetOffset(o canvas.Float64Point) {
 	b.offsetP = o
 	b.sbuf = make([]canvas.Float64Point, 0, len(b.buf))
 	for _, v := range b.buf {
-		b.sbuf = append(b.sbuf, v.Sub(b.offsetP).Mul(b.scale))
+		b.sbuf = append(b.sbuf, b.ScaleDatum(v))
 	}
 }
 
 // Push adds Float64Point data to the back of the buffer.
 func (b *Float64PointScaleBuffer) Push(p canvas.Float64Point) {
 	b.buf = append(b.buf, p)
-	b.sbuf = append(b.sbuf, p.Sub(b.offsetP).Mul(b.scale))
+	b.sbuf = append(b.sbuf, b.ScaleDatum(p))
 }
 
 // Pop erases the oldest Float64Point from the buffer.
@@ -317,7 +335,7 @@ func (b *Float64PointScaleBuffer) SetData(d []canvas.Float64Point) {
 	b.sbuf = make([]canvas.Float64Point, 0, len(d))
 	for _, p := range d {
 		b.buf = append(b.buf, p)
-		b.sbuf = append(b.sbuf, p.Sub(b.offsetP).Mul(b.scale))
+		b.sbuf = append(b.sbuf, b.ScaleDatum(p))
 	}
 }
 
