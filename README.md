@@ -15,6 +15,7 @@ We supply many chart types within the glory of your terminal!
 | [Canvas](./examples/README.md#canvas) | A 2D grid to plot arbitrary runes, with [LipGloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mousing.  It is the foundation for all the following charts. |
 | [Bar Chart](./examples/README.md#bar-chart) | Displays values as either horizontal rows or vertical columns. |
 | [Line Chart](./examples/README.md#lines) | Displays (X,Y) data points onto a 2D grid in various types of charts. |
+| [OHLC/Candle Chart](./examples/README.md#candlesticks) | Displays Open, High, Low, Close values as candlesticks. |
 | [Scatter Chart](./examples/README.md#scatter) | Plots abitrary runes onto (X,Y) coordinates. |
 | [Streamline Chart](./examples/README.md#streaming) | Displays a continuous a line moving across the Canvas from the right side to the left side. |
 | [Time Series Chart](./examples/README.md#time-series) | Displays lines with values on the Y axis and time values on the X axis. |
