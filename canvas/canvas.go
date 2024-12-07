@@ -325,12 +325,31 @@ func (m *Model) SetCellStyle(p Point, s lipgloss.Style) bool {
 	return true
 }
 
-// SetRune sets Cell.Rune using (X,Y) coordinates of canvas.
+// GetCellStyle gets the Style at (X,Y) coordinates of canvas.
+// Returns nil if no style is found.
+func (m *Model) GetCellStyle(p Point) *lipgloss.Style {
+	if !p.In(m.area) {
+		return nil
+	}
+	copyStyle := m.content[p.Y][p.X].Style
+	return &copyStyle
+}
+
+// SetRune sets Cell.Rune using (X,Y) coordinates of canvas using the default style.
 func (m *Model) SetRune(p Point, r rune) bool {
 	if !p.In(m.area) {
 		return false
 	}
-	m.content[p.Y][p.X] = NewCell(r)
+	m.content[p.Y][p.X] = NewCellWithStyle(r, m.Style)
+	return true
+}
+
+// SetRuneWithStyle sets Cell.Rune using (X,Y) coordinates of canvas using the given style.
+func (m *Model) SetRuneWithStyle(p Point, r rune, style lipgloss.Style) bool {
+	if !p.In(m.area) {
+		return false
+	}
+	m.content[p.Y][p.X] = NewCellWithStyle(r, style)
 	return true
 }
 

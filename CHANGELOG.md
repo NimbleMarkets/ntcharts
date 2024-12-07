@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.3.0 (unreleased)
+
+ * FIX: `canvas.SetRune` did not honor Canvas' default style.
+ * ADD: `canvas.SetRuneWithStyle` and `canvas.GetCellStyle`
+
 ## v0.2.0 (2024-11-15)
 
  * Add [candlestick/OHLC support](./examples/README.md#candlesticks) with (#3)
