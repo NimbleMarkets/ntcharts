@@ -14,6 +14,7 @@ We supply many chart types within the glory of your terminal!
 | :-------- | :----- |
 | [Canvas](./examples/README.md#canvas) | A 2D grid to plot arbitrary runes, with [LipGloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mousing.  It is the foundation for all the following charts. |
 | [Bar Chart](./examples/README.md#bar-chart) | Displays values as either horizontal rows or vertical columns. |
+| [Heat Map](./examples/README.md#heatmap) | Displays (x,y) values on a color-mapped heatmap. |
 | [Line Chart](./examples/README.md#lines) | Displays (X,Y) data points onto a 2D grid in various types of charts. |
 | [OHLC/Candle Chart](./examples/README.md#candlesticks) | Displays Open, High, Low, Close values as candlesticks. |
 | [Scatter Chart](./examples/README.md#scatter) | Plots abitrary runes onto (X,Y) coordinates. |
@@ -222,6 +223,37 @@ This example produces the following sparkline:
 
 <img src="examples/usage/sparkline.png" alt="sparkline png" width='100'/>
 
+#### Heat Map
+
+Heat Maps map values to colors on a 2D grid.  The following example creates a heatmap of the function `sin(sqrt(x^2 + y^2))`.   There are more examples in the [`examples` README](./examples/README.md#heatmap).
+
+```go
+package main
+
+import (
+	"fmt"
+	"math"
+
+	"github.com/NimbleMarkets/ntcharts/heatmap"
+)
+
+func main() {
+	hm := heatmap.New(20, 20, heatmap.WithValueRange(0, 1))
+	hm.SetXYRange(-1, 1, -1, 1)
+	for x := float64(-1); x < 1.0; x += 1.0 / float64(hm.GraphWidth()) {
+		for y := float64(-1); y < 1.0; y += 1.0 / float64(hm.GraphHeight()) {
+			val := math.Sin(math.Sqrt(x*x + y*y))
+			hm.Push(heatmap.NewHeatPoint(x, y, val))
+		}
+	}
+	hm.Draw()
+	fmt.Println(hm.View())
+}
+```
+
+This example [(source)](./examples/heatmap/simple/main.go) produces the following heatmap:
+
+<img src="examples/usage/heatmap.png" alt="simple heatmap png" width='100'/>
 
 ## Open Collaboration
 

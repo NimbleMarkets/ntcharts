@@ -1,7 +1,10 @@
 # CHANGELOG
 
-## v0.3.0 (unreleased)
+## v0.3.0 (2024-12-14)
 
+Initial Heatmap support is here! :tada:   It is still missing axis labels and better UX.  We are still exploring the API.  Please provide feedback on GitHub.
+
+ * ADD: Initial [heatmap support](./examples/README.md#heatmap) (#2)
  * FIX: `canvas.SetRune` did not honor Canvas' default style.
  * ADD: `canvas.SetRuneWithStyle` and `canvas.GetCellStyle`
 

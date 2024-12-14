@@ -114,3 +114,20 @@ Sparklines displays data moving across the Canvas from the right side to the lef
 
 [(source)](./sparkline/main.go)<br>
 <img src="sparkline/demo.gif" alt="sparkline gif"/>
+
+## Heatmap
+
+Heatmaps display (x,y) data over a grid with color mapping. 
+
+[Simple Heatmap (source)](./heatmap/simple/main.go)<br>
+<img src="usage/heatmap.png" alt="simple heatmap image" width='100'/>
+
+[AoC 2024.4 Heatmap (source)](./heatmap/aoc2024/main.go)<br>
+<img src="heatmap/aoc2024/aoc2024_4.jpg" alt="heatmap aoc2024 image" width="300"/>
+
+[Functors (source)](./heatmap/functors/main.go)<br>
+<img src="heatmap/functor/functor1.png" alt="heatmap functors still" width="200"/>
+<img src="heatmap/functor/functor2.png" alt="heatmap functors still" width="200"/>
+
+[Perlin Noise (source)](./heatmap/perlin/main.go)<br>
+<img src="heatmap/perlin/perlin.png" alt="heatmap perlin still" width="300"/>

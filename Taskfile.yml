@@ -96,6 +96,7 @@ tasks:
       - build-ex-barchart
       - build-ex-canvas
       - build-ex-graph
+      - build-ex-heatmap
       - build-ex-linechart
       - build-ex-quickstart
       - build-ex-sparkline
@@ -145,6 +146,24 @@ tasks:
       - bin/ntcharts-graph-columns
       - bin/ntcharts-graph-lines
       - bin/ntcharts-graph-rows
+
+  build-ex-heatmap:
+    desc: 'Build heatmap examples'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/ntcharts-heatmap-aoc2024 examples/heatmap/aoc2024/*.go
+      - go build -o bin/ntcharts-heatmap-functor examples/heatmap/functor/*.go
+      - go build -o bin/ntcharts-heatmap-perlin examples/heatmap/perlin/*.go
+      - go build -o bin/ntcharts-heatmap-simple examples/heatmap/simple/*.go
+    sources:
+      - heatmap/**/*.go
+      - canvas/**/*.go
+      - examples/heatmap/**/*.go
+    generates:
+      - bin/ntcharts-heatmap-aoc2024
+      - bin/ntcharts-heatmap-functor
+      - bin/ntcharts-heatmap-perlin
+      - bin/ntcharts-heatmap-simple
 
   build-ex-linechart:
     desc: 'Build linechart examples'
@@ -197,6 +216,7 @@ tasks:
     cmds:
       - rm -f bin/ntcharts-barchart-horizontal bin/ntcharts-barchart-vertical
       - rm -f bin/ntcharts-canvas-logo
+      - rm -f bin/ntcharts-heatmap-aoc2024 bin/ntcharts-heatmap-functor bin/ntcharts-heatmap-perlin bin/ntcharts-heatmap-simple
       - rm -f bin/ntcharts-graph-braille bin/ntcharts-graph-candlesticks bin/ntcharts-graph-circles bin/ntcharts-graph-columns bin/ntcharts-graph-lines bin/ntcharts-graph-rows
       - rm -f bin/ntcharts-linechart-circles bin/ntcharts-linechart-lines bin/ntcharts-linechart-scatter bin/ntcharts-linechart-streaming bin/ntcharts-linechart-timeseries bin/ntcharts-linechart-wavelines
       - rm -f bin/ntcharts-quickstart
@@ -224,6 +244,8 @@ tasks:
       - vhs validate ./examples/graph/columns/demo.tape
       - vhs validate ./examples/graph/lines/demo.tape
       - vhs validate ./examples/graph/rows/demo.tape
+      - vhs validate ./examples/heatmap/functor/demo.tape
+      - vhs validate ./examples/heatmap/perlin/demo.tape
       - vhs validate ./examples/linechart/circles/demo.tape
       - vhs validate ./examples/linechart/lines/demo.tape
       - vhs validate ./examples/linechart/scatter/demo.tape
@@ -233,7 +255,7 @@ tasks:
       - vhs validate ./examples/quickstart/demo.tape
       - vhs validate ./examples/sparkline/demo.tape
     sources:
-      - ./**/*.tape
+      - ./**/**/*.tape
 
   build-gifs:
     desc: 'Build vhs cassette gifs'
@@ -249,6 +271,8 @@ tasks:
       - vhs --output ./examples/graph/columns/demo.gif ./examples/graph/columns/demo.tape
       - vhs --output ./examples/graph/lines/demo.gif ./examples/graph/lines/demo.tape
       - vhs --output ./examples/graph/rows/demo.gif ./examples/graph/rows/demo.tape
+      - vhs --output ./examples/heatmap/functor/demo.gif ./examples/heatmap/functor/demo.tape
+      - vhs --output ./examples/heatmap/perlin/demo.gif ./examples/heatmap/perlin/demo.tape
       - vhs --output ./examples/linechart/circles/demo.gif ./examples/linechart/circles/demo.tape
       - vhs --output ./examples/linechart/lines/demo.gif ./examples/linechart/lines/demo.tape
       - vhs --output ./examples/linechart/scatter/demo.gif ./examples/linechart/scatter/demo.tape
@@ -270,6 +294,8 @@ tasks:
       - ./examples/graph/columns/demo.gif
       - ./examples/graph/lines/demo.gif
       - ./examples/graph/rows/demo.gif
+      - ./examples/heatmap/functor/demo.gif
+      - ./examples/heatmap/perlin/demo.gif
       - ./examples/linechart/circles/demo.gif
       - ./examples/linechart/lines/demo.gif
       - ./examples/linechart/scatter/demo.gif
@@ -291,6 +317,8 @@ tasks:
       - rm -f ./examples/graph/columns/demo.gif
       - rm -f ./examples/graph/lines/demo.gif
       - rm -f ./examples/graph/rows/demo.gif
+      - rm -f ./examples/heatmap/functor/demo.gif
+      - rm -f ./examples/heatmap/perlin/demo.gif
       - rm -f ./examples/linechart/circles/demo.gif
       - rm -f ./examples/linechart/lines/demo.gif
       - rm -f ./examples/linechart/scatter/demo.gif

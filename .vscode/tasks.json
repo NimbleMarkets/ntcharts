@@ -1,0 +1,34 @@
+// .vscode/tasks.json
+// Thank you @KevM
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run ntcharts-heatmap-perlin withheadless dlv",
+            "type": "process",
+            "command": [
+                "dlv",
+            ],
+            "args": [
+                "debug",
+                "--headless",
+                "--listen=:2345",
+                "--api-version=2",
+                "${workspaceFolder}/examples/heatmap/perlin",
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "go",
+                "fileLocation": "relative",
+                "pattern": {
+                    "regexp": "^couldn't start listener:", // error if matched
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^API server listening at:",
+                    "endsPattern": "^Got a connection, launched process" // success if matched
+                }
+            }
+        }
+    ]
+}
