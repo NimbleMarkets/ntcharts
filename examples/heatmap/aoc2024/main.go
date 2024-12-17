@@ -1,6 +1,8 @@
 // Heatmap displaying XMAS
 // https://adventofcode.com/2024/day/4
 //
+// Download example data from URL above.
+//
 // go run examples/heatmap/main.go examples/heatmap/aoc2024/4.txt
 
 package main
@@ -219,10 +221,14 @@ const usage = `usage: %s <aoc2024.4 puzzle file> [<word>]
 Creates a heatmap of word-hits for the AdventOfCode 2024 Day 4
 puzzle with the word filled.  Default word is 'xmas'.
 
+Find test input:
+  https://adventofcode.com/2024/day/4/
+
+Download your input from:
+  https://adventofcode.com/2024/day/4/input
+
 Try running: %s examples/heatmap/aoc2024_4.txt
 
-Or try your own input from:
-   https://adventofcode.com/2024/day/4/input
 `
 
 func main() {

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.3.1 (2024-12-17)
+
+ * Sanitize AoC example
+
 ## v0.3.0 (2024-12-14)
 
 Initial Heatmap support is here! :tada:   It is still missing axis labels and better UX.  We are still exploring the API.  Please provide feedback on GitHub.
