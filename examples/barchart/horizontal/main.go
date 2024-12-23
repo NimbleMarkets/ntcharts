@@ -28,16 +28,20 @@ var labelStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("63")) // purple
 
 var blockStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("9")) // red
+	Foreground(lipgloss.Color("9")). // red
+	Background(lipgloss.Color("9"))  // red
 
 var blockStyle2 = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("2")) // green
+	Foreground(lipgloss.Color("2")). // green
+	Background(lipgloss.Color("2"))  // red
 
 var blockStyle3 = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("6")) // cyan
+	Foreground(lipgloss.Color("6")). // cyan
+	Background(lipgloss.Color("6"))  // red
 
 var blockStyle4 = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("3")) // yellow
+	Foreground(lipgloss.Color("3")). // yellow
+	Background(lipgloss.Color("3"))  // red
 
 type model struct {
 	b1 barchart.Model
