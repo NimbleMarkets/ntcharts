@@ -80,8 +80,8 @@ func (p HeatPoint) AsFloat64Point() canvas.Float64Point {
 type Model struct {
 	linechart.Model
 
-	ColorScale []color.Color // Color gradient user for heatmap
-	cellStyle  lipgloss.Style   // default style for heatmap cells
+	ColorScale []color.Color  // Color gradient user for heatmap
+	cellStyle  lipgloss.Style // default style for heatmap cells
 
 	points []HeatPoint // data points
 
