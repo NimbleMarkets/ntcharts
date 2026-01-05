@@ -3,10 +3,12 @@
 package heatmap
 
 import (
+	"image/color"
+
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // Option is used to set options when initializing a heatmap. Example:
@@ -38,7 +40,7 @@ func WithUpdateHandler(h canvas.UpdateHandler) Option {
 }
 
 // WithColorScale uses the given Color array for the ColorScale.
-func WithColorScale(cs []lipgloss.Color) Option {
+func WithColorScale(cs []color.Color) Option {
 	return func(m *Model) {
 		m.ColorScale = cs
 	}

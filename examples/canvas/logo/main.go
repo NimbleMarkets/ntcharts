@@ -8,9 +8,9 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 var highlightStyle = lipgloss.NewStyle().
@@ -52,18 +52,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
-	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress {
-			if m.zM.Get(m.c1.ZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
-				m.c2.Blur()
-				m.c1.Focus()
-			} else if m.zM.Get(m.c2.ZoneID()).InBounds(msg) { // switch to canvas 2 if clicked on it
-				m.c1.Blur()
-				m.c2.Focus()
-			} else {
-				m.c1.Blur()
-				m.c2.Blur()
-			}
+	case tea.MouseClickMsg:
+		if m.zM.Get(m.c1.ZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
+			m.c2.Blur()
+			m.c1.Focus()
+		} else if m.zM.Get(m.c2.ZoneID()).InBounds(msg) { // switch to canvas 2 if clicked on it
+			m.c1.Blur()
+			m.c2.Focus()
+		} else {
+			m.c1.Blur()
+			m.c2.Blur()
 		}
 	}
 
@@ -76,14 +74,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "left click to select canvas, or `enter` to toggle between canvas\n"
 	s += "click and drag, mouse wheel scroll or arrow keys to move viewport around\n"
 	s += "`q/ctrl+c` to quit\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		c1Style.Render(m.c1.View()),
 		c2Style.Render(m.c2.View())) + "\n"
-	return m.zM.Scan(s) // call zone Manager.Scan() at root model
+	v := tea.NewView(m.zM.Scan(s)) // call zone Manager.Scan() at root model
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func getExampleCanvas1() (c canvas.Model) {
@@ -158,7 +159,7 @@ func main() {
 	m.c1.SetZoneManager(z)
 	m.c1.Focus()
 
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

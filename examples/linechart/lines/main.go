@@ -11,8 +11,8 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var randomFloat64Point1 canvas.Float64Point
@@ -87,7 +87,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	t := fmt.Sprintf("Drawing lines between the two points: ((%0.1f, %0.1f), (%0.1f, %0.1f))",
 		randomFloat64Point1.X, randomFloat64Point1.Y,
 		randomFloat64Point2.X, randomFloat64Point2.Y)
@@ -98,7 +98,7 @@ func (m model) View() string {
 		defaultStyle.Render("DrawLine()\n"+m.lc2.View()),
 		defaultStyle.Render("DrawBrailleLine()\n"+m.lc3.View()),
 	) + "\n"
-	return s
+	return tea.NewView(s)
 }
 
 func main() {

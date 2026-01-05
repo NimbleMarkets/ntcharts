@@ -10,9 +10,9 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 var selectedBarData barchart.BarData
@@ -105,22 +105,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
-	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress {
-			switch {
-			case m.zM.Get(m.b1.ZoneID()).InBounds(msg):
-				m.setBarData(&m.b1, msg)
-			case m.zM.Get(m.b2.ZoneID()).InBounds(msg):
-				m.setBarData(&m.b2, msg)
-			case m.zM.Get(m.b3.ZoneID()).InBounds(msg):
-				m.setBarData(&m.b3, msg)
-			}
+	case tea.MouseClickMsg:
+		switch {
+		case m.zM.Get(m.b1.ZoneID()).InBounds(msg):
+			m.setBarData(&m.b1, msg)
+		case m.zM.Get(m.b2.ZoneID()).InBounds(msg):
+			m.setBarData(&m.b2, msg)
+		case m.zM.Get(m.b3.ZoneID()).InBounds(msg):
+			m.setBarData(&m.b3, msg)
 		}
 	}
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "Same data values are pushed to all vertical bar charts, `q/ctrl+c` to quit\n"
 	s += "Click bar segment to select and display values\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
@@ -135,7 +133,10 @@ func (m model) View() string {
 			defaultStyle.Render(selectedData()),
 		),
 	)
-	return m.zM.Scan(s) // call zone Manager.Scan() at root model
+	v := tea.NewView(m.zM.Scan(s)) // call zone Manager.Scan() at root model
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func main() {
@@ -207,7 +208,7 @@ func main() {
 		zoneManager,
 	}
 
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

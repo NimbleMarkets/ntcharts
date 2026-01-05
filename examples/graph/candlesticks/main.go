@@ -9,8 +9,8 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/graph"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var defaultStyle = lipgloss.NewStyle().
@@ -102,13 +102,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "arrow keys to move origin around, `q/ctrl+c` to quit\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render(m.c1.View()),
 		defaultStyle.Render(m.c2.View()),
 	) + "\n"
-	return s
+	return tea.NewView(s)
 }
 
 func main() {

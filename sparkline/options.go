@@ -5,7 +5,7 @@ package sparkline
 import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // Option is used to set options when initializing a sparkline. Example:

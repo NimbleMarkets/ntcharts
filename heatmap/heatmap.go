@@ -9,19 +9,20 @@ package heatmap
 // and options used by the heatmap during initialization with New().
 
 import (
+	"image/color"
 	"math"
 
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // default color scale is a 0->1 gradient from black to white
-var defaultColorScale = []lipgloss.Color{
+var defaultColorScale = []color.Color{
 	lipgloss.Color("#000000"), // black
 	lipgloss.Color("#111111"),
 	lipgloss.Color("#222222"),
@@ -41,13 +42,13 @@ var defaultColorScale = []lipgloss.Color{
 }
 
 // GetDefaultColorScale returns the current default color scale used by all heatmaps.
-func GetDefaultColorScale() []lipgloss.Color {
+func GetDefaultColorScale() []color.Color {
 	return defaultColorScale
 }
 
 // SetDefaultColorScale sets the default color scale used by all heatmaps.
 // Returns the previous color scale.
-func SetDefaultColorScale(cs []lipgloss.Color) []lipgloss.Color {
+func SetDefaultColorScale(cs []color.Color) []color.Color {
 	old := defaultColorScale
 	defaultColorScale = cs
 	return old
@@ -79,8 +80,8 @@ func (p HeatPoint) AsFloat64Point() canvas.Float64Point {
 type Model struct {
 	linechart.Model
 
-	ColorScale []lipgloss.Color // Color gradient user for heatmap
-	cellStyle  lipgloss.Style   // default style for heatmap cells
+	ColorScale []color.Color  // Color gradient user for heatmap
+	cellStyle  lipgloss.Style // default style for heatmap cells
 
 	points []HeatPoint // data points
 
@@ -252,7 +253,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// View returns a string used by the bubbletea framework to display the sparkline.
+// View returns a string used by the bubbletea framework to display the heatmap.
 func (m Model) View() string {
 	return m.Canvas.View()
 }

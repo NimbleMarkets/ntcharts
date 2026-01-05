@@ -5,7 +5,7 @@ package barchart
 import (
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 func TestBarchart(t *testing.T) {

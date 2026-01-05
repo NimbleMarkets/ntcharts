@@ -10,8 +10,8 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var randomFloat64Point canvas.Float64Point
@@ -71,13 +71,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "any key to draw randomized point, `r` to reset, `q/ctrl+c` to quit\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render(fmt.Sprintf("DrawRune(%0.1f, %0.1f)\n", randomFloat64Point.X, randomFloat64Point.Y)+m.lc1.View()),
 		defaultStyle.Render(fmt.Sprintf("DrawBrailleLine(%0.1f, %0.1f)\n", randomFloat64Point.X, randomFloat64Point.Y)+m.lc2.View()),
 	) + "\n"
-	return s
+	return tea.NewView(s)
 }
 
 func main() {

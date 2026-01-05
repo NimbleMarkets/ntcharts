@@ -10,8 +10,8 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var randomFloat64Point canvas.Float64Point
@@ -76,7 +76,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	t := fmt.Sprintf("Drawing circles at center: ((%0.1f, %0.1f), radius: %0.1f",
 		randomFloat64Point.X, randomFloat64Point.Y,
 		radiusFloat64)
@@ -86,7 +86,7 @@ func (m model) View() string {
 		defaultStyle.Render("DrawRuneCircle('X')\n"+m.lc1.View()),
 		defaultStyle.Render("DrawBrailleCircle()\n"+m.lc2.View()),
 	) + "\n"
-	return s
+	return tea.NewView(s)
 }
 
 func main() {

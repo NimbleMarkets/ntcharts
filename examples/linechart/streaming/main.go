@@ -10,9 +10,9 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/streamlinechart"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 const dataSet2 = "dataSet2"
@@ -70,19 +70,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			addPoint = true
 		}
-	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress {
-			if m.zM.Get(m.slc1.ZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
-				m.slc2.Blur()
-				m.slc1.Focus()
-			} else if m.zM.Get(m.slc2.ZoneID()).InBounds(msg) { // switch to canvas 2 if clicked on it
-				m.slc1.Blur()
-				m.slc2.Focus()
-			} else {
-				m.slc1.Blur()
-				m.slc2.Blur()
-			}
+	case tea.MouseClickMsg:
+		if m.zM.Get(m.slc1.ZoneID()).InBounds(msg) { // switch to canvas 1 if clicked on it
+			m.slc2.Blur()
+			m.slc1.Focus()
+		} else if m.zM.Get(m.slc2.ZoneID()).InBounds(msg) { // switch to canvas 2 if clicked on it
+			m.slc1.Blur()
+			m.slc2.Focus()
+		} else {
+			m.slc1.Blur()
+			m.slc2.Blur()
 		}
+		forwardMsg = true
+	case tea.MouseWheelMsg, tea.MouseMotionMsg:
 		forwardMsg = true
 	}
 	if addPoint {
@@ -115,7 +115,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "any key to push randomized data value,`r` to clear data, `q/ctrl+c` to quit\n"
 	s += "pgup/pdown/mouse wheel scroll to zoom in and out along Y axis\n"
 	s += "mouse click+drag or arrow keys to move view along Y axis while zoomed in\n"
@@ -123,7 +123,10 @@ func (m model) View() string {
 		defaultStyle.Render(fmt.Sprintf("DataSet1(%.02f)\n", randf1)+m.slc1.View()),
 		defaultStyle.Render(fmt.Sprintf("DataSet1(%.02f)x2, DataSet2(%.02f)\n", randf1, randf2)+m.slc2.View()),
 	) + "\n"
-	return m.zM.Scan(s) // call zone Manager.Scan() at root model
+	v := tea.NewView(m.zM.Scan(s)) // call zone Manager.Scan() at root model
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func main() {
@@ -156,7 +159,7 @@ func main() {
 	)
 
 	m := model{slc1, slc2, zoneManager}
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

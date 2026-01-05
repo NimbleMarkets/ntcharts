@@ -10,12 +10,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"image/color"
 	"os"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
-	"github.com/charmbracelet/lipgloss"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -40,7 +41,7 @@ func signOf(x int) int {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-var xmasColorScale = []lipgloss.Color{
+var xmasColorScale = []color.Color{
 	lipgloss.Color("#FF000"),  // red
 	lipgloss.Color("#00FF00"), // green
 	lipgloss.Color("#FFFFFF"), // white
