@@ -101,6 +101,9 @@ func DefaultUpdateHandler() UpdateHandler {
 				lastPos = Point{X: x, Y: y} // set position of last click
 			}
 		case tea.MouseMotionMsg: // event occurs when mouse is pressed
+			if msg.Mouse().Button == tea.MouseNone {
+				return
+			}
 			if m.zoneManager == nil {
 				return
 			}

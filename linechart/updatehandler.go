@@ -310,6 +310,9 @@ func mouseClickXYHandler(m *Model, msg tea.MouseClickMsg, lastPos *canvas.Point)
 
 // mouseMotionXYHandler handles mouse motion messages for X and Y axes
 func mouseMotionXYHandler(m *Model, msg tea.MouseMotionMsg, lastPos *canvas.Point, xIncrement, yIncrement float64) {
+	if msg.Mouse().Button == tea.MouseNone {
+		return
+	}
 	if m.ZoneManager() == nil {
 		return
 	}
@@ -344,6 +347,9 @@ func mouseClickXHandler(m *Model, msg tea.MouseClickMsg, lastPos *canvas.Point) 
 
 // mouseMotionXHandler handles mouse motion messages for X axis
 func mouseMotionXHandler(m *Model, msg tea.MouseMotionMsg, lastPos *canvas.Point, increment float64) {
+	if msg.Mouse().Button == tea.MouseNone {
+		return
+	}
 	if m.ZoneManager() == nil {
 		return
 	}
@@ -373,6 +379,9 @@ func mouseClickYHandler(m *Model, msg tea.MouseClickMsg, lastPos *canvas.Point) 
 
 // mouseMotionYHandler handles mouse motion messages for Y axis
 func mouseMotionYHandler(m *Model, msg tea.MouseMotionMsg, lastPos *canvas.Point, increment float64) {
+	if msg.Mouse().Button == tea.MouseNone {
+		return
+	}
 	if m.ZoneManager() == nil {
 		return
 	}
