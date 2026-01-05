@@ -11,11 +11,11 @@ import (
 	"os"
 	"slices"
 
-	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 )
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -14,9 +14,9 @@ import (
 	"os"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
-	"charm.land/lipgloss/v2"
 )
 
 ///////////////////////////////////////////////////////////////////////////////

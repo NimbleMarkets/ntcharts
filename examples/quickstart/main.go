@@ -9,9 +9,9 @@ import (
 	"os"
 	"time"
 
-	tslc "github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	tslc "github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 	zone "github.com/lrstanley/bubblezone/v2"
 )
 
