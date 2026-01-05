@@ -7,10 +7,10 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/NimbleMarkets/ntcharts/sparkline"
+	"github.com/NimbleMarkets/ntcharts/v2/sparkline"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var randomFloat64 float64
@@ -75,7 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "press any button to push the same random value to all sparklines, `q/ctrl+c` to quit\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render("Draw() w/o background\n"+m.s1.View()),
@@ -85,7 +85,7 @@ func (m model) View() string {
 			defaultStyle.Render("Draw() w/ background\n"+m.s4.View()+"\nDrawBraille()\n"+m.s5.View()),
 		),
 	) + "\n"
-	return s
+	return tea.NewView(s)
 }
 
 func main() {

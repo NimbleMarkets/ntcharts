@@ -6,18 +6,19 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"os"
 	"slices"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts/heatmap"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/aquilax/go-perlin"
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/stopwatch"
-	"github.com/charmbracelet/bubbles/timer"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/stopwatch"
+	"charm.land/bubbles/v2/timer"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/spf13/pflag"
 )
 
@@ -123,7 +124,7 @@ type PerlinModel struct {
 	Heatmap heatmap.Model
 
 	gradientIndex int
-	gradients     [][]lipgloss.Color
+	gradients     [][]color.Color
 
 	timeout   time.Duration
 	stopwatch stopwatch.Model
@@ -146,7 +147,7 @@ func NewPerlinModel(alpha, beta float64, n, seed int64, timeoutMS int64) *Perlin
 		gradientIndex: 0,
 		gradients:     appColorScales,
 		timeout:       intervalDuration,
-		stopwatch:     stopwatch.NewWithInterval(intervalDuration),
+		stopwatch:     stopwatch.New(stopwatch.WithInterval(intervalDuration)),
 		keymap:        newKeyMap(),
 		help:          help.New(),
 	}
@@ -280,11 +281,14 @@ func (m *PerlinModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View returns a string used by the bubbletea framework to display the barchart.
-func (m *PerlinModel) View() (r string) {
+// View returns a tea.View used by the bubbletea framework to display the barchart.
+func (m *PerlinModel) View() tea.View {
 	info := fmt.Sprintf("\n%s  alpha: %.4f  beta: %.2f  n: %d  seed: %d  zoom: %.3f\n",
 		appColorScaleNames[m.gradientIndex], m.Alpha, m.Beta, m.N, m.Seed, m.Zoom)
-	return m.Heatmap.View() + info + m.helpView()
+	v := tea.NewView(m.Heatmap.View() + info + m.helpView())
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -311,7 +315,7 @@ func main() {
 	}
 
 	m := NewPerlinModel(alpha, beta, n, seed, int64(timeoutSecs*1000))
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
@@ -327,7 +331,7 @@ var appColorScaleNames = []string{
 	"red",
 }
 
-var appColorScales = [][]lipgloss.Color{
+var appColorScales = [][]color.Color{
 	{ // red fire, thanks Claude!
 		lipgloss.Color("#FFFFFF"),
 		lipgloss.Color("#FFFAF0"),

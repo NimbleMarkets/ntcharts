@@ -8,8 +8,8 @@ package canvas
 // either up, down, left and right
 
 import (
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 type KeyMap struct {
@@ -79,44 +79,45 @@ func DefaultUpdateHandler() UpdateHandler {
 			case key.Matches(msg, m.KeyMap.PgDown):
 				m.MoveDown(1)
 			}
-		case tea.MouseMsg:
-			switch msg.Button {
-			case tea.MouseButtonWheelUp:
+		case tea.MouseWheelMsg:
+			mouse := msg.Mouse()
+			switch mouse.Button {
+			case tea.MouseWheelUp:
 				m.MoveUp(1)
-			case tea.MouseButtonWheelDown:
+			case tea.MouseWheelDown:
 				m.MoveDown(1)
-			case tea.MouseButtonWheelRight:
+			case tea.MouseWheelRight:
 				m.MoveRight(1)
-			case tea.MouseButtonWheelLeft:
+			case tea.MouseWheelLeft:
 				m.MoveLeft(1)
 			}
-
+		case tea.MouseClickMsg:
 			if m.zoneManager == nil {
 				return
 			}
-			switch msg.Action {
-			case tea.MouseActionPress:
-				zInfo := m.zoneManager.Get(m.zoneID)
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					lastPos = Point{X: x, Y: y} // set position of last click
+			zInfo := m.zoneManager.Get(m.zoneID)
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				lastPos = Point{X: x, Y: y} // set position of last click
+			}
+		case tea.MouseMotionMsg: // event occurs when mouse is pressed
+			if m.zoneManager == nil {
+				return
+			}
+			zInfo := m.zoneManager.Get(m.zoneID)
+			if zInfo.InBounds(msg) {
+				x, y := zInfo.Pos(msg)
+				if x > lastPos.X {
+					m.MoveRight(1)
+				} else if x < lastPos.X {
+					m.MoveLeft(1)
 				}
-			case tea.MouseActionMotion: // event occurs when mouse is pressed
-				zInfo := m.zoneManager.Get(m.zoneID)
-				if zInfo.InBounds(msg) {
-					x, y := zInfo.Pos(msg)
-					if x > lastPos.X {
-						m.MoveRight(1)
-					} else if x < lastPos.X {
-						m.MoveLeft(1)
-					}
-					if y > lastPos.Y {
-						m.MoveDown(1)
-					} else if y < lastPos.Y {
-						m.MoveUp(1)
-					}
-					lastPos = Point{X: x, Y: y} // update last mouse position
+				if y > lastPos.Y {
+					m.MoveDown(1)
+				} else if y < lastPos.Y {
+					m.MoveUp(1)
 				}
+				lastPos = Point{X: x, Y: y} // update last mouse position
 			}
 		}
 	}

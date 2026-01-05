@@ -9,7 +9,7 @@ package timeserieslinechart
 // the viewport of the linechart
 
 import (
-	"github.com/NimbleMarkets/ntcharts/linechart"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 )
 
 // DateUpdateHandler is used by timeserieslinechart to enable

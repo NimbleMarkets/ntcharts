@@ -17,13 +17,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts/canvas/runes"
-	tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
-	spark "github.com/NimbleMarkets/ntcharts/sparkline"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
+	tslc "github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
+	spark "github.com/NimbleMarkets/ntcharts/v2/sparkline"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 var defaultStyle = lipgloss.NewStyle().
@@ -284,7 +284,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	// combine line chart and sparkline if showing volume
 	var graphView string
 	if displayOpts.Volume {
@@ -305,7 +305,10 @@ func (m model) View() string {
 
 	// wrap output string in bubblezone.Manager.Scan()
 	// if SetZoneManager(bubblezone.Manager) is used
-	return m.zoneManager.Scan(s)
+	v := tea.NewView(m.zoneManager.Scan(s))
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 // getChartLegend returns string containing legend for chart
@@ -490,7 +493,7 @@ func main() {
 
 	// create model and start bubbletea Program
 	m := newModel(minTime, maxTime, minY, maxY, ts)
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

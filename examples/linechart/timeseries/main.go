@@ -8,12 +8,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts/canvas/runes"
-	"github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 const dataSet2 = "dataSet2"
@@ -85,25 +85,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			addPoint = true
 		}
-	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress {
-			m.tslc1.Blur()
-			m.tslc2.Blur()
-			m.tslc3.Blur()
-			m.tslc4.Blur()
+	case tea.MouseClickMsg:
+		m.tslc1.Blur()
+		m.tslc2.Blur()
+		m.tslc3.Blur()
+		m.tslc4.Blur()
 
-			// switch to whichever canvas was clicked on
-			switch {
-			case m.zM.Get(m.tslc1.ZoneID()).InBounds(msg):
-				m.tslc1.Focus()
-			case m.zM.Get(m.tslc2.ZoneID()).InBounds(msg):
-				m.tslc2.Focus()
-			case m.zM.Get(m.tslc3.ZoneID()).InBounds(msg):
-				m.tslc3.Focus()
-			case m.zM.Get(m.tslc4.ZoneID()).InBounds(msg):
-				m.tslc4.Focus()
-			}
+		// switch to whichever canvas was clicked on
+		switch {
+		case m.zM.Get(m.tslc1.ZoneID()).InBounds(msg):
+			m.tslc1.Focus()
+		case m.zM.Get(m.tslc2.ZoneID()).InBounds(msg):
+			m.tslc2.Focus()
+		case m.zM.Get(m.tslc3.ZoneID()).InBounds(msg):
+			m.tslc3.Focus()
+		case m.zM.Get(m.tslc4.ZoneID()).InBounds(msg):
+			m.tslc4.Focus()
 		}
+		forwardMsg = true
+	case tea.MouseWheelMsg, tea.MouseMotionMsg:
 		forwardMsg = true
 	}
 	if addPoint {
@@ -152,7 +152,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "any key to push randomized data value,`r` to clear data, `q/ctrl+c` to quit\n"
 	s += "pgup/pdown/mouse wheel scroll to zoom in and out along X axis\n"
 	s += "mouse click+drag or arrow keys to move view along X axis while zoomed in\n"
@@ -166,7 +166,10 @@ func (m model) View() string {
 			defaultStyle.Render(fmt.Sprintf("ts:%s, f1:(%.02f) f2:(%.02f)\n", timePoint1.Time.UTC().Format("15:04:05"), randf1, randf2)+m.tslc4.View()),
 		),
 	) + "\n"
-	return m.zM.Scan(s) // call zone Manager.Scan() at root model
+	v := tea.NewView(m.zM.Scan(s)) // call zone Manager.Scan() at root model
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func main() {
@@ -234,7 +237,7 @@ func main() {
 	)
 
 	m := model{tslc1, tslc2, tslc3, tslc4, zoneManager}
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

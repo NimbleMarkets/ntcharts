@@ -6,15 +6,16 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"os"
 	"slices"
 
-	"github.com/NimbleMarkets/ntcharts/heatmap"
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -159,7 +160,7 @@ type Model struct {
 
 	currentFunctor int
 	currentColor   int
-	colors         [][]lipgloss.Color
+	colors         [][]color.Color
 
 	keymap keymap
 	help   help.Model
@@ -268,22 +269,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	functor := modelFunctors[m.currentFunctor]
-	return fmt.Sprintf("%s\nzoom: %0.1f  o: (%0.1f, %0.1f) | %s  %s | %s\n%s",
+	v := tea.NewView(fmt.Sprintf("%s\nzoom: %0.1f  o: (%0.1f, %0.1f) | %s  %s | %s\n%s",
 		m.Heatmap.View(),
 		m.Zoom, m.OriginX, m.OriginY,
 		functor.Name(), functor.Detail(),
 		appColorScaleNames[m.currentColor],
 		m.help.View(m.keymap),
-	)
+	))
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 func main() {
 	m := NewModel()
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
@@ -300,7 +304,7 @@ var appColorScaleNames = []string{
 	"red",
 }
 
-var appColorScales = [][]lipgloss.Color{
+var appColorScales = [][]color.Color{
 	{ // red fire, thanks Claude!
 		lipgloss.Color("#FFFFFF"),
 		lipgloss.Color("#FFFAF0"),

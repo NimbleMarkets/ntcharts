@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/NimbleMarkets/ntcharts/canvas"
-	"github.com/NimbleMarkets/ntcharts/canvas/graph"
-	"github.com/NimbleMarkets/ntcharts/canvas/runes"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/graph"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 var defaultStyle = lipgloss.NewStyle().
@@ -101,14 +101,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "arrow keys or mouse to move origin around, `q/ctrl+c` to quit\n"
 	s += lipgloss.JoinHorizontal(lipgloss.Top,
 		defaultStyle.Render(m.c1.View()),
 		defaultStyle.Render(m.c2.View()),
 		defaultStyle.Render(m.c3.View()),
 	) + "\n"
-	return m.zM.Scan(s) // required if canvas has set bubblezone manager
+	v := tea.NewView(m.zM.Scan(s)) // required if canvas has set bubblezone manager
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func main() {
@@ -134,7 +137,7 @@ func main() {
 	canvasYCoords2 := canvas.CanvasYCoordinates(xAxis, graphYCoords2)         // Canvas coordinates with (0,0) as top left
 
 	m := model{c1, c2, c3, canvasYCoords1, canvasYCoords2, canvas.Point{yAxis, xAxis}, z}
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

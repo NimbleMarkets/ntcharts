@@ -9,10 +9,10 @@ import (
 	"os"
 	"time"
 
-	tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	tslc "github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 type model struct {
@@ -40,14 +40,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	// call bubblezone Manager.Scan() at root model
-	return m.zoneManager.Scan(
+	v := tea.NewView(m.zoneManager.Scan(
 		lipgloss.NewStyle().
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("63")). // purple
 			Render(m.chart.View()),
-	)
+	))
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func main() {
@@ -93,7 +96,7 @@ func main() {
 
 	// start new Bubble Tea program with mouse support enabled
 	m := model{chart, zoneManager}
-	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

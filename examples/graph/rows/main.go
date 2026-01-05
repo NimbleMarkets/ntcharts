@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/NimbleMarkets/ntcharts/canvas"
-	"github.com/NimbleMarkets/ntcharts/canvas/graph"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/graph"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var defaultStyle = lipgloss.NewStyle().
@@ -70,7 +70,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := "arrow keys to move canvas cursor around, `q/ctrl+c` to quit\n"
 	s += "rows of same height will replace existing rows,\n"
 	s += "even if previous row top block was wider\n"
@@ -79,7 +79,7 @@ func (m model) View() string {
 		defaultStyle.Render("Data Set 2\n"+m.c2.View()),
 		defaultStyle.Render("Set 2 over Set 1\n"+m.c3.View()),
 	) + "\n"
-	return s
+	return tea.NewView(s)
 }
 
 func main() {
