@@ -1,11 +1,11 @@
 # CHANGELOG
 
-## v2.0.0 (unreleased)
+## v2.0.0-beta.5 (2026-01-08)
 
  * Upgrade to BubbleTea v2.  This lives in the `v2` branches.
  * Thanks to **@kpumuk** for this contribution.
 
-NOTE: The `v2` designation is for BubbleTea API compatibility.  The `ntcharts` API is still subject to change.
+NOTE: The `v2` designation is for BubbleTea API compatibility.  The `ntcharts` API is still subject to change, as indicated by `beta`.
 
 ## v0.4.0 (2026-01-08)
 
