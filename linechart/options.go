@@ -5,7 +5,7 @@ package linechart
 // File contains options used by the linechart during initialization with New().
 
 import (
-	"github.com/NimbleMarkets/ntcharts/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"

@@ -10,7 +10,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/NimbleMarkets/ntcharts/heatmap"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"

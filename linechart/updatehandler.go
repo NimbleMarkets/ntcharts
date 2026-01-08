@@ -9,7 +9,7 @@ package linechart
 // the viewport of the linechart
 
 import (
-	"github.com/NimbleMarkets/ntcharts/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"

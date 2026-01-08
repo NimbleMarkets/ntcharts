@@ -1,4 +1,4 @@
-module github.com/NimbleMarkets/ntcharts
+module github.com/NimbleMarkets/ntcharts/v2
 
 go 1.22.0
 

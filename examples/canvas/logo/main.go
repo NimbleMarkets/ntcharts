@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/NimbleMarkets/ntcharts/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

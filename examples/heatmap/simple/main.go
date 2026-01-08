@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/NimbleMarkets/ntcharts/heatmap"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 )
 
 func main() {

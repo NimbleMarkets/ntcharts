@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/NimbleMarkets/ntcharts/sparkline"
+	"github.com/NimbleMarkets/ntcharts/v2/sparkline"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

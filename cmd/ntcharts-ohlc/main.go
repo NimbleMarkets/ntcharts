@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts/canvas/runes"
-	tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
-	spark "github.com/NimbleMarkets/ntcharts/sparkline"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
+	tslc "github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
+	spark "github.com/NimbleMarkets/ntcharts/v2/sparkline"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

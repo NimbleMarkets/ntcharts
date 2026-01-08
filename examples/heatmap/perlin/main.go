@@ -10,7 +10,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts/heatmap"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/aquilax/go-perlin"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"

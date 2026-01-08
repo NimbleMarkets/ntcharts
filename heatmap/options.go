@@ -3,8 +3,8 @@
 package heatmap
 
 import (
-	"github.com/NimbleMarkets/ntcharts/canvas"
-	"github.com/NimbleMarkets/ntcharts/linechart"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 
 	"github.com/charmbracelet/lipgloss"
 )
