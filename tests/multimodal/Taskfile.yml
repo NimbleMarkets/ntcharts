@@ -1,0 +1,155 @@
+# ntcharts multimodal visual tests
+
+version: '3'
+
+vars:
+  REFS_DIR: "{{.ROOT_DIR}}/refs"
+  RESULTS_DIR: "{{.ROOT_DIR}}/results"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # Compilation check
+  check-compiles:
+    desc: Check that a single test compiles (TEST=test-id)
+    cmds:
+      - go build -o /dev/null "{{.REFS_DIR}}/{{.TEST}}/main.go"
+      - echo "{{.TEST}} compiles OK"
+    requires:
+      vars: [TEST]
+
+  check-compiles-all:
+    desc: Check that all tests compile
+    cmds:
+      - |
+        for dir in {{.REFS_DIR}}/*/; do
+          test_id=$(basename "$dir")
+          echo "Checking $test_id..."
+          go build -o /dev/null "$dir/main.go" || exit 1
+        done
+        echo "All tests compile successfully"
+
+  # Validation tasks
+  validate:
+    desc: Validate all test structures and VHS files
+    cmds:
+      - |
+        echo "Validating test structures..."
+        for dir in {{.REFS_DIR}}/*/; do
+          test_id=$(basename "$dir")
+          echo "Checking $test_id..."
+          if [ ! -f "$dir/prompt.md" ]; then
+            echo "  ERROR: Missing prompt.md"
+            exit 1
+          fi
+          if [ ! -f "$dir/main.go" ]; then
+            echo "  ERROR: Missing main.go"
+            exit 1
+          fi
+          if [ ! -f "$dir/demo.tape" ]; then
+            echo "  ERROR: Missing demo.tape"
+            exit 1
+          fi
+          go build -o /dev/null "$dir/main.go" || exit 1
+          vhs validate "$dir/demo.tape" || exit 1
+          echo "  OK"
+        done
+        echo "All tests validated successfully"
+
+  validate-test:
+    desc: Validate a single test structure (TEST=test-id)
+    vars:
+      TEST_DIR: "{{.REFS_DIR}}/{{.TEST}}"
+    cmds:
+      - |
+        if [ ! -d "{{.TEST_DIR}}" ]; then
+          echo "ERROR: Test directory not found: {{.TEST_DIR}}"
+          exit 1
+        fi
+        echo "Validating {{.TEST}}..."
+        if [ ! -f "{{.TEST_DIR}}/prompt.md" ]; then
+          echo "  ERROR: Missing prompt.md"
+          exit 1
+        fi
+        if [ ! -f "{{.TEST_DIR}}/main.go" ]; then
+          echo "  ERROR: Missing main.go"
+          exit 1
+        fi
+        if [ ! -f "{{.TEST_DIR}}/demo.tape" ]; then
+          echo "  ERROR: Missing demo.tape"
+          exit 1
+        fi
+        go build -o /dev/null "{{.TEST_DIR}}/main.go" || exit 1
+        vhs validate "{{.TEST_DIR}}/demo.tape" || exit 1
+        echo "  OK: All files present, compiles, and VHS tape valid"
+    requires:
+      vars: [TEST]
+
+  # Build tasks
+  build:
+    desc: Build all test programs
+    cmds:
+      - mkdir -p {{.RESULTS_DIR}}
+      - |
+        for dir in {{.REFS_DIR}}/*/; do
+          test_id=$(basename "$dir")
+          echo "Building $test_id..."
+          go build -o "{{.RESULTS_DIR}}/$test_id" "$dir/main.go"
+        done
+
+  build-test:
+    desc: Build a single test program (TEST=test-id)
+    vars:
+      OUT_FILE: "{{.RESULTS_DIR}}/{{.TEST}}"
+      SRC_FILE: "{{.REFS_DIR}}/{{.TEST}}/main.go"
+    cmds:
+      - mkdir -p {{.RESULTS_DIR}}
+      - go build -o "{{.OUT_FILE}}" "{{.SRC_FILE}}"
+    requires:
+      vars: [TEST]
+
+  # Execution tasks
+  run:
+    desc: Run all tests and generate GIFs
+    deps: [build]
+    cmds:
+      - |
+        for dir in {{.REFS_DIR}}/*/; do
+          test_id=$(basename "$dir")
+          echo "Running $test_id..."
+          vhs --output "{{.RESULTS_DIR}}/${test_id}-out.gif" "$dir/demo.tape"
+        done
+        echo "All tests completed. Results in {{.RESULTS_DIR}}/"
+
+  run-test:
+    desc: Run a single test (TEST=test-id)
+    deps: [build-test]
+    vars:
+      OUT_GIF: "{{.RESULTS_DIR}}/{{.TEST}}-out.gif"
+      TAPE_FILE: "{{.REFS_DIR}}/{{.TEST}}/demo.tape"
+    cmds:
+      - vhs --output "{{.OUT_GIF}}" "{{.TAPE_FILE}}"
+      - echo "Output {{.OUT_GIF}}"
+    requires:
+      vars: [TEST]
+
+  # List tasks
+  list-tests:
+    desc: List all available tests
+    cmds:
+      - |
+        echo "Available tests:"
+        for dir in {{.REFS_DIR}}/*/; do
+          test_id=$(basename "$dir")
+          echo "  - $test_id"
+        done
+
+  # Cleanup
+  clean:
+    desc: Remove generated results
+    cmds:
+      - rm -rf {{.RESULTS_DIR}}/*
+      - echo "Results cleaned"
