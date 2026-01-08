@@ -2,6 +2,9 @@
 
 version: '3'
 
+includes:
+  tests: ./tests/Taskfile.yml
+
 tasks:
   default:
     desc: 'Default task runs the "build" task'
