@@ -30,6 +30,24 @@ This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series C
 
 <a href="./examples/quickstart/README.md" alt="quickstart readme"><img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/></a>
 
+## BubbleTea Version Compatibility
+
+We have migrated to **Bubble Tea v2**.  It exists on the [`v2-exp` branch](https://github.com/NimbleMarkets/ntcharts/tree/v2-exp).  You should import as so:
+
+```go
+import "github.com/NimbleMarkets/ntcharts/v2"
+```
+
+Our **Bubble Tea v1** compatible library exists on the  [`main` branch](https://github.com/NimbleMarkets/ntcharts/tree/main).  You should import it as so:
+
+```go
+import "github.com/NimbleMarkets/ntcharts"
+```
+
+We will continue to backport relevant fixes to both branches.
+
+Please note that the `v2` designation is for BubbleTea API compatibility.  Despite the version number, the `ntcharts` API is still subject to change.
+
 ## Usage
 
 See the [`examples` folder](./examples/README.md) for code samples and visuals of each type.
@@ -41,8 +59,8 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/ntcharts/canvas"
-    "github.com/charmbracelet/lipgloss"
+    "github.com/NimbleMarkets/ntcharts/v2/canvas"
+    "charm.land/lipgloss/v2"
 )
 
 func main() {
@@ -66,8 +84,8 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/ntcharts/barchart"
-    "github.com/charmbracelet/lipgloss"
+    "github.com/NimbleMarkets/ntcharts/v2/barchart"
+    "charm.land/lipgloss/v2"
 )
 
 func main() {
@@ -100,7 +118,7 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/ntcharts/linechart/streamlinechart"
+    "github.com/NimbleMarkets/ntcharts/v2/linechart/streamlinechart"
 )
 
 func main() {
@@ -135,7 +153,7 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
+    "github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 )
 
 func main() {
@@ -170,8 +188,8 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/ntcharts/canvas"
-    "github.com/NimbleMarkets/ntcharts/linechart/wavelinechart"
+    "github.com/NimbleMarkets/ntcharts/v2/canvas"
+    "github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
 )
 
 func main() {
@@ -208,7 +226,7 @@ package main
 
 import (
     "fmt"
-    "github.com/NimbleMarkets/ntcharts/sparkline"
+    "github.com/NimbleMarkets/ntcharts/v2/sparkline"
 )
 
 func main() {
@@ -235,7 +253,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/NimbleMarkets/ntcharts/heatmap"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 )
 
 func main() {

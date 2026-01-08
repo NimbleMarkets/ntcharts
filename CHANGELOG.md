@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.0.0 (unreleased)
+
+ * Upgrade to BubbleTea v2.  This lives in the `v2` branches.
+ * Thanks to **@kpumuk** for this contribution.
+
+NOTE: The `v2` designation is for BubbleTea API compatibility.  The `ntcharts` API is still subject to change.
+
 ## v0.4.0 (2026-01-08)
 
  * Bug fixes and added [GitHub Actions](https://github.com/NimbleMarkets/ntcharts/actions) to test builds
