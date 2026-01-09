@@ -20,6 +20,12 @@ func main() {
 		tslc.Push(timeserieslinechart.TimePoint{Time: date, Value: v})
 	}
 
+	// Explicitly set time range to avoid including time.Now() (2026) in the auto-scaled range
+	// This ensures deterministic axis labels
+	minTime := baseDate
+	maxTime := baseDate.Add(8 * 24 * time.Hour)
+	tslc.SetTimeRange(minTime, maxTime)
+
 	tslc.DrawAll()
 
 	fmt.Print(tslc.View())

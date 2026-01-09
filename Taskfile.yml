@@ -3,7 +3,9 @@
 version: '3'
 
 includes:
-  tests: ./tests/Taskfile.yml
+  tests:
+    taskfile: ./tests/Taskfile.yml
+    dir: tests
 
 tasks:
   default:
@@ -45,6 +47,7 @@ tasks:
     deps:
       - clean-cmds
       - clean-examples
+      - tests:clean
 
   go-doc-server:
     desc: 'Run Go gdoc documentation server'

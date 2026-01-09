@@ -3,9 +3,9 @@
 version: '3'
 
 vars:
-  CMD_DIR: "{{.ROOT_DIR}}/cmd"
-  TERM_REFS_DIR: "{{.ROOT_DIR}}/terminal/refs"
-  RESULTS_DIR: "{{.ROOT_DIR}}/results"
+  CMD_DIR: "cmd"
+  TERM_REFS_DIR: "terminal/refs"
+  RESULTS_DIR: "results"
 
 tasks:
   default:
