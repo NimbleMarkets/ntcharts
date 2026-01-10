@@ -66,8 +66,9 @@ func New(w, h int, opts ...Option) Model {
 
 // newDataSet returns a new initialize *dataSet.
 func (m *Model) newDataSet() *dataSet {
+	// use GraphHeight() for y scale factor to align with y axis ticks
 	// note that graph width is not used since lines are able to overlap onto Y axis
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
+	ys := float64(m.GraphHeight()) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	return &dataSet{
 		LineStyle: m.dLineStyle,
 		Style:     m.dStyle,
@@ -78,7 +79,7 @@ func (m *Model) newDataSet() *dataSet {
 // rescaleData will scale all internally stored data with new scale factor.
 func (m *Model) rescaleData() {
 	// rescale stream buffer
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
+	ys := float64(m.GraphHeight()) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	for _, ds := range m.dSets {
 		width := m.Width() - m.Origin().X // width of graphing area includes Y axis
 		// create new buffer with new size if the graphing area size has changed
