@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.0.0-beta.6 (2026-01-10)
+
+ * Fix incorrect height in streamlinechart (#7)
+
+This was teased out by adding better test scaffolding
+and then asking an LLM for help.
+
 ## v2.0.0-beta.5 (2026-01-08)
 
  * Upgrade to BubbleTea v2.  This lives in the `v2` branches.
