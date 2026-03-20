@@ -1,8 +1,8 @@
 # CHANGELOG
 
-**BubbleTea `v2` NOTE:** See the [ntcharts/v2-exp](https://github.com/NimbleMarkets/ntcharts/tree/v2-exp) branch and its [CHANGELOG](https://github.com/NimbleMarkets/ntcharts/blob/v2-exp/CHANGELOG.md).
+**BubbleTea `v2` NOTE:** See the [ntcharts/v2](https://github.com/NimbleMarkets/ntcharts/tree/v2) branch and its [CHANGELOG](https://github.com/NimbleMarkets/ntcharts/blob/v2/CHANGELOG.md).  `v2` is now the default development branch.
 
-## v0.5.0 (2026-01-10)
+## v0.5.0 (2026-03-20)
 
  * Fix incorrect height in streamlinechart (#7)
 
