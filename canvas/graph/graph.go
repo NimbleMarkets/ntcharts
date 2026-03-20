@@ -657,7 +657,15 @@ func GetCirclePoints(c canvas.Point, r int) (p []canvas.Point) {
 // GetLinePoints returns a []canvas.Point containing points
 // that approximates a line between points p1 and p2.
 func GetLinePoints(p1 canvas.Point, p2 canvas.Point) []canvas.Point {
-	if abs(p2.Y-p1.Y) < abs(p2.X-p1.X) {
+	// Sanity check: limit line length to prevent excessive allocation
+	const maxLineLen = 10000
+	dx := abs(p2.X - p1.X)
+	dy := abs(p2.Y - p1.Y)
+	if dx > maxLineLen || dy > maxLineLen {
+		return nil
+	}
+
+	if dy < dx {
 		if p1.X > p2.X {
 			return getLinePointsLow(p2, p1)
 		} else {
