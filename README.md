@@ -32,7 +32,7 @@ This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series C
 
 ## BubbleTea Version Compatibility
 
-We have migrated to **Bubble Tea v2**.  It exists on the [`v2-exp` branch](https://github.com/NimbleMarkets/ntcharts/tree/v2-exp).  You should import as so:
+We have migrated to **Bubble Tea v2**.  It exists on the [`v2` branch](https://github.com/NimbleMarkets/ntcharts/tree/v2).  You should import as so:
 
 ```go
 import "github.com/NimbleMarkets/ntcharts/v2"
@@ -46,7 +46,7 @@ import "github.com/NimbleMarkets/ntcharts"
 
 We will continue to backport relevant fixes to both branches.
 
-Please note that the `v2` designation is for BubbleTea API compatibility.  Despite the version number, the `ntcharts` API is still subject to change.
+Please note that the `v2` designation is for BubbleTea API compatibility.  Despite the version number, the `ntcharts` API is still subject to change.  `v2` is the primary development branch branch now.
 
 ## Usage
 
@@ -291,7 +291,7 @@ Thanks also to [asciigraph](https://github.com/guptarohit/asciigraph), [ratatui]
 
 Released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt).
 
-Copyright (c) 2024 [Neomantra Corp](https://www.neomantra.com).   
+Copyright (c) 2024-2026 [Neomantra Corp](https://www.neomantra.com).   
 
 ----
 Made with :heart: and :fire: by the team behind [Nimble.Markets](https://nimble.markets).
