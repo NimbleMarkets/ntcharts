@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "description": "Multimodal visual tests for ntcharts library",
+  "tests": [
+    {
+      "id": "canvas-text",
+      "name": "Canvas Text Rendering",
+      "description": "Verifies basic canvas text placement and styling",
+      "package": "canvas"
+    },
+    {
+      "id": "linechart-simple",
+      "name": "Simple Line Chart",
+      "description": "Line chart with known data points, verifies axes and line drawing",
+      "package": "linechart"
+    },
+    {
+      "id": "linechart-braille",
+      "name": "Braille Mode Line Chart",
+      "description": "Line chart rendered in braille mode for higher resolution",
+      "package": "linechart"
+    },
+    {
+      "id": "barchart-horizontal",
+      "name": "Horizontal Bar Chart",
+      "description": "Bar chart with horizontal bars and labels",
+      "package": "barchart"
+    },
+    {
+      "id": "barchart-vertical",
+      "name": "Vertical Bar Chart",
+      "description": "Bar chart with vertical columns and labels",
+      "package": "barchart"
+    },
+    {
+      "id": "sparkline-basic",
+      "name": "Basic Sparkline",
+      "description": "Simple sparkline visualization with known values",
+      "package": "sparkline"
+    },
+    {
+      "id": "timeseries-dates",
+      "name": "Time Series with Dates",
+      "description": "Time series chart with date-based X axis",
+      "package": "linechart/timeserieslinechart"
+    },
+    {
+      "id": "heatmap-gradient",
+      "name": "Heatmap Gradient",
+      "description": "Heatmap showing color gradient from low to high values",
+      "package": "heatmap"
+    },
+    {
+      "id": "streamline-wave",
+      "name": "Streamline Wave Pattern",
+      "description": "Streaming line chart with wave pattern data",
+      "package": "linechart/streamlinechart"
+    },
+    {
+      "id": "wavelinechart-sine",
+      "name": "Waveline Sine Pattern",
+      "description": "Waveline chart connecting points in wave pattern",
+      "package": "linechart/wavelinechart"
+    }
+  ]
+}

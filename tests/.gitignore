@@ -1,0 +1,4 @@
+# ntcharts tests .gitignore
+
+results/*
+!results/.keepme

@@ -2,6 +2,11 @@
 
 version: '3'
 
+includes:
+  tests:
+    taskfile: ./tests/Taskfile.yml
+    dir: tests
+
 tasks:
   default:
     desc: 'Default task runs the "build" task'
@@ -42,6 +47,7 @@ tasks:
     deps:
       - clean-cmds
       - clean-examples
+      - tests:clean
 
   go-doc-server:
     desc: 'Run Go gdoc documentation server'
