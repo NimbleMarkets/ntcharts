@@ -30,7 +30,9 @@ func DateTimeLabelFormatter() linechart.LabelFormatter {
 		if i == 0 { // reset year labeling if redisplaying values
 			yearLabel = ""
 		}
-		t := time.Unix(int64(v), 0).UTC()
+		sec := int64(v)
+		msec := int64((v - float64(sec)) * 1e3)
+		t := time.Unix(sec, msec*1e6).UTC()
 		monthDay := t.Format("01/02")
 		year := t.Format("'06")
 		if yearLabel != year { // apply year label if first time seeing year
@@ -44,7 +46,9 @@ func DateTimeLabelFormatter() linechart.LabelFormatter {
 
 func HourTimeLabelFormatter() linechart.LabelFormatter {
 	return func(i int, v float64) string {
-		t := time.Unix(int64(v), 0).UTC()
+		sec := int64(v)
+		msec := int64((v - float64(sec)) * 1e3)
+		t := time.Unix(sec, msec*1e6).UTC()
 		return t.Format("15:04:05")
 	}
 }
@@ -100,7 +104,7 @@ func New(w, h int, opts ...Option) Model {
 	min := time.Now()
 	max := min.Add(time.Second)
 	m := Model{
-		Model: linechart.New(w, h, float64(min.Unix()), float64(max.Unix()), 0, 1,
+		Model: linechart.New(w, h, float64(min.UnixMilli())/1e3, float64(max.UnixMilli())/1e3, 0, 1,
 			linechart.WithXYSteps(4, 2),
 			linechart.WithXLabelFormatter(DateTimeLabelFormatter()),
 			linechart.WithAutoXYRange(),                        // automatically adjust value ranges
@@ -169,7 +173,7 @@ func (m *Model) ClearDataSet(n string) {
 // SetTimeRange updates the minimum and maximum expected time values.
 // Existing data will be rescaled.
 func (m *Model) SetTimeRange(min, max time.Time) {
-	m.Model.SetXRange(float64(min.Unix()), float64(max.Unix()))
+	m.Model.SetXRange(float64(min.UnixMilli())/1e3, float64(max.UnixMilli())/1e3)
 	m.rescaleData()
 }
 
@@ -183,7 +187,7 @@ func (m *Model) SetYRange(min, max float64) {
 // SetViewTimeRange updates the displayed minimum and maximum time values.
 // Existing data will be rescaled.
 func (m *Model) SetViewTimeRange(min, max time.Time) {
-	m.Model.SetViewXRange(float64(min.Unix()), float64(max.Unix()))
+	m.Model.SetViewXRange(float64(min.UnixMilli())/1e3, float64(max.UnixMilli())/1e3)
 	m.rescaleData()
 }
 
@@ -197,7 +201,7 @@ func (m *Model) SetViewYRange(min, max float64) {
 // SetViewTimeAndYRange updates the displayed minimum and maximum time and Y values.
 // Existing data will be rescaled.
 func (m *Model) SetViewTimeAndYRange(minX, maxX time.Time, minY, maxY float64) {
-	m.Model.SetViewXRange(float64(minX.Unix()), float64(maxX.Unix()))
+	m.Model.SetViewXRange(float64(minX.UnixMilli())/1e3, float64(maxX.UnixMilli())/1e3)
 	m.Model.SetViewYRange(minY, maxY)
 	m.rescaleData()
 }
@@ -248,7 +252,7 @@ func (m *Model) Push(t TimePoint) {
 // Push will push a TimePoint data value to a data set
 // to be displayed with Draw. Using given data set by name string.
 func (m *Model) PushDataSet(n string, t TimePoint) {
-	f := canvas.Float64Point{X: float64(t.Time.Unix()), Y: t.Value}
+	f := canvas.Float64Point{X: float64(t.Time.UnixMilli()) / 1e3, Y: t.Value}
 	// auto adjust x and y ranges if enabled
 	if m.AutoAdjustRange(f) {
 		m.UpdateGraphSizes()
@@ -464,7 +468,7 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 // Set column background style to given lipgloss.Style background
 // corresponding to timestamp at given time.Time.
 func (m *Model) SetColumnBackgroundStyle(ts time.Time, s lipgloss.Style) {
-	f := canvas.Float64Point{X: float64(ts.Unix()), Y: 0}
+	f := canvas.Float64Point{X: float64(ts.UnixMilli()) / 1e3, Y: 0}
 	if f.X < m.ViewMinX() || f.X > m.ViewMaxX() {
 		return
 	}
