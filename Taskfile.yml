@@ -31,6 +31,11 @@ tasks:
     cmds:
       - go get -u ./...
 
+  test:
+    desc: 'Run all Go tests'
+    cmds:
+      - go test ./...
+
   build:
     desc: 'Build all the things'
     deps:

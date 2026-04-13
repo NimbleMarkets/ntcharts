@@ -3,6 +3,8 @@
 ## v2.0.1 (2026-04-13)
 
  * fix: linchart label glitch (#16)
+ * ci: Update GitHub Action versions and add test phase
+
 
 ## v2.0.0 (2026-02-28)
 
