@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.0.1 (2026-04-13)
+
+ * fix: linchart label glitch (#16)
+
 ## v2.0.0 (2026-02-28)
 
  * Upgrade to BubbleTea v2.0.0 -- official release! :tada:
