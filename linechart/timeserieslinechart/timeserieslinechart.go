@@ -30,9 +30,7 @@ func DateTimeLabelFormatter() linechart.LabelFormatter {
 		if i == 0 { // reset year labeling if redisplaying values
 			yearLabel = ""
 		}
-		sec := int64(v)
-		msec := int64((v - float64(sec)) * 1e3)
-		t := time.Unix(sec, msec*1e6).UTC()
+		t := time.UnixMilli(int64(math.Round(v * 1e3))).UTC()
 		monthDay := t.Format("01/02")
 		year := t.Format("'06")
 		if yearLabel != year { // apply year label if first time seeing year
@@ -46,9 +44,7 @@ func DateTimeLabelFormatter() linechart.LabelFormatter {
 
 func HourTimeLabelFormatter() linechart.LabelFormatter {
 	return func(i int, v float64) string {
-		sec := int64(v)
-		msec := int64((v - float64(sec)) * 1e3)
-		t := time.Unix(sec, msec*1e6).UTC()
+		t := time.UnixMilli(int64(math.Round(v * 1e3))).UTC()
 		return t.Format("15:04:05")
 	}
 }
