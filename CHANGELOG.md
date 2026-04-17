@@ -1,11 +1,14 @@
 # CHANGELOG
 
+
 ## v2.3.0 (unreleased)
 
  * feat(picture): add automatic tmux passthrough wrapping for Kitty graphics. Added `NTCHARTS_TMUX_PASSTHROUGH` and `NTCHARTS_KITTY` environment variables for easy runtime overrides.
  * feat(kitty): add `kitty-probe` test program
  * feat(ci): Restructure `go.mod` into subdirectories, to shield users from unnecessary dependencies.
  * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pulled these in automatically, even if one didn't need it. **BREAKING**
+ * feat(spec): Add  `spec` package for surface-agnostic chart specifications
+   * This means the same `struct` can render a TUI or a Web chart
 
 ## v2.2.0 (2026-05-28)
 

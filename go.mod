@@ -11,6 +11,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/NimbleMarkets/pixterm v0.0.0-20260501211346-dc18ac6c1a0f
 	github.com/charmbracelet/ultraviolet v0.0.0-20260601155805-6cf7526a1b3f
+	github.com/go-echarts/go-echarts/v2 v2.7.2
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	golang.org/x/image v0.41.0
 )
