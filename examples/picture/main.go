@@ -1,0 +1,332 @@
+// examples/picture/main.go
+//
+// A small two-pane demo:
+//   - Left pane uses picture.Model with a procedurally-generated image
+//     (showing the source-agnostic base API).
+//   - Right pane uses pictureurl.Model fetching a fixed picsum URL,
+//     with the URL drawn as a caption near the bottom of the box.
+//
+// Press 'g' to toggle both panes between Glyph and Kitty rendering.
+// Press 'q' or ctrl+c to quit.
+package main
+
+import (
+	"bytes"
+	_ "embed"
+	"fmt"
+	"image"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/NimbleMarkets/ntcharts/v2/picture"
+	"github.com/NimbleMarkets/ntcharts/v2/picture/pictureurl"
+)
+
+const (
+	kittyIDLeft  = 4242
+	kittyIDRight = 4243
+
+	imageURL = "https://i0.wp.com/www.hypertalking.com/wp-content/uploads/2023/05/Fuji-01.png"
+
+	leftCaption1 = "01 of 36 view of Mt Fuji by hypertalking"
+	leftCaption2 = imageURL
+	rightURL     = imageURL
+
+	leftTopLabel  = "picture with embed"
+	rightTopLabel = "pictureurl with http"
+
+	// Wikimedia (and many other image hosts) reject the default Go http
+	// User-Agent with a 403, so the example sets an identifying UA.
+	userAgent = "ntcharts-picture-example/1.0 (https://github.com/NimbleMarkets/ntcharts)"
+)
+
+//go:embed Fuji-01.png
+var fujiPNG []byte
+
+type uaTransport struct{ rt http.RoundTripper }
+
+func (t *uaTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.Header.Set("User-Agent", userAgent)
+	return t.rt.RoundTrip(req)
+}
+
+type model struct {
+	leftPic  picture.Model
+	rightPic pictureurl.Model
+
+	// Captured from initialModel; returned from Init. Must be set inside the
+	// constructor because Init has a value receiver and cannot persist
+	// mutations (e.g. SetURL) made on its local copy of the model.
+	initCmd tea.Cmd
+
+	width, height int
+}
+
+func initialModel() model {
+	left := picture.NewWithConfig(picture.Config{KittyID: kittyIDLeft})
+	right := pictureurl.NewWithConfig(pictureurl.Config{
+		KittyID: kittyIDRight,
+		HTTPClient: &http.Client{
+			Transport: &uaTransport{rt: http.DefaultTransport},
+			Timeout:   15 * time.Second,
+		},
+	})
+
+	img, _, err := image.Decode(bytes.NewReader(fujiPNG))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "decode embedded image: %v\n", err)
+		os.Exit(1)
+	}
+	_ = left.SetImage(img)
+
+	// Kick off the right-pane fetch here so the SetURL state mutation
+	// (currentURL, loading flag) is captured in the model returned to
+	// bubbletea. Init() can only return the Cmd — not a mutated model.
+	initCmd := right.SetURL(rightURL)
+
+	return model{leftPic: left, rightPic: right, initCmd: initCmd}
+}
+
+func (m model) Init() tea.Cmd {
+	return m.initCmd
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		case "g":
+			if c := m.leftPic.Toggle(); c != nil {
+				cmds = append(cmds, c)
+			}
+			if c := m.rightPic.Toggle(); c != nil {
+				cmds = append(cmds, c)
+			}
+		}
+
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		cmds = append(cmds, m.applyLayout()...)
+	}
+
+	if c := m.leftPic.Update(msg); c != nil {
+		cmds = append(cmds, c)
+	}
+	if c := m.rightPic.Update(msg); c != nil {
+		cmds = append(cmds, c)
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+type layoutDims struct {
+	innerCols, innerRows int
+	leftCaptions         []string
+	rightCaptions        []string
+	tooSmall             bool
+}
+
+const (
+	minWidth  = 32
+	minHeight = 12
+)
+
+// Layout: 1 title + Hpic + 1 footer = m.height, so Hpic = m.height - 2 and
+// pane inner rows = Hpic - 2 = m.height - 4. The status line, when shown for
+// errors, is appended in View() and pushes the footer down by one row.
+func (m *model) layout() layoutDims {
+	var d layoutDims
+	if m.width < minWidth || m.height < minHeight {
+		d.tooSmall = true
+		return d
+	}
+	paneOuter := (m.width - 1) / 2
+	d.innerCols = paneOuter - 2
+	d.innerRows = m.height - 4
+	if d.innerCols < 1 {
+		d.innerCols = 1
+	}
+	if d.innerRows < 1 {
+		d.innerRows = 1
+	}
+	d.leftCaptions = append([]string{leftCaption1}, wrapToLines(leftCaption2, d.innerCols, 2)...)
+	d.rightCaptions = d.leftCaptions
+	return d
+}
+
+func (m *model) applyLayout() []tea.Cmd {
+	d := m.layout()
+	if d.tooSmall {
+		return nil
+	}
+	var cmds []tea.Cmd
+	// Each pane reserves 1 top row for the label and bottom rows for caption lines.
+	leftRows := d.innerRows - len(d.leftCaptions) - 1
+	if leftRows < 1 {
+		leftRows = 1
+	}
+	rightRows := d.innerRows - len(d.rightCaptions) - 1
+	if rightRows < 1 {
+		rightRows = 1
+	}
+	if c := m.leftPic.SetSize(d.innerCols, leftRows); c != nil {
+		cmds = append(cmds, c)
+	}
+	if c := m.rightPic.SetSize(d.innerCols, rightRows); c != nil {
+		cmds = append(cmds, c)
+	}
+	return cmds
+}
+
+func (m model) View() tea.View {
+	d := m.layout()
+	if d.tooSmall {
+		return tea.NewView(lipgloss.NewStyle().
+			Width(m.width).
+			Height(m.height).
+			Align(lipgloss.Center, lipgloss.Center).
+			Foreground(lipgloss.Color("9")).
+			Render(fmt.Sprintf("Terminal too small (%d × %d)\nneed at least %d × %d",
+				m.width, m.height, minWidth, minHeight)))
+	}
+
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("12")).
+		Width(m.width).
+		Align(lipgloss.Center).
+		Render("🖼️  ntcharts · picture")
+
+	// lipgloss v2 Width/Height are outer dimensions; +2 makes the inner
+	// content area equal d.innerCols × d.innerRows (matching pic SetSize).
+	paneStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("8")).
+		Width(d.innerCols+2).
+		Height(d.innerRows+2).
+		Align(lipgloss.Center, lipgloss.Center)
+
+	leftContent := buildPane(m.leftPic.View().Content, leftTopLabel,
+		d.leftCaptions, d.innerCols, d.innerRows)
+	rightContent := buildPane(m.rightPic.View().Content, rightTopLabel,
+		d.rightCaptions, d.innerCols, d.innerRows)
+
+	leftBox := paneStyle.Render(leftContent)
+	rightBox := paneStyle.Render(rightContent)
+	panes := lipgloss.JoinHorizontal(lipgloss.Top, leftBox, " ", rightBox)
+
+	mode := "Glyph"
+	if m.leftPic.Mode() == picture.PictureKitty {
+		mode = "Kitty"
+	}
+
+	footer := lipgloss.NewStyle().
+		Width(m.width).
+		Foreground(lipgloss.Color("242")).
+		Render(fmt.Sprintf("mode: %s   g toggle   q quit", mode))
+
+	parts := []string{title, panes}
+	if err := m.rightPic.Err(); err != nil {
+		statusBar := lipgloss.NewStyle().
+			Width(m.width).
+			Foreground(lipgloss.Color("9")).
+			Render(fmt.Sprintf("right: error: %v", err))
+		parts = append(parts, statusBar)
+	}
+	parts = append(parts, footer)
+
+	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, parts...))
+}
+
+// buildPane composes a pane's content: a top label row, picture content in
+// the middle (centered), and caption lines pinned to the bottom. The picture
+// model is expected to be sized so its content fits inside the middle area;
+// shorter status text ("Loading…", "Image error: …") gets centered without
+// clobbering the labels or captions.
+func buildPane(content, top string, captions []string, innerCols, innerRows int) string {
+	topStyle := lipgloss.NewStyle().
+		Background(lipgloss.Color("12")).
+		Foreground(lipgloss.Color("0")).
+		Bold(true).
+		Width(innerCols).
+		Align(lipgloss.Center)
+	captionStyle := lipgloss.NewStyle().
+		Background(lipgloss.Color("0")).
+		Foreground(lipgloss.Color("15")).
+		Width(innerCols).
+		Align(lipgloss.Center)
+
+	lines := make([]string, 0, len(captions)+2)
+	lines = append(lines, topStyle.Render(truncate(top, innerCols)))
+
+	upperRows := innerRows - 1 - len(captions)
+	if upperRows >= 1 {
+		lines = append(lines,
+			lipgloss.Place(innerCols, upperRows, lipgloss.Center, lipgloss.Center, content))
+	}
+	for _, c := range captions {
+		lines = append(lines, captionStyle.Render(truncate(c, innerCols)))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func truncate(s string, width int) string {
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+	if width <= 1 {
+		return s[:width]
+	}
+	// Naive byte-truncate with ellipsis; fine for ASCII URLs.
+	return s[:width-1] + "…"
+}
+
+// wrapToLines returns up to maxLines lines of width cells each, splitting s on
+// rune boundaries. If s is longer than width*maxLines, the last line is
+// truncated with an ellipsis. Suitable for ASCII URLs; not Unicode-aware
+// beyond rune boundaries.
+func wrapToLines(s string, width, maxLines int) []string {
+	if width <= 0 || maxLines <= 0 {
+		return nil
+	}
+	if lipgloss.Width(s) <= width {
+		return []string{s}
+	}
+	runes := []rune(s)
+	out := make([]string, 0, maxLines)
+	for len(runes) > 0 && len(out) < maxLines {
+		if len(out) == maxLines-1 && len(runes) > width {
+			if width <= 1 {
+				out = append(out, string(runes[:width]))
+			} else {
+				out = append(out, string(runes[:width-1])+"…")
+			}
+			break
+		}
+		take := width
+		if take > len(runes) {
+			take = len(runes)
+		}
+		out = append(out, string(runes[:take]))
+		runes = runes[take:]
+	}
+	return out
+}
+
+func main() {
+	p := tea.NewProgram(initialModel())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+}
