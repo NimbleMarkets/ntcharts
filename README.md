@@ -292,6 +292,8 @@ Thanks also to [asciigraph](https://github.com/guptarohit/asciigraph), [ratatui]
 
 Released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt).
 
+The image [`./examples/picture/Fuji-01.png] is from this link and licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](http://creativecommons.org/licenses/by-nc-nd/4.0/).
+
 Copyright (c) 2024-2026 [Neomantra Corp](https://www.neomantra.com).   
 
 ----
