@@ -105,7 +105,7 @@ tasks:
   clean-cmds:
     desc: 'Cleans all commands'
     cmds:
-      - rm -f ntcharts-lorem-picsum
+      - rm -f bin/ntcharts-lorem-picsum
       - rm -f bin/ntcharts-ohlc
     
 ###############################################################################
@@ -286,6 +286,7 @@ tasks:
       - vhs validate ./examples/linechart/streaming/demo.tape
       - vhs validate ./examples/linechart/timeseries/demo.tape
       - vhs validate ./examples/linechart/wavelines/demo.tape
+      - vhs validate ./examples/picture/demo.tape
       - vhs validate ./examples/quickstart/demo.tape
       - vhs validate ./examples/sparkline/demo.tape
     sources:
@@ -313,6 +314,7 @@ tasks:
       - vhs --output ./examples/linechart/streaming/demo.gif ./examples/linechart/streaming/demo.tape
       - vhs --output ./examples/linechart/timeseries/demo.gif ./examples/linechart/timeseries/demo.tape
       - vhs --output ./examples/linechart/wavelines/demo.gif ./examples/linechart/wavelines/demo.tape
+      - vhs --output ./examples/picture/demo.gif ./examples/picture/demo.tape
       - vhs --output ./examples/quickstart/demo.gif ./examples/quickstart/demo.tape
       - vhs --output ./examples/sparkline/demo.gif ./examples/sparkline/demo.tape
     sources:
@@ -336,6 +338,8 @@ tasks:
       - ./examples/linechart/streaming/demo.gif
       - ./examples/linechart/timeseries/demo.gif
       - ./examples/linechart/wavelines/demo.gif
+      - ./examples/picture/demo.gif
+      - ./examples/quickstart/demo.gif
       - ./examples/sparkline/demo.gif
 
   clean-gifs:
@@ -359,5 +363,6 @@ tasks:
       - rm -f ./examples/linechart/streaming/demo.gif
       - rm -f ./examples/linechart/timeseries/demo.gif
       - rm -f ./examples/linechart/wavelines/demo.gif
+      - rm -f ./examples/picture/demo.gif
       - rm -f ./examples/quickstart/demo.gif
       - rm -f ./examples/sparkline/demo.gif
