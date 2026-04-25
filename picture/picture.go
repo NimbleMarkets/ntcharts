@@ -1,7 +1,9 @@
 // Package picture is a source-agnostic image renderer for Bubble Tea.
 // It supports half-block glyphs (universal) and the Kitty graphics protocol
-// (high-resolution). Use picture/pictureurl for URL-driven fetching on top of
-// this base.
+// (high-resolution).
+//
+// Use picture/pictureurl for URL-driven fetching on top of this base.
+
 package picture
 
 import (
@@ -130,7 +132,7 @@ func (m *Model) Mode() PictureMode { return m.mode }
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case kittyFrameMsg:
-		if msg.seq != m.seq {
+		if msg.id != m.kittyID || msg.seq != m.seq {
 			return nil
 		}
 		m.kittyGrid = msg.grid
@@ -191,6 +193,6 @@ func (m *Model) renderCmd() tea.Cmd {
 	return func() tea.Msg {
 		apc := buildKittyAPC(img, id, cols, rows)
 		grid := buildKittyGrid(cols, rows, id)
-		return kittyFrameMsg{seq: seq, apc: apc, grid: grid}
+		return kittyFrameMsg{id: id, seq: seq, apc: apc, grid: grid}
 	}
 }
