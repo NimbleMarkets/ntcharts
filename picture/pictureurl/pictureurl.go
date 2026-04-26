@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	DefaultMaxSize = 15 * 1024 * 1024 // 15 MiB
-	DefaultTimeout = 15 * time.Second
+	DefaultMaxSize   = 15 * 1024 * 1024 // 15 MiB
+	DefaultTimeout   = 15 * time.Second
+	DefaultMaxPixels = 32 * 1024 * 1024 // 32 megapixels
 )
 
 // Config configures a Model at construction.
@@ -26,6 +27,7 @@ type Config struct {
 
 	// URL-specific.
 	MaxSize    int64         // default 15 MiB
+	MaxPixels  int           // default 32 megapixels; 0 means default, negative disables
 	Timeout    time.Duration // default 15s; ignored if HTTPClient is set
 	HTTPClient *http.Client  // optional; caller owns the lifetime
 	CacheLimit int           // maximum cached images; 0 = unlimited
@@ -42,6 +44,7 @@ type Model struct {
 	errs       map[string]error
 	loading    map[string]bool
 	maxSize    int64
+	maxPixels  int
 	cacheLimit int
 	client     *http.Client
 }
@@ -56,6 +59,9 @@ func New() Model {
 func NewWithConfig(cfg Config) Model {
 	if cfg.MaxSize <= 0 {
 		cfg.MaxSize = DefaultMaxSize
+	}
+	if cfg.MaxPixels == 0 {
+		cfg.MaxPixels = DefaultMaxPixels
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = DefaultTimeout
@@ -74,6 +80,7 @@ func NewWithConfig(cfg Config) Model {
 		errs:       make(map[string]error),
 		loading:    make(map[string]bool),
 		maxSize:    cfg.MaxSize,
+		maxPixels:  cfg.MaxPixels,
 		cacheLimit: cfg.CacheLimit,
 		client:     client,
 	}
@@ -156,7 +163,7 @@ func (m *Model) SetURL(url string) tea.Cmd {
 
 	m.loading[url] = true
 	clearCmd := m.pic.SetImage(nil)
-	return tea.Batch(clearCmd, fetchCmd(m.client, url, m.maxSize))
+	return tea.Batch(clearCmd, fetchCmd(m.client, url, m.maxSize, m.maxPixels))
 }
 
 // Reload re-fetches CurrentURL. The currently-displayed image (if any) stays
@@ -168,7 +175,7 @@ func (m *Model) Reload() tea.Cmd {
 	}
 	delete(m.errs, m.currentURL)
 	m.loading[m.currentURL] = true
-	return fetchCmd(m.client, m.currentURL, m.maxSize)
+	return fetchCmd(m.client, m.currentURL, m.maxSize, m.maxPixels)
 }
 
 // Clear blanks the display without dropping CurrentURL or any cache entries.

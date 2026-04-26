@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	catalogPages = 3
-	catalogLimit = 100
-	startingID   = "110"
-	kittyIDRight = 44
+	catalogPages    = 3
+	catalogLimit    = 100
+	startingID      = "110"
+	kittyIDRight    = 44
+	imageCacheLimit = 8
 )
 
 type model struct {
@@ -33,8 +34,8 @@ type model struct {
 }
 
 func initialModel() model {
-	leftPic := pictureurl.New()
-	rightPic := pictureurl.NewWithConfig(pictureurl.Config{KittyID: kittyIDRight})
+	leftPic := pictureurl.NewWithConfig(pictureurl.Config{CacheLimit: imageCacheLimit})
+	rightPic := pictureurl.NewWithConfig(pictureurl.Config{KittyID: kittyIDRight, CacheLimit: imageCacheLimit})
 	// right starts in Glyph by default; flip to Kitty. URL is empty so the
 	// returned Cmd is nil and can be ignored here.
 	_ = rightPic.Toggle()
@@ -281,8 +282,8 @@ func (m model) View() tea.View {
 	paneStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("8")).
-		Width(d.innerCols + 2).
-		Height(d.innerRows + 2).
+		Width(d.innerCols+2).
+		Height(d.innerRows+2).
 		Align(lipgloss.Center, lipgloss.Center)
 
 	leftBox := paneStyle.Render(m.leftPic.View().Content)

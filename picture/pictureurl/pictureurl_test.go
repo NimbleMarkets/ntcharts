@@ -2,6 +2,7 @@ package pictureurl
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -80,6 +81,49 @@ func TestSetURL_FetchesAndDisplays(t *testing.T) {
 	}
 }
 
+func TestSetURL_RejectsBodyOverMaxSize(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 200, G: 0, B: 0, A: 255})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	m := NewWithConfig(Config{MaxSize: int64(len(body) - 1)})
+	m.SetSize(20, 10)
+	drainCmd(t, &m, m.SetURL(srv.URL))
+
+	if !errors.Is(m.Err(), ErrImageTooLarge) {
+		t.Fatalf("expected ErrImageTooLarge, got %v", m.Err())
+	}
+	if got := m.State(); got != StateError {
+		t.Fatalf("expected StateError, got %s", got)
+	}
+	if _, ok := m.cache[srv.URL]; ok {
+		t.Fatal("oversized response should not be cached")
+	}
+}
+
+func TestSetURL_RejectsDecodedPixelsOverLimit(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 200, G: 0, B: 0, A: 255})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	m := NewWithConfig(Config{MaxPixels: 15})
+	m.SetSize(20, 10)
+	drainCmd(t, &m, m.SetURL(srv.URL))
+
+	if !errors.Is(m.Err(), ErrImageDimensionsTooLarge) {
+		t.Fatalf("expected ErrImageDimensionsTooLarge, got %v", m.Err())
+	}
+	if _, ok := m.cache[srv.URL]; ok {
+		t.Fatal("image over pixel limit should not be cached")
+	}
+}
+
 func TestSetURL_CachedErrorDoesNotRefetch(t *testing.T) {
 	var hits int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -136,6 +180,38 @@ func TestReload_ClearsErrorAndRefetches(t *testing.T) {
 	got := m.View().Content
 	if got == "" || hasPrefix(got, "Image error:") || got == "Loading…" {
 		t.Fatalf("after Reload + success, expected image View, got %q", got)
+	}
+}
+
+func TestCacheLimit_EvictsOldImages(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 0, G: 0, B: 200, A: 255})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	url1 := srv.URL + "/one"
+	url2 := srv.URL + "/two"
+	url3 := srv.URL + "/three"
+	m := NewWithConfig(Config{CacheLimit: 2})
+	m.SetSize(20, 10)
+
+	drainCmd(t, &m, m.SetURL(url1))
+	drainCmd(t, &m, m.SetURL(url2))
+	drainCmd(t, &m, m.SetURL(url3))
+
+	if _, ok := m.cache[url1]; ok {
+		t.Fatal("oldest cached image should be evicted")
+	}
+	if _, ok := m.cache[url2]; !ok {
+		t.Fatal("second image should remain cached")
+	}
+	if _, ok := m.cache[url3]; !ok {
+		t.Fatal("current image should remain cached")
+	}
+	if got := len(m.cache); got != 2 {
+		t.Fatalf("cache size = %d, want 2", got)
 	}
 }
 
