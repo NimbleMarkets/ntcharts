@@ -72,20 +72,20 @@ func TestModel_KittyMode_ViewSilentUntilFrameDelivered(t *testing.T) {
 
 	// Before delivering the frame, View should be empty (silent mid-render).
 	if got := m.View().Content; got != "" {
-		t.Fatalf("expected empty View() before kittyFrameMsg, got %q", got)
+		t.Fatalf("expected empty View() before KittyFrameMsg, got %q", got)
 	}
 
-	// Execute the Cmd to produce the kittyFrameMsg.
+	// Execute the Cmd to produce the KittyFrameMsg.
 	msg := cmd()
-	frame, ok := msg.(kittyFrameMsg)
+	frame, ok := msg.(KittyFrameMsg)
 	if !ok {
-		t.Fatalf("expected kittyFrameMsg, got %T", msg)
+		t.Fatalf("expected KittyFrameMsg, got %T", msg)
 	}
 
 	// Feed it back via Update; should produce a tea.Raw of the APC.
 	out := m.Update(frame)
 	if out == nil {
-		t.Fatal("Update with matching kittyFrameMsg should return a Cmd, got nil")
+		t.Fatal("Update with matching KittyFrameMsg should return a Cmd, got nil")
 	}
 	if rawMsg := out(); rawMsg == nil {
 		t.Fatal("Cmd from Update should produce a non-nil tea.Msg")
@@ -104,13 +104,13 @@ func TestModel_KittyMode_StaleFrameIgnored(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected non-nil Cmd")
 	}
-	frame := cmd().(kittyFrameMsg)
+	frame := cmd().(KittyFrameMsg)
 
 	// Bump seq by setting a new image; the previously-built frame is now stale.
 	m.SetImage(smallImage(color.RGBA{R: 255, G: 255, B: 255, A: 255}))
 
 	if out := m.Update(frame); out != nil {
-		t.Fatalf("expected stale kittyFrameMsg to be ignored (nil Cmd), got non-nil")
+		t.Fatalf("expected stale KittyFrameMsg to be ignored (nil Cmd), got non-nil")
 	}
 }
 

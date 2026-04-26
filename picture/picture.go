@@ -127,16 +127,28 @@ func (m *Model) Toggle() tea.Cmd {
 // Mode returns the current rendering mode.
 func (m *Model) Mode() PictureMode { return m.mode }
 
+// String returns the rendered image content as a plain string.
+func (m *Model) String() string { return m.View().Content }
+
+// IsPictureMsg reports whether msg is a picture-owned async update.
+func IsPictureMsg(msg tea.Msg) bool {
+	switch msg.(type) {
+	case KittyFrameMsg:
+		return true
+	}
+	return false
+}
+
 // Update processes the picture component's own messages. Forward every tea.Msg
 // to it; unknown messages are ignored and return nil.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case kittyFrameMsg:
-		if msg.id != m.kittyID || msg.seq != m.seq {
+	case KittyFrameMsg:
+		if msg.ID != m.kittyID || msg.Seq != m.seq {
 			return nil
 		}
-		m.kittyGrid = msg.grid
-		return tea.Raw(msg.apc)
+		m.kittyGrid = msg.Grid
+		return tea.Raw(msg.APC)
 	}
 	return nil
 }
@@ -193,6 +205,6 @@ func (m *Model) renderCmd() tea.Cmd {
 	return func() tea.Msg {
 		apc := buildKittyAPC(img, id, cols, rows)
 		grid := buildKittyGrid(cols, rows, id)
-		return kittyFrameMsg{id: id, seq: seq, apc: apc, grid: grid}
+		return KittyFrameMsg{ID: id, Seq: seq, APC: apc, Grid: grid}
 	}
 }

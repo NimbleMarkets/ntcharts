@@ -28,6 +28,7 @@ type Config struct {
 	MaxSize    int64         // default 15 MiB
 	Timeout    time.Duration // default 15s; ignored if HTTPClient is set
 	HTTPClient *http.Client  // optional; caller owns the lifetime
+	CacheLimit int           // maximum cached images; 0 = unlimited
 }
 
 // Model wraps a picture.Model with URL-based fetching. Forward every tea.Msg
@@ -37,9 +38,11 @@ type Model struct {
 	pic        picture.Model
 	currentURL string
 	cache      map[string]image.Image
+	cacheOrder []string
 	errs       map[string]error
 	loading    map[string]bool
 	maxSize    int64
+	cacheLimit int
 	client     *http.Client
 }
 
@@ -67,11 +70,12 @@ func NewWithConfig(cfg Config) Model {
 			KittyID:    cfg.KittyID,
 			Background: cfg.Background,
 		}),
-		cache:   make(map[string]image.Image),
-		errs:    make(map[string]error),
-		loading: make(map[string]bool),
-		maxSize: cfg.MaxSize,
-		client:  client,
+		cache:      make(map[string]image.Image),
+		errs:       make(map[string]error),
+		loading:    make(map[string]bool),
+		maxSize:    cfg.MaxSize,
+		cacheLimit: cfg.CacheLimit,
+		client:     client,
 	}
 }
 
@@ -185,20 +189,20 @@ func (m *Model) Mode() picture.PictureMode { return m.pic.Mode() }
 // Update routes fetch-completion messages and delegates everything else to
 // the embedded picture.Model.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	if loaded, ok := msg.(imageLoadedMsg); ok {
-		delete(m.loading, loaded.url)
-		if loaded.err != nil {
-			m.errs[loaded.url] = loaded.err
-			delete(m.cache, loaded.url)
-			if loaded.url == m.currentURL {
+	if loaded, ok := msg.(ImageLoadedMsg); ok {
+		delete(m.loading, loaded.URL)
+		if loaded.Err != nil {
+			m.errs[loaded.URL] = loaded.Err
+			delete(m.cache, loaded.URL)
+			if loaded.URL == m.currentURL {
 				return m.pic.SetImage(nil)
 			}
 			return nil
 		}
-		m.cache[loaded.url] = loaded.img
-		delete(m.errs, loaded.url)
-		if loaded.url == m.currentURL {
-			return m.pic.SetImage(loaded.img)
+		m.rememberImage(loaded.URL, loaded.Img)
+		delete(m.errs, loaded.URL)
+		if loaded.URL == m.currentURL {
+			return m.pic.SetImage(loaded.Img)
 		}
 		return nil
 	}
@@ -220,4 +224,40 @@ func (m *Model) View() tea.View {
 		}
 	}
 	return m.pic.View()
+}
+
+// String returns the rendered image content as a plain string.
+func (m *Model) String() string { return m.View().Content }
+
+// IsPictureMsg reports whether msg is an async update owned by the pictureurl
+// layer (image fetch completions) or the embedded picture.Model (Kitty frames).
+func IsPictureMsg(msg tea.Msg) bool {
+	switch msg.(type) {
+	case ImageLoadedMsg:
+		return true
+	}
+	return picture.IsPictureMsg(msg)
+}
+
+func (m *Model) rememberImage(url string, img image.Image) {
+	if _, ok := m.cache[url]; !ok {
+		m.cacheOrder = append(m.cacheOrder, url)
+	}
+	m.cache[url] = img
+	m.trimCache()
+}
+
+func (m *Model) trimCache() {
+	if m.cacheLimit <= 0 {
+		return
+	}
+	for len(m.cacheOrder) > m.cacheLimit {
+		evict := m.cacheOrder[0]
+		m.cacheOrder = m.cacheOrder[1:]
+		if evict == m.currentURL {
+			m.cacheOrder = append(m.cacheOrder, evict)
+			continue
+		}
+		delete(m.cache, evict)
+	}
 }

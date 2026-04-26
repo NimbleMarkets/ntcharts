@@ -10,34 +10,34 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-type imageLoadedMsg struct {
-	url string
-	img image.Image
-	err error
+type ImageLoadedMsg struct {
+	URL string
+	Img image.Image
+	Err error
 }
 
 func fetchCmd(client *http.Client, url string, maxSize int64) tea.Cmd {
 	return func() tea.Msg {
 		resp, err := client.Get(url)
 		if err != nil {
-			return imageLoadedMsg{url: url, err: err}
+			return ImageLoadedMsg{URL: url, Err: err}
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return imageLoadedMsg{url: url, err: errors.New(resp.Status)}
+			return ImageLoadedMsg{URL: url, Err: errors.New(resp.Status)}
 		}
 
 		data, err := io.ReadAll(io.LimitReader(resp.Body, maxSize))
 		if err != nil {
-			return imageLoadedMsg{url: url, err: err}
+			return ImageLoadedMsg{URL: url, Err: err}
 		}
 
 		img, _, err := image.Decode(bytes.NewReader(data))
 		if err != nil {
-			return imageLoadedMsg{url: url, err: err}
+			return ImageLoadedMsg{URL: url, Err: err}
 		}
 
-		return imageLoadedMsg{url: url, img: img}
+		return ImageLoadedMsg{URL: url, Img: img}
 	}
 }
