@@ -18,6 +18,7 @@ We supply many chart types within the glory of your terminal!
 | [Heat Map](./examples/README.md#heatmap) | Displays (x,y) values on a color-mapped heatmap. |
 | [Line Chart](./examples/README.md#lines) | Displays (X,Y) data points onto a 2D grid in various types of charts. |
 | [OHLC/Candle Chart](./examples/README.md#candlesticks) | Displays Open, High, Low, Close values as candlesticks. |
+| [Picture](./examples/README.md#picture) | Displays images with `picture` and via `http` with `pictureurl` |
 | [Scatter Chart](./examples/README.md#scatter) | Plots abitrary runes onto (X,Y) coordinates. |
 | [Streamline Chart](./examples/README.md#streaming) | Displays a continuous a line moving across the Canvas from the right side to the left side. |
 | [Time Series Chart](./examples/README.md#time-series) | Displays lines with values on the Y axis and time values on the X axis. |
@@ -290,6 +291,8 @@ Thanks also to [asciigraph](https://github.com/guptarohit/asciigraph), [ratatui]
 ## License
 
 Released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt).
+
+The image [`./examples/picture/Fuji-01.png] is from this link and licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](http://creativecommons.org/licenses/by-nc-nd/4.0/).
 
 Copyright (c) 2024-2026 [Neomantra Corp](https://www.neomantra.com).   
 

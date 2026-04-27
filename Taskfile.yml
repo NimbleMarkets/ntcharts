@@ -23,11 +23,13 @@ tasks:
 
   go-tidy:
     desc: 'Go tidy all the things'
+    run: once
     cmds:
       - go mod tidy
 
   go-update:
     desc: 'Go update all the dependencies'
+    run: once
     cmds:
       - go get -u ./...
 
@@ -73,7 +75,20 @@ tasks:
   build-cmds:
     desc: 'Build all commands'
     deps:
+      - build-cmd-ntcharts-lorem-picsum
       - build-cmd-ntcharts-ohlc
+
+  build-cmd-ntcharts-lorem-picsum:
+    desc: 'Build ntcharts-ohlc command'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/ntcharts-lorem-picsum cmd/ntcharts-lorem-picsum/*.go
+    sources:
+      - cmd/ntcharts-lorem-picsum/*.go
+      - picture/**/*.go
+      - go.mod
+    generates:
+      - bin/ntcharts-lorem-picsum
 
   build-cmd-ntcharts-ohlc:
     desc: 'Build ntcharts-ohlc command'
@@ -90,6 +105,7 @@ tasks:
   clean-cmds:
     desc: 'Cleans all commands'
     cmds:
+      - rm -f bin/ntcharts-lorem-picsum
       - rm -f bin/ntcharts-ohlc
     
 ###############################################################################
@@ -103,6 +119,7 @@ tasks:
       - build-ex-graph
       - build-ex-heatmap
       - build-ex-linechart
+      - build-ex-picture
       - build-ex-quickstart
       - build-ex-sparkline
 
@@ -192,6 +209,17 @@ tasks:
       - bin/ntcharts-linechart-timeseries
       - bin/ntcharts-linechart-wavelines
 
+  build-ex-picture:
+    desc: 'Build picture example'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/ntcharts-picture examples/picture/*.go
+    sources:
+      - picture/**/*.go
+      - examples/picture/*.go
+    generates:
+      - bin/ntcharts-picture
+
   build-ex-quickstart:
     desc: 'Build quickstart example'
     deps: [go-tidy]
@@ -224,6 +252,7 @@ tasks:
       - rm -f bin/ntcharts-heatmap-aoc2024 bin/ntcharts-heatmap-functor bin/ntcharts-heatmap-perlin bin/ntcharts-heatmap-simple
       - rm -f bin/ntcharts-graph-braille bin/ntcharts-graph-candlesticks bin/ntcharts-graph-circles bin/ntcharts-graph-columns bin/ntcharts-graph-lines bin/ntcharts-graph-rows
       - rm -f bin/ntcharts-linechart-circles bin/ntcharts-linechart-lines bin/ntcharts-linechart-scatter bin/ntcharts-linechart-streaming bin/ntcharts-linechart-timeseries bin/ntcharts-linechart-wavelines
+      - rm -f bin/ntcharts-picture
       - rm -f bin/ntcharts-quickstart
       - rm -f bin/ntcharts-sparkline
 
@@ -257,6 +286,7 @@ tasks:
       - vhs validate ./examples/linechart/streaming/demo.tape
       - vhs validate ./examples/linechart/timeseries/demo.tape
       - vhs validate ./examples/linechart/wavelines/demo.tape
+      - vhs validate ./examples/picture/demo.tape
       - vhs validate ./examples/quickstart/demo.tape
       - vhs validate ./examples/sparkline/demo.tape
     sources:
@@ -284,6 +314,7 @@ tasks:
       - vhs --output ./examples/linechart/streaming/demo.gif ./examples/linechart/streaming/demo.tape
       - vhs --output ./examples/linechart/timeseries/demo.gif ./examples/linechart/timeseries/demo.tape
       - vhs --output ./examples/linechart/wavelines/demo.gif ./examples/linechart/wavelines/demo.tape
+      - vhs --output ./examples/picture/demo.gif ./examples/picture/demo.tape
       - vhs --output ./examples/quickstart/demo.gif ./examples/quickstart/demo.tape
       - vhs --output ./examples/sparkline/demo.gif ./examples/sparkline/demo.tape
     sources:
@@ -307,6 +338,8 @@ tasks:
       - ./examples/linechart/streaming/demo.gif
       - ./examples/linechart/timeseries/demo.gif
       - ./examples/linechart/wavelines/demo.gif
+      - ./examples/picture/demo.gif
+      - ./examples/quickstart/demo.gif
       - ./examples/sparkline/demo.gif
 
   clean-gifs:
@@ -330,5 +363,6 @@ tasks:
       - rm -f ./examples/linechart/streaming/demo.gif
       - rm -f ./examples/linechart/timeseries/demo.gif
       - rm -f ./examples/linechart/wavelines/demo.gif
+      - rm -f ./examples/picture/demo.gif
       - rm -f ./examples/quickstart/demo.gif
       - rm -f ./examples/sparkline/demo.gif

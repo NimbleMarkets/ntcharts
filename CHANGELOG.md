@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.0.2 (2026-04-25)
+
+ * feat: add picture and pictureurl
+
 ## v2.0.1 (2026-04-13)
 
  * feat: Support millisecond resolution in timeseries line chart (#15)
