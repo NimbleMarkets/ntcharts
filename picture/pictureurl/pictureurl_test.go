@@ -222,6 +222,42 @@ func TestCacheLimit_EvictsOldImages(t *testing.T) {
 	}
 }
 
+func TestCacheLimit_LRUBumping(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 0, G: 0, B: 200, A: 255})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	url1 := srv.URL + "/one"
+	url2 := srv.URL + "/two"
+	url3 := srv.URL + "/three"
+	m := NewWithConfig(Config{CacheLimit: 2})
+	m.SetSize(20, 10)
+
+	// Load 1 and 2. Cache: [1, 2]
+	drainCmd(t, &m, m.SetURL(url1))
+	drainCmd(t, &m, m.SetURL(url2))
+
+	// Re-access 1. Cache: [2, 1] (1 is now MRU)
+	m.SetURL("") // Clear current to allow re-setting same URL
+	m.SetURL(url1)
+
+	// Load 3. Cache: [1, 3] (2 should be evicted)
+	drainCmd(t, &m, m.SetURL(url3))
+
+	if _, ok := m.cache[url2]; ok {
+		t.Fatal("image 2 should have been evicted (it was the LRU after bumping 1)")
+	}
+	if _, ok := m.cache[url1]; !ok {
+		t.Fatal("image 1 should have remained in cache due to access bump")
+	}
+	if _, ok := m.cache[url3]; !ok {
+		t.Fatal("image 3 should remain in cache")
+	}
+}
+
 func TestClear_BlanksWithoutDroppingState(t *testing.T) {
 	body := tinyPNG(t, color.RGBA{R: 0, G: 0, B: 200, A: 255})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

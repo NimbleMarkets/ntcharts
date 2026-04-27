@@ -164,6 +164,7 @@ func (m *Model) SetURL(url string) tea.Cmd {
 	}
 
 	if img, ok := m.cache[url]; ok {
+		m.markUsed(url)
 		return m.pic.SetImage(img)
 	}
 	if _, ok := m.errs[url]; ok {
@@ -258,14 +259,33 @@ func IsPictureMsg(msg tea.Msg) bool {
 	return picture.IsPictureMsg(msg)
 }
 
+// rememberImage adds img to the cache for url and updates its position in the
+// LRU eviction queue.
 func (m *Model) rememberImage(url string, img image.Image) {
 	if _, ok := m.cache[url]; !ok {
 		m.cacheOrder = append(m.cacheOrder, url)
+	} else {
+		m.markUsed(url)
 	}
 	m.cache[url] = img
 	m.trimCache()
 }
 
+// markUsed moves url to the end of the cacheOrder list, marking it as the
+// most recently used.
+func (m *Model) markUsed(url string) {
+	for i, u := range m.cacheOrder {
+		if u == url {
+			m.cacheOrder = append(m.cacheOrder[:i], m.cacheOrder[i+1:]...)
+			m.cacheOrder = append(m.cacheOrder, url)
+			return
+		}
+	}
+}
+
+// trimCache removes the oldest entries from the cache until cacheLimit is
+// satisfied. It will not evict currentURL; if currentURL is the oldest entry,
+// it is moved to the end of the list and the next oldest is evicted instead.
 func (m *Model) trimCache() {
 	if m.cacheLimit < 0 {
 		return
