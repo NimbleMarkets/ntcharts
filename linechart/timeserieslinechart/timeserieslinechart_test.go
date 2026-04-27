@@ -12,7 +12,7 @@ func TestHourTimeLabelFormatterRoundsToNearestMillisecond(t *testing.T) {
 	f := HourTimeLabelFormatter()
 	base := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
 
-	v := float64(base.Add(-400 * time.Microsecond).UnixMilli())/1e3 + 0.0006
+	v := float64(base.Add(-400*time.Microsecond).UnixMilli())/1e3 + 0.0006
 	if got, want := f(0, v), "03:04:05"; got != want {
 		t.Fatalf("HourTimeLabelFormatter() = %q, want %q", got, want)
 	}
@@ -22,7 +22,7 @@ func TestDateTimeLabelFormatterRoundsToNearestMillisecond(t *testing.T) {
 	f := DateTimeLabelFormatter()
 	base := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-	v := float64(base.Add(-400 * time.Microsecond).UnixMilli())/1e3 + 0.0006
+	v := float64(base.Add(-400*time.Microsecond).UnixMilli())/1e3 + 0.0006
 	if got, want := f(0, v), "'26 01/01"; got != want {
 		t.Fatalf("DateTimeLabelFormatter() = %q, want %q", got, want)
 	}

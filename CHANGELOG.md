@@ -1,8 +1,12 @@
 # CHANGELOG
 
-## v2.0.2 (2026-04-25)
+## v2.0.2 (2026-04-27)
 
  * feat: add picture and pictureurl
+ * feat: add controls to prevent intentional or accidental memory bombs (#12 #17)
+   * add `DefaultMaxPoints` global and `config.MaxInterpolationPoints`
+   * add `GetLinePointsWithLimit` and `GetCirclePointsWithLimit`
+ * chore: update Golang dependencies
 
 ## v2.0.1 (2026-04-13)
 

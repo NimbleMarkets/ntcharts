@@ -58,3 +58,11 @@ func WithData(d []float64) Option {
 		m.PushAll(d)
 	}
 }
+
+// WithMaxInterpolationPoints sets the maximum number of points to interpolate
+// for lines. If 0, graph.DefaultMaxPoints is used.
+func WithMaxInterpolationPoints(n int) Option {
+	return func(m *Model) {
+		m.MaxInterpolationPoints = n
+	}
+}

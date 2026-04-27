@@ -442,7 +442,7 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 				gp2 := bGrid.GridPoint(p2)
 				// set all points in the braille grid
 				// between two points that approximates a line
-				points := graph.GetLinePoints(gp1, gp2)
+				points := graph.GetLinePointsWithLimit(gp1, gp2, m.MaxInterpolationPoints)
 				for _, p := range points {
 					bGrid.Set(p)
 				}
@@ -508,7 +508,7 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 		}
 		// place all points between two points
 		// that approximates a line into buckets
-		points := graph.GetLinePoints(p1, p2)
+		points := graph.GetLinePointsWithLimit(p1, p2, m.MaxInterpolationPoints)
 		for _, p := range points {
 			if (p.X >= 0) && (p.X) < width {
 				buckets[p.X].Add(float64(p.Y))

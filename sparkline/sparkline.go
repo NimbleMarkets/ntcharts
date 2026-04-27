@@ -25,6 +25,8 @@ type Model struct {
 	Style        lipgloss.Style // style applied when drawing columns
 	Canvas       canvas.Model
 
+	MaxInterpolationPoints int // maximum points to interpolate for lines
+
 	max float64                        // expected maximum data value
 	buf *buffer.Float64ScaleRingBuffer // buffer with size as width of canvas
 }
@@ -159,7 +161,7 @@ func (m *Model) DrawBraille() {
 		}
 		gp1 := grid.GridPoint(canvas.Float64Point{X: float64(startX + i), Y: d[i]})
 		gp2 := grid.GridPoint(canvas.Float64Point{X: float64(startX + j), Y: d[j]})
-		points := graph.GetLinePoints(gp1, gp2)
+		points := graph.GetLinePointsWithLimit(gp1, gp2, m.MaxInterpolationPoints)
 		for _, p := range points {
 			grid.Set(p)
 		}
