@@ -14,9 +14,14 @@ import (
 )
 
 const (
-	DefaultMaxSize   = 15 * 1024 * 1024 // 15 MiB
-	DefaultTimeout   = 15 * time.Second
-	DefaultMaxPixels = 32 * 1024 * 1024 // 32 megapixels
+	// DefaultMaxSize is the maximum allowed size of an image response in bytes (15 MiB).
+	DefaultMaxSize = 15 * 1024 * 1024
+	// DefaultTimeout is the default HTTP client timeout (15 seconds).
+	DefaultTimeout = 15 * time.Second
+	// DefaultMaxPixels is the maximum allowed dimensions of a decoded image (32 megapixels).
+	DefaultMaxPixels = 32 * 1024 * 1024
+	// DefaultCacheLimit is the default number of images to keep in the LRU cache.
+	DefaultCacheLimit = 10
 )
 
 // Config configures a Model at construction.
@@ -30,7 +35,7 @@ type Config struct {
 	MaxPixels  int           // default 32 megapixels; 0 means default, negative disables
 	Timeout    time.Duration // default 15s; ignored if HTTPClient is set
 	HTTPClient *http.Client  // optional; caller owns the lifetime
-	CacheLimit int           // maximum cached images; 0 = unlimited
+	CacheLimit int           // default 10; negative means unlimited
 }
 
 // Model wraps a picture.Model with URL-based fetching. Forward every tea.Msg
@@ -66,6 +71,9 @@ func NewWithConfig(cfg Config) Model {
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = DefaultTimeout
 	}
+	if cfg.CacheLimit == 0 {
+		cfg.CacheLimit = DefaultCacheLimit
+	}
 	client := cfg.HTTPClient
 	if client == nil {
 		client = &http.Client{Timeout: cfg.Timeout}
@@ -93,10 +101,14 @@ func (m *Model) CurrentURL() string { return m.currentURL }
 type LoadState int
 
 const (
-	StateEmpty   LoadState = iota // no URL set
-	StateLoading                  // fetch in flight
-	StateLoaded                   // image cached and ready
-	StateError                    // fetch errored
+	// StateEmpty indicates no URL has been set.
+	StateEmpty LoadState = iota
+	// StateLoading indicates a fetch for the current URL is in flight.
+	StateLoading
+	// StateLoaded indicates the image for the current URL is cached and ready.
+	StateLoaded
+	// StateError indicates the fetch for the current URL failed.
+	StateError
 )
 
 func (s LoadState) String() string {
@@ -255,7 +267,7 @@ func (m *Model) rememberImage(url string, img image.Image) {
 }
 
 func (m *Model) trimCache() {
-	if m.cacheLimit <= 0 {
+	if m.cacheLimit < 0 {
 		return
 	}
 	for len(m.cacheOrder) > m.cacheLimit {

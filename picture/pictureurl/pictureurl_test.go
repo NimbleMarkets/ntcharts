@@ -183,6 +183,13 @@ func TestReload_ClearsErrorAndRefetches(t *testing.T) {
 	}
 }
 
+func TestDefaultCacheLimit(t *testing.T) {
+	m := New()
+	if m.cacheLimit != DefaultCacheLimit {
+		t.Fatalf("expected default cache limit %d, got %d", DefaultCacheLimit, m.cacheLimit)
+	}
+}
+
 func TestCacheLimit_EvictsOldImages(t *testing.T) {
 	body := tinyPNG(t, color.RGBA{R: 0, G: 0, B: 200, A: 255})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
