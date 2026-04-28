@@ -19,6 +19,7 @@ We supply many chart types within the glory of your terminal!
 | [Line Chart](./examples/README.md#lines) | Displays (X,Y) data points onto a 2D grid in various types of charts. |
 | [OHLC/Candle Chart](./examples/README.md#candlesticks) | Displays Open, High, Low, Close values as candlesticks. |
 | [Picture](./examples/README.md#picture) | Displays images with `picture` and via `http` with `pictureurl` |
+| [Chart Picture](./examples/README.md#chart-picture) | Renders [go-analyze/charts](https://github.com/go-analyze/charts) chart images via an embedded `picture.Model` — Kitty graphics with glyph fallback. |
 | [Scatter Chart](./examples/README.md#scatter) | Plots abitrary runes onto (X,Y) coordinates. |
 | [Streamline Chart](./examples/README.md#streaming) | Displays a continuous a line moving across the Canvas from the right side to the left side. |
 | [Time Series Chart](./examples/README.md#time-series) | Displays lines with values on the Y axis and time values on the X axis. |
@@ -30,6 +31,22 @@ We supply many chart types within the glory of your terminal!
 This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](./examples/README.md#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.
 
 <a href="./examples/quickstart/README.md" alt="quickstart readme"><img src="examples/quickstart/demo.gif" alt="quickstart gif" width='300'/></a>
+
+## Demo Apps
+
+Standalone CLI demos. Run `task` to build them all into the `bin/` directory.
+
+| Command | Source | What it shows |
+| :--- | :--- | :--- |
+| `ntcharts-quickstart` | [examples/quickstart](./examples/quickstart/main.go) | The tutorial above — time-series chart with two data sets, mouse support. |
+| `ntcharts-ohlc` | [cmd/ntcharts-ohlc](./cmd/ntcharts-ohlc) | Renders OHLC candles + a sparkline from a CSV ([example.csv](./cmd/ntcharts-ohlc/example.csv)) using the time-series line chart with braille runes. |
+| `ntcharts-lorem-picsum` | [cmd/ntcharts-lorem-picsum](./cmd/ntcharts-lorem-picsum) | Sortable/filterable [Lorem Picsum](https://picsum.photos/) catalog browser; previews the selected image side-by-side in Glyph and Kitty graphics modes via `pictureurl`. Requires a Kitty-graphics-capable terminal for the right pane. |
+| `ntcharts-picture` | [examples/picture](./examples/picture/main.go) | Two-pane image demo: embedded PNG via `picture` on the left, fetched URL via `pictureurl` on the right. |
+| `ntcharts-chartpicture` | [examples/chartpicture](./examples/chartpicture/main.go) | Live-updating chart rendered through `chartpicture` (go-analyze/charts → image → Kitty/Glyph). Press `r` to swap line/bar, `t` to cycle themes, `g` to toggle modes. |
+
+<a href="./cmd/ntcharts-lorem-picsum/README.md" alt="ntcharts-lorem-picsum readme"><img src="cmd/ntcharts-lorem-picsum/demo.gif" alt="ntcharts-lorem-picsum gif" width="600"/></a>
+
+<a href="./cmd/ntcharts-ohlc/README.md" alt="ntcharts-ohlc readme"><img src="cmd/ntcharts-ohlc/demo.gif" alt="ntcharts-ohlc gif" width="600"/></a>
 
 ## BubbleTea Version Compatibility
 

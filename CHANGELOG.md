@@ -1,8 +1,20 @@
 # CHANGELOG
 
+## v2.0.3 (2026-04-28)
+ 
+[`chartpicture`](examples/README.md#chart-picture) is experimental. It renders charts as images; it can also bridge Apache ECharts.  It is not very useful unless your terminal supports the Kitty Graphics Protocol.  We are exploring how to improve it, but wanted to share with the community.
+
+ * feat: add `picture/chartpicture` package — renders [github.com/go-analyze/charts](https://github.com/go-analyze/charts) chart images via the embedded `picture.Model`
+   * `chartpicture.Model` produces chart frames asynchronously through `tea.Cmd`
+   * Recipes for common sources: `WithLineRecipe`, `WithBarRecipe`, `WithEChartsJSONRecipe`, `WithPainterFuncRecipe`
+   * Configurable via `WithChartSource`, `WithRecipe`, `WithKittyID`, `WithBackground`, `WithTheme`
+   * Bridges `barchart.Model` and `linechart.Model` directly via the new `barchart.Model.Data()` accessor
+ * fix: propagate streamlinechart height fix to wave/timeserieslinechart (#7)
+ * Correctness and security fixes
+
 ## v2.0.2 (2026-04-27)
 
- * feat: add picture and pictureurl
+ * feat: add [`picture` and `pictureurl`](examples/README.md#picture)
  * feat: add controls to prevent intentional or accidental memory bombs (#12 #17)
    * add `DefaultMaxPoints` global and `config.MaxInterpolationPoints`
    * add `GetLinePointsWithLimit` and `GetCirclePointsWithLimit`
