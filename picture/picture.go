@@ -13,6 +13,7 @@ import (
 	_ "image/gif"  // decoder registration
 	_ "image/jpeg" // decoder registration
 	_ "image/png"  // decoder registration
+	"strings"
 	"sync/atomic"
 
 	tea "charm.land/bubbletea/v2"
@@ -189,7 +190,10 @@ func (m *Model) View() tea.View {
 		return tea.NewView("")
 	}
 
-	out := ascii.RenderExt(false, false)
+	// pixterm/ansimage appends \n after every row including the last; the
+	// Kitty path does not. Strip so both modes report the same shape to
+	// newline-aware layout code (lipgloss.JoinVertical, etc.).
+	out := strings.TrimRight(ascii.RenderExt(false, false), "\n")
 	m.glyphCache = out
 	m.glyphKey = key
 	return tea.NewView(out)

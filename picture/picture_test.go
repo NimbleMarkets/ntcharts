@@ -3,6 +3,7 @@ package picture
 import (
 	"image"
 	"image/color"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -111,6 +112,50 @@ func TestModel_KittyMode_StaleFrameIgnored(t *testing.T) {
 
 	if out := m.Update(frame); out != nil {
 		t.Fatalf("expected stale KittyFrameMsg to be ignored (nil Cmd), got non-nil")
+	}
+}
+
+func TestModel_View_NeitherModeEndsWithTrailingNewline(t *testing.T) {
+	// pixterm/ansimage appends \n after every row including the last, while
+	// the Kitty path's buildKittyGrid omits it. Without normalization, the
+	// Glyph render carries a trailing \n that lipgloss.JoinVertical and
+	// other newline-aware layout code interpret as an extra empty row,
+	// making the surrounding box jump by one row when toggling modes.
+	const cols, rows = 40, 20
+
+	m := New()
+	if cmd := m.SetSize(cols, rows); cmd != nil {
+		t.Fatalf("SetSize: %v", cmd)
+	}
+	if cmd := m.SetImage(smallImage(color.RGBA{R: 100, G: 100, B: 100, A: 255})); cmd != nil {
+		t.Fatalf("glyph SetImage should return nil, got %v", cmd)
+	}
+
+	glyph := m.View().Content
+	if glyph == "" {
+		t.Fatal("expected non-empty Glyph render")
+	}
+	if strings.HasSuffix(glyph, "\n") {
+		t.Errorf("Glyph render must not end with a trailing \\n; layouts that count newlines (lipgloss.JoinVertical etc.) will see an extra row")
+	}
+
+	cmd := m.Toggle()
+	if cmd == nil {
+		t.Fatal("Toggle to Kitty should return a render Cmd")
+	}
+	msg := cmd()
+	frame, ok := msg.(KittyFrameMsg)
+	if !ok {
+		t.Fatalf("expected KittyFrameMsg from Toggle, got %T", msg)
+	}
+	m.Update(frame)
+
+	kitty := m.View().Content
+	if kitty == "" {
+		t.Fatal("expected non-empty Kitty render")
+	}
+	if strings.HasSuffix(kitty, "\n") {
+		t.Errorf("Kitty render must not end with a trailing \\n")
 	}
 }
 
