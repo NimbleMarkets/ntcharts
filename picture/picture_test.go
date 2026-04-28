@@ -193,6 +193,36 @@ func TestModel_KittyMode_ToggleWithImage_EmitsFrame(t *testing.T) {
 	}
 }
 
+func TestModel_KittyMode_SetImage_KeepsOldGridUntilNewFrame(t *testing.T) {
+	// Animation flicker fix: when only the image changes (same size, same
+	// kittyID), the placeholder grid is byte-identical pre- and post-render.
+	// SetImage must not blank kittyGrid synchronously; the old grid keeps
+	// the previously-resident image visible until the new APC overwrites
+	// it at the same kittyID.
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle() // Kitty
+	cmd := m.SetImage(smallImage(color.RGBA{R: 255, A: 255}))
+	if cmd == nil {
+		t.Fatal("expected non-nil render Cmd from initial SetImage")
+	}
+	frame1 := cmd().(KittyFrameMsg)
+	m.Update(frame1)
+	grid1 := m.View().Content
+	if grid1 == "" {
+		t.Fatal("precondition: expected non-empty View after first frame applied")
+	}
+
+	// Set a new image. Do NOT deliver the new frame. The grid must remain
+	// the previous one so animation has no blank window.
+	if cmd2 := m.SetImage(smallImage(color.RGBA{G: 255, A: 255})); cmd2 == nil {
+		t.Fatal("expected non-nil render Cmd from second SetImage")
+	}
+	if got := m.View().Content; got != grid1 {
+		t.Fatalf("View().Content blanked between frames; got %q, want previous grid (still placing image at kittyID)", got)
+	}
+}
+
 func TestModel_KittyMode_RejectsOtherModelsFrame(t *testing.T) {
 	// Two Models with default config both default to KittyID=43 and, after
 	// the same sequence of mutations, the same seq. Without a per-Model

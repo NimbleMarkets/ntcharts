@@ -83,13 +83,21 @@ func NewWithConfig(cfg Config) Model {
 // SetImage sets the image to render. Pass nil to clear. Returns a tea.Cmd if
 // rendering needs to be scheduled (Kitty mode), or a cleanup Cmd if Kitty was
 // previously placed and is now being cleared, or nil otherwise.
+//
+// In Kitty mode with a non-nil new image, the previous placeholder grid is
+// preserved until the new KittyFrameMsg arrives. The grid is a pure function
+// of (cols, rows, kittyID) — byte-identical between renders when those are
+// stable — and the previously-resident image at kittyID stays visible until
+// the new APC overwrites it. Clearing the grid synchronously would create a
+// visible blank window during animation.
 func (m *Model) SetImage(img image.Image) tea.Cmd {
 	prev := m.img
 	m.img = img
 	m.seq++
-	m.invalidate()
+	m.invalidateGlyph()
 
 	if img == nil {
+		m.invalidateKitty()
 		if m.mode == PictureKitty && prev != nil {
 			return tea.Raw(kittyDeleteImage(m.kittyID))
 		}
@@ -107,7 +115,8 @@ func (m *Model) SetSize(cols, rows int) tea.Cmd {
 	m.cols = cols
 	m.rows = rows
 	m.seq++
-	m.invalidate()
+	m.invalidateGlyph()
+	m.invalidateKitty()
 	return m.renderCmd()
 }
 
@@ -122,7 +131,8 @@ func (m *Model) Toggle() tea.Cmd {
 		m.mode = PictureGlyph
 	}
 	m.seq++
-	m.invalidate()
+	m.invalidateGlyph()
+	m.invalidateKitty()
 
 	if prev == PictureKitty && m.img != nil {
 		return tea.Raw(kittyDeleteImage(m.kittyID))
@@ -199,9 +209,12 @@ func (m *Model) View() tea.View {
 	return tea.NewView(out)
 }
 
-func (m *Model) invalidate() {
+func (m *Model) invalidateGlyph() {
 	m.glyphCache = ""
 	m.glyphKey = ""
+}
+
+func (m *Model) invalidateKitty() {
 	m.kittyGrid = ""
 }
 
