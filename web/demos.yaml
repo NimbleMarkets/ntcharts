@@ -1,0 +1,39 @@
+# Source of truth for the WASM showcase site.
+# Consumed by cmd/wasm-build to compile demos and render pages.
+groups:
+  - title: Lines
+    demos:
+      - name: quickstart
+        title: Quickstart
+        blurb: Time-series chart with mouse + keyboard zoom — the onboarding tutorial.
+        source: ./examples/quickstart
+      - name: wavelines
+        title: Wavelines
+        blurb: Looping wave pattern via wavelinechart.
+        source: ./examples/linechart/wavelines
+      - name: streaming
+        title: Streaming
+        blurb: Continuous data flowing right-to-left.
+        source: ./examples/linechart/streaming
+  - title: Bars & Sparks
+    demos:
+      - name: barchart-vertical
+        title: Bar Chart (vertical)
+        blurb: Vertical bar chart with styled labels.
+        source: ./examples/barchart/vertical
+      - name: sparkline
+        title: Sparkline
+        blurb: Compact at-a-glance trend visual.
+        source: ./examples/sparkline
+  - title: Heatmap
+    demos:
+      - name: heatmap-perlin
+        title: Heatmap (Perlin)
+        blurb: Color-mapped 2D Perlin-noise field.
+        source: ./examples/heatmap/perlin
+  - title: Graph
+    demos:
+      - name: graph-braille
+        title: Graph (braille)
+        blurb: Braille-rune graph rendering.
+        source: ./examples/graph/braille

@@ -12,6 +12,7 @@ require (
 	github.com/go-analyze/charts v0.5.27
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	github.com/spf13/pflag v1.0.10
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -30,6 +31,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-analyze/bulk v0.1.3 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
