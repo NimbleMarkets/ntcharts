@@ -425,6 +425,63 @@ func TestUpdate_StaleEarlierFetchDiscarded(t *testing.T) {
 	}
 }
 
+func TestTrimCache_BailsWhenNoProgressPossible(t *testing.T) {
+	// Construct the degenerate state I5 warns about: cacheLimit=0 with
+	// currentURL pinned as the sole entry. The pre-fix loop would pop and
+	// re-append currentURL forever.
+	m := New()
+	m.cacheLimit = 0
+	m.currentURL = "http://x"
+	m.cache["http://x"] = image.NewRGBA(image.Rect(0, 0, 1, 1))
+	m.cacheOrder = []string{"http://x"}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		m.trimCache()
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("trimCache hung — expected to return when no progress can be made")
+	}
+
+	if _, ok := m.cache["http://x"]; !ok {
+		t.Fatal("currentURL must not be evicted")
+	}
+}
+
+func TestTrimCache_EvictsNonCurrentEvenAtZeroLimit(t *testing.T) {
+	// With cacheLimit=0 and an entry that isn't currentURL, trimCache should
+	// evict the non-currentURL entry and then return (not loop on currentURL).
+	m := New()
+	m.cacheLimit = 0
+	m.currentURL = "http://current"
+	m.cache["http://current"] = image.NewRGBA(image.Rect(0, 0, 1, 1))
+	m.cache["http://old"] = image.NewRGBA(image.Rect(0, 0, 1, 1))
+	m.cacheOrder = []string{"http://old", "http://current"}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		m.trimCache()
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("trimCache hung")
+	}
+
+	if _, ok := m.cache["http://old"]; ok {
+		t.Fatal("non-current entry should have been evicted")
+	}
+	if _, ok := m.cache["http://current"]; !ok {
+		t.Fatal("currentURL must remain")
+	}
+}
+
 func TestReload_KeepsImageVisibleDuringRefetch(t *testing.T) {
 	body := tinyPNG(t, color.RGBA{R: 100, G: 100, B: 100, A: 255})
 

@@ -24,7 +24,11 @@ type ImageLoadedMsg struct {
 var (
 	ErrImageTooLarge           = errors.New("image response exceeds max size")
 	ErrImageDimensionsTooLarge = errors.New("image dimensions exceed max pixels")
-	ErrUnexpectedContentType   = errors.New("unexpected Content-Type")
+	// ErrUnexpectedContentType is returned when the response Content-Type
+	// is set to a non-image type. Responses with no Content-Type header
+	// are accepted and left for the image decoder to validate, since some
+	// local and dev servers do not set the header.
+	ErrUnexpectedContentType = errors.New("unexpected Content-Type")
 )
 
 func fetchCmd(modelID, seq uint64, client *http.Client, userAgent, url string, maxSize int64, maxPixels int) tea.Cmd {

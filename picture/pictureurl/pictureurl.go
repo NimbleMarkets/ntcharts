@@ -40,7 +40,11 @@ type Config struct {
 	Timeout    time.Duration // default 15s; ignored if HTTPClient is set
 	HTTPClient *http.Client  // optional; caller owns the lifetime
 	CacheLimit int           // default 10; negative means unlimited
-	UserAgent  string        // default "ntcharts-pictureurl"
+	// UserAgent sets the User-Agent header on outbound image requests
+	// (default "ntcharts-pictureurl"). If HTTPClient is supplied with a
+	// Transport that rewrites User-Agent, the Transport wins because it
+	// runs after the header is set on the request.
+	UserAgent string
 }
 
 // Model wraps a picture.Model with URL-based fetching. Forward every tea.Msg
@@ -312,17 +316,27 @@ func (m *Model) markUsed(url string) {
 // trimCache removes the oldest entries from the cache until cacheLimit is
 // satisfied. It will not evict currentURL; if currentURL is the oldest entry,
 // it is moved to the end of the list and the next oldest is evicted instead.
+// If currentURL is the only entry blocking eviction, trimCache returns
+// without making further progress rather than spinning.
 func (m *Model) trimCache() {
 	if m.cacheLimit < 0 {
 		return
 	}
 	for len(m.cacheOrder) > m.cacheLimit {
-		evict := m.cacheOrder[0]
-		m.cacheOrder = m.cacheOrder[1:]
-		if evict == m.currentURL {
-			m.cacheOrder = append(m.cacheOrder, evict)
-			continue
+		progress := false
+		n := len(m.cacheOrder)
+		for i := 0; i < n && len(m.cacheOrder) > m.cacheLimit; i++ {
+			evict := m.cacheOrder[0]
+			m.cacheOrder = m.cacheOrder[1:]
+			if evict == m.currentURL {
+				m.cacheOrder = append(m.cacheOrder, evict)
+				continue
+			}
+			delete(m.cache, evict)
+			progress = true
 		}
-		delete(m.cache, evict)
+		if !progress {
+			return
+		}
 	}
 }
