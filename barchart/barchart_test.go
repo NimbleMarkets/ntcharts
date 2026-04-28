@@ -159,3 +159,23 @@ func TestBarNoAutoBarWidth(t *testing.T) {
 		t.Errorf("BarWidth changed with AutoBarWidth disabled:%d", bc.BarWidth())
 	}
 }
+
+func TestModelData(t *testing.T) {
+	bd := []BarData{
+		{Label: "A", Values: []BarValue{{Name: "v", Value: 10}}},
+		{Label: "B", Values: []BarValue{{Name: "v", Value: 20}}},
+	}
+	m := New(20, 10)
+	m.PushAll(bd)
+
+	got := m.Data()
+	if len(got) != 2 {
+		t.Fatalf("Data() len = %d, want 2", len(got))
+	}
+	if got[0].Label != "A" || got[1].Label != "B" {
+		t.Errorf("labels = %q,%q", got[0].Label, got[1].Label)
+	}
+	if got[0].Values[0].Value != 10 || got[1].Values[0].Value != 20 {
+		t.Errorf("values = %v,%v", got[0].Values[0].Value, got[1].Values[0].Value)
+	}
+}

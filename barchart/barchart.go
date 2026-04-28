@@ -250,6 +250,17 @@ func (m *Model) Height() int {
 	return m.Canvas.Height()
 }
 
+// Data returns a copy of the bar data currently stored in the model, in the
+// order the bars were pushed. Modifying the returned slice does not affect
+// the model's internal state.
+func (m *Model) Data() []BarData {
+	out := make([]BarData, len(m.data))
+	for i, ds := range m.data {
+		out[i] = ds.bd
+	}
+	return out
+}
+
 // MaxValue returns expected maximum data value.
 func (m *Model) MaxValue() float64 {
 	return m.max
