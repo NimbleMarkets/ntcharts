@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.0.4 (unreleased)
+
+  * Replace `github.com/eliukblau/pixterm => github.com/NimbleMarkets/pixterm` until bugfixes are upstreamed
+
 ## v2.0.3 (2026-04-28)
  
 [`chartpicture`](examples/README.md#chart-picture) is experimental. It renders charts as images; it can also bridge Apache ECharts.  It is not very useful unless your terminal supports the Kitty Graphics Protocol.  We are exploring how to improve it, but wanted to share with the community.
