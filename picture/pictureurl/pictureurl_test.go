@@ -124,6 +124,47 @@ func TestSetURL_RejectsDecodedPixelsOverLimit(t *testing.T) {
 	}
 }
 
+func TestUpdate_IgnoresImageLoadedMsgFromOtherModel(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 200, G: 0, B: 0, A: 255})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	tooSmall := NewWithConfig(Config{MaxSize: int64(len(body) - 1)})
+	other := New()
+	tooSmall.SetSize(20, 10)
+	other.SetSize(20, 10)
+
+	cmd := tooSmall.SetURL(srv.URL)
+	if cmd == nil {
+		t.Fatal("SetURL should return a fetch Cmd")
+	}
+	if otherCmd := other.SetURL(srv.URL); otherCmd == nil {
+		t.Fatal("other SetURL should return a fetch Cmd")
+	}
+
+	msg := cmd()
+	loaded, ok := msg.(ImageLoadedMsg)
+	if !ok {
+		t.Fatalf("expected ImageLoadedMsg, got %T", msg)
+	}
+	if loaded.Err == nil {
+		t.Fatal("precondition: first model should produce an error")
+	}
+
+	if out := other.Update(loaded); out != nil {
+		t.Fatalf("message from another model should be ignored, got Cmd %v", out)
+	}
+	if err := other.Err(); err != nil {
+		t.Fatalf("other model should not receive foreign error, got %v", err)
+	}
+	if got := other.State(); got != StateLoading {
+		t.Fatalf("other model state = %s, want loading", got)
+	}
+}
+
 func TestSetURL_CachedErrorDoesNotRefetch(t *testing.T) {
 	var hits int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

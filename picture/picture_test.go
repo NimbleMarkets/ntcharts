@@ -114,6 +114,35 @@ func TestModel_KittyMode_StaleFrameIgnored(t *testing.T) {
 	}
 }
 
+func TestModel_KittyMode_RejectsOtherModelsFrame(t *testing.T) {
+	// Two Models with default config both default to KittyID=43 and, after
+	// the same sequence of mutations, the same seq. Without a per-Model
+	// discriminator, a frame from a is accepted by b in tea.Program (which
+	// broadcasts every msg to every Model).
+	a := New()
+	a.SetSize(20, 10)
+	a.Toggle()
+	cmdA := a.SetImage(smallImage(color.RGBA{R: 100, G: 0, B: 0, A: 255}))
+	if cmdA == nil {
+		t.Fatal("expected non-nil Cmd from a.SetImage")
+	}
+	frameA := cmdA().(KittyFrameMsg)
+
+	b := New()
+	b.SetSize(20, 10)
+	b.Toggle()
+	if cmd := b.SetImage(smallImage(color.RGBA{R: 0, G: 100, B: 0, A: 255})); cmd == nil {
+		t.Fatal("expected non-nil Cmd from b.SetImage")
+	}
+
+	if out := b.Update(frameA); out != nil {
+		t.Fatalf("expected b to reject Model a's KittyFrameMsg (cross-talk), got non-nil cmd")
+	}
+	if got := b.View().Content; got == frameA.Grid {
+		t.Fatal("expected b's View not to be set to a's grid")
+	}
+}
+
 // Compile-time check that Update accepts arbitrary tea.Msg without panicking.
 type unrelatedMsg struct{}
 

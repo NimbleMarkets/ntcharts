@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -42,6 +43,7 @@ type Config struct {
 // to its Update; it routes fetch-completion messages internally and delegates
 // everything else to the embedded picture.Model.
 type Model struct {
+	modelID    uint64
 	pic        picture.Model
 	currentURL string
 	cache      map[string]image.Image
@@ -54,13 +56,16 @@ type Model struct {
 	client     *http.Client
 }
 
+var nextModelID atomic.Uint64
+
 // New returns a Model with default Config.
+// New or NewWithConfig should always be used to create a Model.
 func New() Model {
 	return NewWithConfig(Config{})
 }
 
-// NewWithConfig returns a Model with the supplied Config. Zero/nil fields are
-// filled with defaults.
+// NewWithConfig returns a Model with the supplied Config.
+// New or NewWithConfig should always be used to create a Model.
 func NewWithConfig(cfg Config) Model {
 	if cfg.MaxSize <= 0 {
 		cfg.MaxSize = DefaultMaxSize
@@ -80,6 +85,7 @@ func NewWithConfig(cfg Config) Model {
 	}
 
 	return Model{
+		modelID: nextModelID.Add(1),
 		pic: picture.NewWithConfig(picture.Config{
 			KittyID:    cfg.KittyID,
 			Background: cfg.Background,
@@ -176,7 +182,7 @@ func (m *Model) SetURL(url string) tea.Cmd {
 
 	m.loading[url] = true
 	clearCmd := m.pic.SetImage(nil)
-	return tea.Batch(clearCmd, fetchCmd(m.client, url, m.maxSize, m.maxPixels))
+	return tea.Batch(clearCmd, fetchCmd(m.modelID, m.client, url, m.maxSize, m.maxPixels))
 }
 
 // Reload re-fetches CurrentURL. The currently-displayed image (if any) stays
@@ -188,7 +194,7 @@ func (m *Model) Reload() tea.Cmd {
 	}
 	delete(m.errs, m.currentURL)
 	m.loading[m.currentURL] = true
-	return fetchCmd(m.client, m.currentURL, m.maxSize, m.maxPixels)
+	return fetchCmd(m.modelID, m.client, m.currentURL, m.maxSize, m.maxPixels)
 }
 
 // Clear blanks the display without dropping CurrentURL or any cache entries.
@@ -210,6 +216,9 @@ func (m *Model) Mode() picture.PictureMode { return m.pic.Mode() }
 // the embedded picture.Model.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if loaded, ok := msg.(ImageLoadedMsg); ok {
+		if loaded.modelID != m.modelID {
+			return nil
+		}
 		delete(m.loading, loaded.URL)
 		if loaded.Err != nil {
 			m.errs[loaded.URL] = loaded.Err

@@ -8,12 +8,14 @@ import (
 )
 
 // chartRenderedMsg carries the result of a rendered chart for a specific
-// generation of the Model. Update() ignores frames whose seq does not match
-// the Model's current seq (input/size/theme changed since dispatch).
+// generation of one Model. Update() ignores frames whose modelID does not
+// match the Model, or whose seq does not match the Model's current seq
+// (input/size/theme changed since dispatch).
 type chartRenderedMsg struct {
-	seq uint64
-	img image.Image
-	err error
+	modelID uint64
+	seq     uint64
+	img     image.Image
+	err     error
 }
 
 // IsPictureMsg reports whether msg is an async update owned by chartpicture

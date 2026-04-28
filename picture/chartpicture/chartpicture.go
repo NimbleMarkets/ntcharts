@@ -2,6 +2,7 @@ package chartpicture
 
 import (
 	"image/color"
+	"sync/atomic"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/NimbleMarkets/ntcharts/v2/picture"
@@ -28,6 +29,7 @@ type Config struct {
 // Forward every tea.Msg to its Update; it routes chart-render completion
 // internally and delegates everything else to the embedded picture.Model.
 type Model struct {
+	modelID      uint64
 	pic          picture.Model
 	cellW, cellH int
 	cols, rows   int
@@ -41,8 +43,13 @@ type Model struct {
 	pendingPicBg color.Color
 }
 
+var nextModelID atomic.Uint64
+
 // New returns a Model with default Config.
-func New() Model { return NewWithConfig(Config{}) }
+// New or NewWithConfig should always be used to create a Model.
+func New() Model {
+	return NewWithConfig(Config{})
+}
 
 // NewWithConfig returns a Model with the supplied Config. Zero/nil fields are
 // filled with defaults.
@@ -54,6 +61,7 @@ func NewWithConfig(cfg Config) Model {
 		cfg.CellHeightPx = DefaultCellHeightPx
 	}
 	return Model{
+		modelID: nextModelID.Add(1),
 		pic: picture.NewWithConfig(picture.Config{
 			KittyID:    cfg.KittyID,
 			Background: cfg.Background,
@@ -131,18 +139,18 @@ func (m *Model) renderCmd() tea.Cmd {
 	if m.recipe == nil || m.cols <= 0 || m.rows <= 0 {
 		return nil
 	}
-	recipe, theme, seq := m.recipe, m.theme, m.seq
+	modelID, recipe, theme, seq := m.modelID, m.recipe, m.theme, m.seq
 	w, h := m.pixelSize()
 	return func() tea.Msg {
 		buf, err := recipe(w, h, theme)
 		if err != nil {
-			return chartRenderedMsg{seq: seq, err: err}
+			return chartRenderedMsg{modelID: modelID, seq: seq, err: err}
 		}
 		img, _, derr := decodePNGToImage(buf)
 		if derr != nil {
-			return chartRenderedMsg{seq: seq, err: derr}
+			return chartRenderedMsg{modelID: modelID, seq: seq, err: derr}
 		}
-		return chartRenderedMsg{seq: seq, img: img}
+		return chartRenderedMsg{modelID: modelID, seq: seq, img: img}
 	}
 }
 
@@ -183,7 +191,7 @@ func (m *Model) SetTheme(name string) tea.Cmd {
 // else to the embedded picture.Model.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if rendered, ok := msg.(chartRenderedMsg); ok {
-		if rendered.seq != m.seq {
+		if rendered.modelID != m.modelID || rendered.seq != m.seq {
 			return nil // stale
 		}
 		if rendered.err != nil {

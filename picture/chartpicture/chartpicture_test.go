@@ -64,6 +64,40 @@ func TestStaleFrameDropped(t *testing.T) {
 	}
 }
 
+func TestUpdateIgnoresRenderedMsgFromOtherModel(t *testing.T) {
+	left := New()
+	right := New()
+	left.SetSize(40, 12)
+	right.SetSize(40, 12)
+
+	cmd := left.SetEChartsJSON("not json")
+	if cmd == nil {
+		t.Fatal("SetEChartsJSON should return a render Cmd")
+	}
+	if rightCmd := right.SetLineChartOption(charts.NewLineChartOptionWithData([][]float64{{1, 2}})); rightCmd == nil {
+		t.Fatal("right SetLineChartOption should return a render Cmd")
+	}
+
+	msg := cmd()
+	rendered, ok := msg.(chartRenderedMsg)
+	if !ok {
+		t.Fatalf("expected chartRenderedMsg, got %T", msg)
+	}
+	if rendered.err == nil {
+		t.Fatal("precondition: left render should fail")
+	}
+	if rendered.seq != right.seq {
+		t.Fatalf("precondition: seq mismatch, got left %d right %d", rendered.seq, right.seq)
+	}
+
+	if out := right.Update(rendered); out != nil {
+		t.Fatalf("message from another model should be ignored, got Cmd %v", out)
+	}
+	if err := right.Err(); err != nil {
+		t.Fatalf("right model should not receive foreign error, got %v", err)
+	}
+}
+
 func TestRenderErrorSurfacedViaErrAndView(t *testing.T) {
 	m := New()
 	m.SetSize(40, 12)

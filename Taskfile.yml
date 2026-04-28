@@ -217,6 +217,7 @@ tasks:
       - go build -o bin/ntcharts-picture examples/picture/*.go
     sources:
       - picture/**/*.go
+      - examples/chartpicture/*.go
       - examples/picture/*.go
     generates:
       - bin/ntcharts-chartpicture
