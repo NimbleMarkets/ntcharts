@@ -81,6 +81,68 @@ func TestSetURL_FetchesAndDisplays(t *testing.T) {
 	}
 }
 
+func TestSetURL_SendsUserAgentAndAcceptHeaders(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 200, G: 0, B: 0, A: 255})
+	var gotUA, gotAccept string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
+		gotAccept = r.Header.Get("Accept")
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	m := New()
+	m.SetSize(20, 10)
+	drainCmd(t, &m, m.SetURL(srv.URL))
+
+	if !hasPrefix(gotUA, "ntcharts-pictureurl") {
+		t.Fatalf("expected User-Agent to start with %q, got %q", "ntcharts-pictureurl", gotUA)
+	}
+	if !hasPrefix(gotAccept, "image/") {
+		t.Fatalf("expected Accept to start with %q, got %q", "image/", gotAccept)
+	}
+}
+
+func TestSetURL_HonorsCustomUserAgent(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 200, G: 0, B: 0, A: 255})
+	var gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	m := NewWithConfig(Config{UserAgent: "MyApp/1.2.3"})
+	m.SetSize(20, 10)
+	drainCmd(t, &m, m.SetURL(srv.URL))
+
+	if gotUA != "MyApp/1.2.3" {
+		t.Fatalf("expected User-Agent %q, got %q", "MyApp/1.2.3", gotUA)
+	}
+}
+
+func TestSetURL_RejectsNonImageContentType(t *testing.T) {
+	body := tinyPNG(t, color.RGBA{R: 200, G: 0, B: 0, A: 255})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(body)
+	}))
+	defer srv.Close()
+
+	m := New()
+	m.SetSize(20, 10)
+	drainCmd(t, &m, m.SetURL(srv.URL))
+
+	if !errors.Is(m.Err(), ErrUnexpectedContentType) {
+		t.Fatalf("expected ErrUnexpectedContentType, got %v", m.Err())
+	}
+	if got := m.State(); got != StateError {
+		t.Fatalf("expected StateError, got %s", got)
+	}
+}
+
 func TestSetURL_RejectsBodyOverMaxSize(t *testing.T) {
 	body := tinyPNG(t, color.RGBA{R: 200, G: 0, B: 0, A: 255})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -324,6 +386,42 @@ func TestClear_BlanksWithoutDroppingState(t *testing.T) {
 	}
 	if _, ok := m.cache[srv.URL]; !ok {
 		t.Fatal("Clear should not drop cache entries")
+	}
+}
+
+func TestUpdate_StaleEarlierFetchDiscarded(t *testing.T) {
+	// Simulate the race fixed by I1: two fetches for the same URL are in
+	// flight (initial SetURL + Reload). The second fetch (latest) returns
+	// first and updates the view. The first fetch (now stale) returns later
+	// and must NOT clobber the latest result.
+	const url = "http://example.com/x"
+	m := New()
+	m.SetSize(20, 10)
+
+	// Drive the model into a state where two fetches have been dispatched
+	// for the same URL.
+	first := m.SetURL(url)
+	if first == nil {
+		t.Fatal("SetURL should return a fetch Cmd")
+	}
+	second := m.Reload()
+	if second == nil {
+		t.Fatal("Reload should return a fetch Cmd")
+	}
+
+	imgStale := image.NewRGBA(image.Rect(0, 0, 4, 4))
+	imgFresh := image.NewRGBA(image.Rect(0, 0, 4, 4))
+
+	// Latest fetch (seq=2) returns first: accepted.
+	m.Update(ImageLoadedMsg{modelID: m.modelID, seq: m.fetchSeq[url], URL: url, Img: imgFresh})
+	if got := m.cache[url]; got != imgFresh {
+		t.Fatalf("after latest fetch, cache should hold imgFresh, got %p (want %p)", got, imgFresh)
+	}
+
+	// Earlier fetch (seq=1) returns later — must be discarded.
+	m.Update(ImageLoadedMsg{modelID: m.modelID, seq: m.fetchSeq[url] - 1, URL: url, Img: imgStale})
+	if got := m.cache[url]; got != imgFresh {
+		t.Fatalf("stale fetch clobbered cache; got %p, want %p (imgFresh)", got, imgFresh)
 	}
 }
 

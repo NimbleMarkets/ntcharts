@@ -15,10 +15,8 @@ import (
 	_ "embed"
 	"fmt"
 	"image"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -39,21 +37,13 @@ const (
 	leftTopLabel  = "picture with embed"
 	rightTopLabel = "pictureurl with http"
 
-	// Wikimedia (and many other image hosts) reject the default Go http
-	// User-Agent with a 403, so the example sets an identifying UA.
+	// Many image hosts reject the stock Go HTTP User-Agent with a 403,
+	// so the example sets an identifying UA via Config.UserAgent.
 	userAgent = "ntcharts-picture-example/1.0 (https://github.com/NimbleMarkets/ntcharts)"
 )
 
 //go:embed Fuji-01.png
 var fujiPNG []byte
-
-type uaTransport struct{ rt http.RoundTripper }
-
-func (t *uaTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req = req.Clone(req.Context())
-	req.Header.Set("User-Agent", userAgent)
-	return t.rt.RoundTrip(req)
-}
 
 type model struct {
 	leftPic  picture.Model
@@ -70,11 +60,8 @@ type model struct {
 func initialModel() model {
 	left := picture.NewWithConfig(picture.Config{KittyID: kittyIDLeft})
 	right := pictureurl.NewWithConfig(pictureurl.Config{
-		KittyID: kittyIDRight,
-		HTTPClient: &http.Client{
-			Transport: &uaTransport{rt: http.DefaultTransport},
-			Timeout:   15 * time.Second,
-		},
+		KittyID:   kittyIDRight,
+		UserAgent: userAgent,
 	})
 
 	img, _, err := image.Decode(bytes.NewReader(fujiPNG))

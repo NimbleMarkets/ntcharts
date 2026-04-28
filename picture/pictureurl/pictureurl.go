@@ -23,6 +23,9 @@ const (
 	DefaultMaxPixels = 32 * 1024 * 1024
 	// DefaultCacheLimit is the default number of images to keep in the LRU cache.
 	DefaultCacheLimit = 10
+	// DefaultUserAgent is the default User-Agent header sent with image fetches.
+	// Many image hosts reject the stock Go HTTP User-Agent.
+	DefaultUserAgent = "ntcharts-pictureurl"
 )
 
 // Config configures a Model at construction.
@@ -37,6 +40,7 @@ type Config struct {
 	Timeout    time.Duration // default 15s; ignored if HTTPClient is set
 	HTTPClient *http.Client  // optional; caller owns the lifetime
 	CacheLimit int           // default 10; negative means unlimited
+	UserAgent  string        // default "ntcharts-pictureurl"
 }
 
 // Model wraps a picture.Model with URL-based fetching. Forward every tea.Msg
@@ -50,10 +54,12 @@ type Model struct {
 	cacheOrder []string
 	errs       map[string]error
 	loading    map[string]bool
+	fetchSeq   map[string]uint64
 	maxSize    int64
 	maxPixels  int
 	cacheLimit int
 	client     *http.Client
+	userAgent  string
 }
 
 var nextModelID atomic.Uint64
@@ -79,6 +85,9 @@ func NewWithConfig(cfg Config) Model {
 	if cfg.CacheLimit == 0 {
 		cfg.CacheLimit = DefaultCacheLimit
 	}
+	if cfg.UserAgent == "" {
+		cfg.UserAgent = DefaultUserAgent
+	}
 	client := cfg.HTTPClient
 	if client == nil {
 		client = &http.Client{Timeout: cfg.Timeout}
@@ -93,10 +102,12 @@ func NewWithConfig(cfg Config) Model {
 		cache:      make(map[string]image.Image),
 		errs:       make(map[string]error),
 		loading:    make(map[string]bool),
+		fetchSeq:   make(map[string]uint64),
 		maxSize:    cfg.MaxSize,
 		maxPixels:  cfg.MaxPixels,
 		cacheLimit: cfg.CacheLimit,
 		client:     client,
+		userAgent:  cfg.UserAgent,
 	}
 }
 
@@ -181,8 +192,9 @@ func (m *Model) SetURL(url string) tea.Cmd {
 	}
 
 	m.loading[url] = true
+	m.fetchSeq[url]++
 	clearCmd := m.pic.SetImage(nil)
-	return tea.Batch(clearCmd, fetchCmd(m.modelID, m.client, url, m.maxSize, m.maxPixels))
+	return tea.Batch(clearCmd, fetchCmd(m.modelID, m.fetchSeq[url], m.client, m.userAgent, url, m.maxSize, m.maxPixels))
 }
 
 // Reload re-fetches CurrentURL. The currently-displayed image (if any) stays
@@ -194,7 +206,8 @@ func (m *Model) Reload() tea.Cmd {
 	}
 	delete(m.errs, m.currentURL)
 	m.loading[m.currentURL] = true
-	return fetchCmd(m.modelID, m.client, m.currentURL, m.maxSize, m.maxPixels)
+	m.fetchSeq[m.currentURL]++
+	return fetchCmd(m.modelID, m.fetchSeq[m.currentURL], m.client, m.userAgent, m.currentURL, m.maxSize, m.maxPixels)
 }
 
 // Clear blanks the display without dropping CurrentURL or any cache entries.
@@ -217,6 +230,10 @@ func (m *Model) Mode() picture.PictureMode { return m.pic.Mode() }
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if loaded, ok := msg.(ImageLoadedMsg); ok {
 		if loaded.modelID != m.modelID {
+			return nil
+		}
+		if loaded.seq != m.fetchSeq[loaded.URL] {
+			// Stale fetch (a newer fetch for this URL was dispatched).
 			return nil
 		}
 		delete(m.loading, loaded.URL)
