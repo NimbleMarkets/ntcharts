@@ -257,6 +257,7 @@ func (m *Model) Data() []BarData {
 	out := make([]BarData, len(m.data))
 	for i, ds := range m.data {
 		out[i] = ds.bd
+		out[i].Values = append([]BarValue(nil), ds.bd.Values...)
 	}
 	return out
 }
