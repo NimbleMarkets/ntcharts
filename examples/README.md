@@ -144,3 +144,10 @@ The example's source image is a hand-made 1-bit recreation of Hokusai's waves:
 `ntcharts-picture` [(source)](./picture/main.go)<br>
 <img src="picture/demo.gif" alt="picture wave image"/>
 
+## Chart Picture
+
+`chartpicture` displays a [github.com/go-analyze/charts](https://github.com/go-analyze/charts) chart via an embedded `picture.Model`.  In the example, you may toggle between a random line chart and bar chart.  You can toggle between `glyph` mode and Kitty Graphics mode.
+
+`ntcharts-chartpicture` [(source)](./chartpicture/main.go)<br>
+<img src="chartpicture/demo.gif" alt="chartpicture animated image"/>
+
