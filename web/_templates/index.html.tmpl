@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ntcharts — Nimble Terminal Charts</title>
+<link rel="icon" type="image/svg+xml" href="/ntcharts/_assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@700&family=Open+Sans:wdth,wght@75,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/ntcharts/style.css">
+</head>
+<body class="layout">
+{{ template "sidebar" . }}
+<main class="main">
+  <section class="hero">
+    <h1>ntcharts</h1>
+    <p class="hero-tagline">Nimble Terminal Charts — runnable in your browser.</p>
+    <p>
+      <code>ntcharts</code> is a Go terminal-charting library for
+      <a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a> and other TUIs.
+      Pick a demo on the left to see it run in a real terminal emulator, compiled to WebAssembly.
+    </p>
+    <p class="hero-ctas">
+      <a class="cta" href="https://github.com/NimbleMarkets/ntcharts">View on GitHub</a>
+      <a class="cta cta-secondary" href="https://pkg.go.dev/github.com/NimbleMarkets/ntcharts/v2">godoc</a>
+    </p>
+  </section>
+  <section class="features">
+    {{- range .Manifest.Groups }}
+    <h2>{{ .Title }}</h2>
+    <ul class="feature-list">
+      {{- range .Demos }}
+      <li>
+        <a href="/ntcharts/demos/{{ .Name }}/">
+          <strong>{{ .Title }}</strong>
+          <span>{{ .Blurb }}</span>
+        </a>
+      </li>
+      {{- end }}
+    </ul>
+    {{- end }}
+  </section>
+</main>
+</body>
+</html>

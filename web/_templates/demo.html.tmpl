@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ .Demo.Title }} — ntcharts</title>
+<link rel="icon" type="image/svg+xml" href="/ntcharts/_assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@700&family=Open+Sans:wdth,wght@75,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/ntcharts/style.css">
+</head>
+<body class="layout">
+{{ template "sidebar" . }}
+<main class="main">
+  <header class="demo-header">
+    <h1>{{ .Demo.Title }}</h1>
+    <p class="demo-blurb">{{ .Demo.Blurb }}</p>
+    <a class="demo-source-link" href="https://github.com/NimbleMarkets/ntcharts/tree/v2/{{ trimPrefix .Demo.Source `./` }}">
+      Source on GitHub →
+    </a>
+  </header>
+  <section class="terminal-frame">
+    <div id="terminal"></div>
+  </section>
+</main>
+<script src="/ntcharts/_assets/wasm_exec.js"></script>
+<script type="module">
+  // Boot ghostty-web + load this demo's app.wasm.
+  // The exact init shape will be confirmed against booba's index.html during Task 5.
+  import { boot } from "/ntcharts/_assets/ghostty-web/index.js";
+  boot({
+    container: document.getElementById("terminal"),
+    wasmURL: "./app.wasm",
+  });
+</script>
+</body>
+</html>
