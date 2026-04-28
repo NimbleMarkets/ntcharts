@@ -122,8 +122,10 @@ func New(w, h int, opts ...Option) Model {
 
 // newDataSet returns a new initialize *dataSet.
 func (m *Model) newDataSet() *dataSet {
-	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // x scale factor
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
+	// use GraphHeight() for y scale factor to align with y axis ticks.
+	// Origin().Y is h-1 when xStep==0, which mis-scales by one row.
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX())  // x scale factor
+	ys := float64(m.GraphHeight()) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	offset := canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()}
 	scale := canvas.Float64Point{X: xs, Y: ys}
 	return &dataSet{
@@ -136,9 +138,10 @@ func (m *Model) newDataSet() *dataSet {
 // rescaleData will reinitialize time chunks and
 // map time points into graph columns for display
 func (m *Model) rescaleData() {
-	// rescale time points buffer
-	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // x scale factor
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
+	// rescale time points buffer; use GraphHeight() for y scale factor
+	// to align with y axis ticks (see newDataSet).
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX())  // x scale factor
+	ys := float64(m.GraphHeight()) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	offset := canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()}
 	scale := canvas.Float64Point{X: xs, Y: ys}
 	for _, ds := range m.dSets {

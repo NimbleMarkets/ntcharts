@@ -68,8 +68,10 @@ func New(w, h int, opts ...Option) Model {
 
 // newDataSet returns a new initialize *dataSet.
 func (m *Model) newDataSet() *dataSet {
-	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // X scale factor
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
+	// use GraphHeight() for y scale factor to align with y axis ticks.
+	// Origin().Y is h-1 when xStep==0, which mis-scales by one row.
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX())  // X scale factor
+	ys := float64(m.GraphHeight()) / (m.ViewMaxY() - m.ViewMinY()) // Y scale factor
 	ds := &dataSet{
 		LineStyle: m.dLineStyle,
 		Style:     m.dStyle,
@@ -125,9 +127,10 @@ func (m *Model) setLineSequencePoint(seqY []int, f canvas.Float64Point) {
 
 // rescaleData will scale all internally stored data with new scale factor.
 func (m *Model) rescaleData() {
-	// rescale all data set graph points
-	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX()) // X scale factor
-	ys := float64(m.Origin().Y) / (m.ViewMaxY() - m.ViewMinY())   // y scale factor
+	// rescale all data set graph points; use GraphHeight() for y scale factor
+	// to align with y axis ticks (see newDataSet).
+	xs := float64(m.GraphWidth()) / (m.ViewMaxX() - m.ViewMinX())  // X scale factor
+	ys := float64(m.GraphHeight()) / (m.ViewMaxY() - m.ViewMinY()) // Y scale factor
 	for _, ds := range m.dSets {
 		ds.pBuf.SetOffset(canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()})
 		ds.pBuf.SetScale(canvas.Float64Point{X: xs, Y: ys}) // buffer rescales all raw data points
