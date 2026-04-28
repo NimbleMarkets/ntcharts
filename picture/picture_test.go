@@ -114,6 +114,40 @@ func TestModel_KittyMode_StaleFrameIgnored(t *testing.T) {
 	}
 }
 
+func TestModel_KittyMode_ToggleWithImage_EmitsFrame(t *testing.T) {
+	// Toggle Glyph→Kitty while an image is already set: the Cmd must produce
+	// a KittyFrameMsg, and after Update applies it the View must be non-empty.
+	m := New()
+	m.SetSize(20, 10)
+	if cmd := m.SetImage(smallImage(color.RGBA{R: 0, G: 200, B: 0, A: 255})); cmd != nil {
+		t.Fatalf("SetImage in Glyph mode should return nil, got %v", cmd)
+	}
+
+	cmd := m.Toggle()
+	if cmd == nil {
+		t.Fatal("Toggle Glyph→Kitty with active image should return a render Cmd")
+	}
+	if m.Mode() != PictureKitty {
+		t.Fatal("expected Kitty mode after Toggle")
+	}
+
+	msg := cmd()
+	frame, ok := msg.(KittyFrameMsg)
+	if !ok {
+		t.Fatalf("expected KittyFrameMsg from Toggle's render Cmd, got %T", msg)
+	}
+	if frame.APC == "" || frame.Grid == "" {
+		t.Fatalf("expected populated frame, got APC=%q Grid=%q", frame.APC, frame.Grid)
+	}
+
+	if out := m.Update(frame); out == nil {
+		t.Fatal("Update with the Toggle-emitted frame should return a Cmd")
+	}
+	if got := m.View().Content; got == "" {
+		t.Fatal("expected non-empty View() after Toggle's frame applied")
+	}
+}
+
 func TestModel_KittyMode_RejectsOtherModelsFrame(t *testing.T) {
 	// Two Models with default config both default to KittyID=43 and, after
 	// the same sequence of mutations, the same seq. Without a per-Model
