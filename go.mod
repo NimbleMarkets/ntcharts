@@ -6,6 +6,7 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.6
 	charm.land/lipgloss/v2 v2.0.3
+	github.com/NimbleMarkets/go-booba v0.5.3
 	github.com/aquilax/go-perlin v1.1.0
 	github.com/eliukblau/pixterm v1.3.2
 	github.com/go-analyze/charts v0.5.27
