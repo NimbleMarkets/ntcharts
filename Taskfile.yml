@@ -213,11 +213,13 @@ tasks:
     desc: 'Build picture example'
     deps: [go-tidy]
     cmds:
+      - go build -o bin/ntcharts-chartpicture examples/chartpicture/*.go
       - go build -o bin/ntcharts-picture examples/picture/*.go
     sources:
       - picture/**/*.go
       - examples/picture/*.go
     generates:
+      - bin/ntcharts-chartpicture
       - bin/ntcharts-picture
 
   build-ex-quickstart:
@@ -252,7 +254,7 @@ tasks:
       - rm -f bin/ntcharts-heatmap-aoc2024 bin/ntcharts-heatmap-functor bin/ntcharts-heatmap-perlin bin/ntcharts-heatmap-simple
       - rm -f bin/ntcharts-graph-braille bin/ntcharts-graph-candlesticks bin/ntcharts-graph-circles bin/ntcharts-graph-columns bin/ntcharts-graph-lines bin/ntcharts-graph-rows
       - rm -f bin/ntcharts-linechart-circles bin/ntcharts-linechart-lines bin/ntcharts-linechart-scatter bin/ntcharts-linechart-streaming bin/ntcharts-linechart-timeseries bin/ntcharts-linechart-wavelines
-      - rm -f bin/ntcharts-picture
+      - rm -f bin/ntcharts-chartpicture bin/ntcharts-picture
       - rm -f bin/ntcharts-quickstart
       - rm -f bin/ntcharts-sparkline
 

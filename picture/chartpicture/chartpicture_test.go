@@ -1,0 +1,108 @@
+package chartpicture
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/go-analyze/charts"
+)
+
+func TestNewDefaults(t *testing.T) {
+	m := New()
+	w, h := m.pixelSize() // before any size, returns floor
+	if w < 200 || h < 120 {
+		t.Errorf("pixelSize floor = %dx%d, want at least 200x120", w, h)
+	}
+	if m.cellW != 10 || m.cellH != 20 {
+		t.Errorf("cell size = %dx%d, want 10x20", m.cellW, m.cellH)
+	}
+}
+
+func TestNewWithConfigOverrides(t *testing.T) {
+	m := NewWithConfig(Config{CellWidthPx: 8, CellHeightPx: 16, Theme: "dark"})
+	if m.cellW != 8 || m.cellH != 16 {
+		t.Errorf("cell size = %dx%d, want 8x16", m.cellW, m.cellH)
+	}
+	if m.theme != "dark" {
+		t.Errorf("theme = %q, want dark", m.theme)
+	}
+}
+
+func TestSetLineChartOptionDeferredUntilSize(t *testing.T) {
+	m := New()
+	cmd := m.SetLineChartOption(charts.NewLineChartOptionWithData([][]float64{{1, 2, 3}}))
+	if cmd != nil {
+		t.Fatal("setter returned a Cmd before SetSize; expected nil")
+	}
+	if m.recipe == nil {
+		t.Fatal("recipe was not stored")
+	}
+}
+
+func TestSetSizeReturnsRenderCmdWhenRecipeSet(t *testing.T) {
+	m := New()
+	m.SetLineChartOption(charts.NewLineChartOptionWithData([][]float64{{1, 2}}))
+	cmd := m.SetSize(20, 10)
+	if cmd == nil {
+		t.Fatal("SetSize returned nil; expected render Cmd")
+	}
+}
+
+func TestStaleFrameDropped(t *testing.T) {
+	m := New()
+	m.SetSize(40, 12)
+	cmd1 := m.SetLineChartOption(charts.NewLineChartOptionWithData([][]float64{{1, 2}}))
+	// Simulate a second mutation before the first frame lands.
+	m.SetSize(60, 20) // bumps seq
+	stale := cmd1().(chartRenderedMsg)
+	if stale.seq == m.seq {
+		t.Fatal("seq should differ after second mutation")
+	}
+	out := m.Update(stale)
+	if out != nil {
+		t.Fatalf("stale msg should be ignored, got Cmd %v", out)
+	}
+}
+
+func TestRenderErrorSurfacedViaErrAndView(t *testing.T) {
+	m := New()
+	m.SetSize(40, 12)
+	cmd := m.SetEChartsJSON("not json")
+	msg := cmd().(chartRenderedMsg)
+	if msg.err == nil {
+		t.Fatal("expected err in chartRenderedMsg")
+	}
+	m.Update(msg)
+	if m.Err() == nil {
+		t.Fatal("Err() returned nil after error msg")
+	}
+	if !strings.Contains(m.View().Content, "Chart error") {
+		t.Errorf("View() = %q; want it to contain \"Chart error\"", m.View().Content)
+	}
+}
+
+func TestSetLineChartOptionRendersAfterSize(t *testing.T) {
+	m := New()
+	if cmd := m.SetSize(40, 12); cmd != nil {
+		// SetSize before any recipe should not produce a Cmd.
+		_ = cmd
+	}
+	cmd := m.SetLineChartOption(charts.NewLineChartOptionWithData([][]float64{{1, 2, 3, 4, 5}}))
+	if cmd == nil {
+		t.Fatal("setter returned nil after SetSize")
+	}
+	msg := cmd()
+	rendered, ok := msg.(chartRenderedMsg)
+	if !ok {
+		t.Fatalf("msg type = %T, want chartRenderedMsg", msg)
+	}
+	if rendered.err != nil {
+		t.Fatalf("render error: %v", rendered.err)
+	}
+	if rendered.img == nil {
+		t.Fatal("rendered img is nil")
+	}
+	if rendered.seq != m.seq {
+		t.Errorf("rendered.seq = %d, m.seq = %d", rendered.seq, m.seq)
+	}
+}
