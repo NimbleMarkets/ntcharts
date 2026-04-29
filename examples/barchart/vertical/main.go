@@ -12,6 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	booba "github.com/NimbleMarkets/go-booba"
 	zone "github.com/lrstanley/bubblezone/v2"
 )
 
@@ -208,7 +209,10 @@ func main() {
 		zoneManager,
 	}
 
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
+	// or the WASM/ghostty-web bridge depending on build target.
+	// See https://github.com/NimbleMarkets/go-booba-example.
+	if err := booba.Run(m); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
