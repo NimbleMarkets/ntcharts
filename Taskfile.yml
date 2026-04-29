@@ -45,10 +45,11 @@ tasks:
       - build-examples
 
   clean:
-    desc: 'Clean commands and examples)'
+    desc: 'Clean commands and examples'
     deps:
       - clean-cmds
       - clean-examples
+      - clean-wasm-site
 
   go-doc-server:
     desc: 'Run Go gdoc documentation server'

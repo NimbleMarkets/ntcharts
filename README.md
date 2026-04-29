@@ -307,9 +307,11 @@ Thanks also to [asciigraph](https://github.com/guptarohit/asciigraph), [ratatui]
 
 ## License
 
-Released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt).
+This project is released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt), **except** for the following files:
 
-The image [`./examples/picture/Fuji-01.png] is from this link and licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](http://creativecommons.org/licenses/by-nc-nd/4.0/).
+  * The *Nimby Flame* image, [`./web/_assets/NimbyFlame.svg`](./web/_assets/NimbyFlame.svg) remains **All Rights Reserved** by Neomantra Corp.  You may use it only in unmodified form and only as part of this project (e.g., in forks or distributions of the project).  You may **not** extract it for unrelated use, modify it, or redistribute it separately without explicit permission.
+
+  * The *1-bit Hokusai Wave* image [`./examples/picture/Fuji-01.png`](./examples/picture/Fuji-01.png) is from [the artist' blog](https://www.hypertalking.com/2023/05/08/1-bit-pixel-art-of-hokusais-the-great-wave-off-kanagawa/) and licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](http://creativecommons.org/licenses/by-nc-nd/4.0/).
 
 Copyright (c) 2024-2026 [Neomantra Corp](https://www.neomantra.com).   
 
