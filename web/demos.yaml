@@ -87,3 +87,13 @@ groups:
         title: Graph (rows)
         blurb: Row rendering on the Canvas grid.
         source: ./examples/graph/rows
+  - title: Picture
+    demos:
+      - name: chartpicture
+        title: Chart Picture
+        blurb: Live chart rendered through go-analyze/charts, paged to picture.Model as an image. Kitty graphics where supported, Glyph fallback otherwise.
+        source: ./examples/chartpicture
+      - name: picture
+        title: Picture
+        blurb: Two-pane image demo — embedded PNG via picture.Model (left) and an HTTP-fetched URL via pictureurl.Model (right). Right pane is CORS-blocked in browsers; left pane works.
+        source: ./examples/picture
