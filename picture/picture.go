@@ -47,11 +47,11 @@ type Config struct {
 	Background color.Color // default color.Transparent (no compositing)
 
 	// CellPixelWidth and CellPixelHeight are the terminal cell dimensions in
-	// pixels. Used in Kitty mode to set explicit display pixel dimensions on
-	// the APC (w=, h=) so the placed image fills the c×r cell rectangle
-	// regardless of source AR. Default 8×16 (typical 1:2 font cell). Update
-	// at runtime via Model.SetCellPixelSize when the terminal reports its
-	// real cell size.
+	// pixels. Used in Kitty mode to pre-scale the source image to the c×r
+	// cell rectangle's pixel dimensions before encoding, so Kitty's
+	// aspect-ratio-preserving placement fills the cell rectangle. Default
+	// 8×16 (typical 1:2 font cell). Update at runtime via
+	// Model.SetCellPixelSize when the terminal reports its real cell size.
 	CellPixelWidth  int
 	CellPixelHeight int
 }
@@ -179,8 +179,8 @@ func (m *Model) Mode() PictureMode { return m.mode }
 // auto-applied by Update via SetCellPixelSize.
 func (m *Model) Init() tea.Cmd { return RequestCellSize() }
 
-// CellPixelSize returns the configured terminal cell pixel size used to size
-// Kitty placements (w=, h= on the APC).
+// CellPixelSize returns the configured terminal cell pixel size used to
+// pre-scale Kitty image sources to the placement cell rectangle.
 func (m *Model) CellPixelSize() (w, h int) {
 	return m.cellPixelW, m.cellPixelH
 }

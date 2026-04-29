@@ -1,6 +1,8 @@
 package picture
 
 import (
+	"bytes"
+	"encoding/base64"
 	"image"
 	"image/color"
 	"strings"
@@ -253,42 +255,55 @@ func TestModel_KittyMode_RejectsOtherModelsFrame(t *testing.T) {
 	}
 }
 
-// TestKittyAPC_IncludesDefaultDisplayPixelDims verifies the rendered Kitty APC
-// carries explicit w=,h= options derived from the default cell pixel size
-// (8x16) so the image fills the cell rectangle regardless of source AR.
-//
-// On terminals whose actual cell pixel ratio is not 1:2, omitting w/h causes
-// Kitty to AR-preserve-fit the source image inside the c×r cell rectangle,
-// leaving a visible letterbox gap on one axis.
-func TestKittyAPC_IncludesDefaultDisplayPixelDims(t *testing.T) {
+// TestKittyAPC_PrescalesSourceToCellRect verifies the encoded APC carries an
+// image whose pixel dimensions exactly match the cell rectangle
+// (cols × cellPixelW × rows × cellPixelH). With the pre-scale, Kitty's
+// AR-preserve fit equals fill regardless of the terminal's actual cell pixel
+// ratio.
+func TestKittyAPC_PrescalesSourceToCellRect(t *testing.T) {
 	m := New()
 	m.SetSize(10, 5)
 	m.Toggle() // Kitty
-	cmd := m.SetImage(smallImage(color.RGBA{R: 1, G: 2, B: 3, A: 255}))
+	cmd := m.SetImage(smallImage(color.RGBA{R: 1, A: 255}))
 	if cmd == nil {
 		t.Fatal("expected non-nil Cmd from SetImage in Kitty mode")
 	}
-	msg := cmd()
-	frame, ok := msg.(KittyFrameMsg)
-	if !ok {
-		t.Fatalf("expected KittyFrameMsg, got %T", msg)
-	}
-	// Defaults: 10 cols * 8 px = 80 wide; 5 rows * 16 px = 80 tall.
-	if !strings.Contains(frame.APC, "w=80,") {
-		t.Errorf("APC should contain w=80 (cols × default cellPixelW), got %q", frame.APC)
-	}
-	if !strings.Contains(frame.APC, "h=80,") {
-		t.Errorf("APC should contain h=80 (rows × default cellPixelH), got %q", frame.APC)
+	frame := cmd().(KittyFrameMsg)
+	img := decodeKittyAPCImage(t, frame.APC)
+
+	// Defaults: 10*8 × 5*16 = 80×80.
+	if got := img.Bounds(); got.Dx() != 80 || got.Dy() != 80 {
+		t.Errorf("expected encoded image 80×80, got %d×%d", got.Dx(), got.Dy())
 	}
 }
 
-// TestSetCellPixelSize_AffectsAPC verifies that SetCellPixelSize updates the
-// w=,h= options of subsequently rendered Kitty APCs.
-func TestSetCellPixelSize_AffectsAPC(t *testing.T) {
+// TestKittyAPC_OmitsCropOptions verifies the APC doesn't carry w=,h= source
+// crop options. The source is already pre-scaled to full placement dimensions,
+// so crop options would be a no-op and misleading.
+func TestKittyAPC_OmitsCropOptions(t *testing.T) {
 	m := New()
 	m.SetSize(10, 5)
 	m.Toggle() // Kitty
-	if cmd := m.SetCellPixelSize(9, 18); cmd != nil {
+	cmd := m.SetImage(smallImage(color.RGBA{R: 1, A: 255}))
+	if cmd == nil {
+		t.Fatal("expected non-nil Cmd from SetImage in Kitty mode")
+	}
+	frame := cmd().(KittyFrameMsg)
+	if hasAPCOption(frame.APC, "w") {
+		t.Errorf("APC should not contain w= source-crop option, got %q", frame.APC)
+	}
+	if hasAPCOption(frame.APC, "h") {
+		t.Errorf("APC should not contain h= source-crop option, got %q", frame.APC)
+	}
+}
+
+// TestSetCellPixelSize_AffectsEncodedDimensions verifies that SetCellPixelSize
+// updates the dimensions of subsequently encoded Kitty image sources.
+func TestSetCellPixelSize_AffectsEncodedDimensions(t *testing.T) {
+	m := New()
+	m.SetSize(10, 5)
+	m.Toggle() // Kitty
+	if cmd := m.SetCellPixelSize(9, 17); cmd != nil {
 		// No image yet, render Cmd should be nil.
 		t.Fatalf("SetCellPixelSize before any image should return nil, got %v", cmd)
 	}
@@ -297,12 +312,10 @@ func TestSetCellPixelSize_AffectsAPC(t *testing.T) {
 		t.Fatal("expected non-nil Cmd from SetImage in Kitty mode")
 	}
 	frame := cmd().(KittyFrameMsg)
-	// 10 cols * 9 = 90; 5 rows * 18 = 90.
-	if !strings.Contains(frame.APC, "w=90,") {
-		t.Errorf("APC should contain w=90, got %q", frame.APC)
-	}
-	if !strings.Contains(frame.APC, "h=90,") {
-		t.Errorf("APC should contain h=90, got %q", frame.APC)
+	img := decodeKittyAPCImage(t, frame.APC)
+	// 10 cols * 9 = 90; 5 rows * 17 = 85.
+	if got := img.Bounds(); got.Dx() != 90 || got.Dy() != 85 {
+		t.Errorf("expected encoded image 90×85, got %d×%d", got.Dx(), got.Dy())
 	}
 }
 
@@ -343,9 +356,10 @@ func TestSetCellPixelSize_RerendersInFlightImage(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected KittyFrameMsg, got %T", cmd())
 	}
+	img := decodeKittyAPCImage(t, frame.APC)
 	// 10 cols * 10 = 100; 5 rows * 20 = 100.
-	if !strings.Contains(frame.APC, "w=100,") || !strings.Contains(frame.APC, "h=100,") {
-		t.Errorf("APC after SetCellPixelSize(10,20) should contain w=100 and h=100, got %q", frame.APC)
+	if got := img.Bounds(); got.Dx() != 100 || got.Dy() != 100 {
+		t.Errorf("expected encoded image 100×100 after SetCellPixelSize(10,20), got %d×%d", got.Dx(), got.Dy())
 	}
 }
 
@@ -402,7 +416,7 @@ func TestUpdate_AppliesCellSizeEvent(t *testing.T) {
 		t.Fatal("expected non-nil Cmd from SetImage")
 	}
 
-	cmd := m.Update(uv.CellSizeEvent{Width: 9, Height: 18})
+	cmd := m.Update(uv.CellSizeEvent{Width: 9, Height: 17})
 	if cmd == nil {
 		t.Fatal("Update with CellSizeEvent should return a render Cmd in Kitty mode with an image set")
 	}
@@ -410,12 +424,13 @@ func TestUpdate_AppliesCellSizeEvent(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected KittyFrameMsg, got %T", cmd())
 	}
-	// 10*9 = 90; 5*18 = 90.
-	if !strings.Contains(frame.APC, "w=90,") || !strings.Contains(frame.APC, "h=90,") {
-		t.Errorf("expected w=90,h=90 in APC, got %q", frame.APC)
+	img := decodeKittyAPCImage(t, frame.APC)
+	// 10*9 = 90; 5*17 = 85.
+	if got := img.Bounds(); got.Dx() != 90 || got.Dy() != 85 {
+		t.Errorf("expected encoded image 90×85 after CellSizeEvent, got %d×%d", got.Dx(), got.Dy())
 	}
-	if w, h := m.CellPixelSize(); w != 9 || h != 18 {
-		t.Errorf("expected CellPixelSize 9x18 after CellSizeEvent, got %dx%d", w, h)
+	if w, h := m.CellPixelSize(); w != 9 || h != 17 {
+		t.Errorf("expected CellPixelSize 9x17 after CellSizeEvent, got %dx%d", w, h)
 	}
 }
 
@@ -488,5 +503,79 @@ func TestModel_Update_IgnoresUnknownMessages(t *testing.T) {
 	}
 	if out := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24}); out != nil {
 		t.Fatalf("expected nil Cmd for WindowSizeMsg, got %v", out)
+	}
+}
+
+func decodeKittyAPCImage(t *testing.T, apc string) image.Image {
+	t.Helper()
+	pngBytes, ok := extractAPCPayload(apc)
+	if !ok {
+		t.Fatal("could not extract PNG payload from APC")
+	}
+	img, _, err := image.Decode(bytes.NewReader(pngBytes))
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	return img
+}
+
+func extractAPCPayload(apc string) ([]byte, bool) {
+	const (
+		prefix = "\x1b_G"
+		suffix = "\x1b\\"
+	)
+	var encoded strings.Builder
+	rest := apc
+	for {
+		start := strings.Index(rest, prefix)
+		if start < 0 {
+			break
+		}
+		seq := rest[start+len(prefix):]
+		semi := strings.IndexByte(seq, ';')
+		if semi < 0 {
+			return nil, false
+		}
+		payloadAndSuffix := seq[semi+1:]
+		end := strings.Index(payloadAndSuffix, suffix)
+		if end < 0 {
+			return nil, false
+		}
+		encoded.WriteString(payloadAndSuffix[:end])
+		rest = payloadAndSuffix[end+len(suffix):]
+	}
+	if encoded.Len() == 0 {
+		return nil, false
+	}
+	decoded, err := base64.StdEncoding.DecodeString(encoded.String())
+	return decoded, err == nil
+}
+
+func hasAPCOption(apc, key string) bool {
+	const (
+		prefix = "\x1b_G"
+		suffix = "\x1b\\"
+	)
+	rest := apc
+	for {
+		start := strings.Index(rest, prefix)
+		if start < 0 {
+			return false
+		}
+		seq := rest[start+len(prefix):]
+		semi := strings.IndexByte(seq, ';')
+		if semi < 0 {
+			return false
+		}
+		for _, opt := range strings.Split(seq[:semi], ",") {
+			if strings.HasPrefix(opt, key+"=") {
+				return true
+			}
+		}
+		end := strings.Index(seq[semi+1:], suffix)
+		if end < 0 {
+			return false
+		}
+		rest = seq[semi+1+end+len(suffix):]
 	}
 }
