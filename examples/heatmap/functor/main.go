@@ -127,8 +127,8 @@ func newKeyMap() keymap {
 			key.WithHelp("w", "up"),
 		),
 		transDown: key.NewBinding(
-			key.WithKeys("d"),
-			key.WithHelp("d", "down"),
+			key.WithKeys("s"),
+			key.WithHelp("s", "down"),
 		),
 		transLeft: key.NewBinding(
 			key.WithKeys("a"),
@@ -200,7 +200,10 @@ var moveFactor float64 = 0.5
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.Heatmap.Resize(msg.Width, msg.Height)
+		// Reserve 2 rows for the info line and help bar rendered below the
+		// heatmap in View(); without this the heatmap fills the full
+		// viewport and the help bar clips off the bottom.
+		m.Heatmap.Resize(msg.Width, msg.Height-2)
 		m.SampleFunctor()
 		m.Heatmap.Draw()
 		return m, nil
@@ -250,7 +253,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.SampleFunctor()
 			m.Heatmap.Draw()
 			return m, nil
-		case key.Matches(msg, m.keymap.transUp):
+		case key.Matches(msg, m.keymap.transDown):
 			m.OriginY += (moveFactor / m.Zoom)
 			m.SampleFunctor()
 			m.Heatmap.Draw()

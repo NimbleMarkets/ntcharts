@@ -199,7 +199,10 @@ func (m *PerlinModel) Init() tea.Cmd {
 func (m *PerlinModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.Heatmap.Resize(msg.Width, msg.Height)
+		// Reserve 3 rows for the info line, blank separator, and help bar
+		// rendered below the heatmap in View(); without this the heatmap
+		// fills the full viewport and the help bar clips off the bottom.
+		m.Heatmap.Resize(msg.Width, msg.Height-3)
 		m.SampleNoise()
 		m.Heatmap.Draw()
 		return m, nil
