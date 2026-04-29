@@ -7,9 +7,9 @@ require (
 	charm.land/bubbletea/v2 v2.0.6
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/NimbleMarkets/go-booba v0.5.3
+	github.com/NimbleMarkets/pixterm v0.0.0-20260429102514-4e8bc7f0c8ee
 	github.com/aquilax/go-perlin v1.1.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260428153724-66037269d7be
-	github.com/eliukblau/pixterm v1.3.2
 	github.com/go-analyze/charts v0.5.27
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	github.com/spf13/pflag v1.0.10
@@ -41,5 +41,3 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 )
-
-replace github.com/eliukblau/pixterm => github.com/NimbleMarkets/pixterm v0.0.0-20260428212147-d576e057b538

@@ -17,9 +17,9 @@ import (
 	"sync/atomic"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/NimbleMarkets/pixterm/pkg/ansimage"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/eliukblau/pixterm/pkg/ansimage"
 )
 
 // PictureMode selects how images are rendered.
