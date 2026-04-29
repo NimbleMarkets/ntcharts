@@ -450,6 +450,34 @@ func TestInit_DispatchesCellSizeRequest(t *testing.T) {
 	}
 }
 
+// TestIsPictureMsg_IncludesCellSizeEvent verifies the helper matches the
+// terminal's CSI 16 t reply. Update auto-applies it via SetCellPixelSize, so
+// consumers that gate message forwarding on IsPictureMsg (or on a wrapper
+// that delegates to it) must route the event to Update or Kitty placements
+// stay at the default 8×16 cell-pixel size.
+func TestIsPictureMsg_IncludesCellSizeEvent(t *testing.T) {
+	if !IsPictureMsg(uv.CellSizeEvent{Width: 8, Height: 16}) {
+		t.Error("expected IsPictureMsg to recognize uv.CellSizeEvent — Update auto-applies it, so consumers gating forwarding on this helper must see it match")
+	}
+}
+
+// TestIsPictureMsg_KittyFrameStillMatches pins the original behavior so
+// broadening the helper for CellSizeEvent doesn't accidentally drop the
+// existing KittyFrameMsg case.
+func TestIsPictureMsg_KittyFrameStillMatches(t *testing.T) {
+	if !IsPictureMsg(KittyFrameMsg{}) {
+		t.Error("regression: KittyFrameMsg should still match")
+	}
+}
+
+// TestIsPictureMsg_RejectsUnrelated pins the helper's negative case so the
+// type switch can't drift to "match everything".
+func TestIsPictureMsg_RejectsUnrelated(t *testing.T) {
+	if IsPictureMsg("hello") {
+		t.Error("expected IsPictureMsg to reject unrelated messages")
+	}
+}
+
 // Compile-time check that Update accepts arbitrary tea.Msg without panicking.
 type unrelatedMsg struct{}
 

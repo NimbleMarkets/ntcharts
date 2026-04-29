@@ -209,10 +209,14 @@ func (m *Model) SetCellPixelSize(w, h int) tea.Cmd {
 // String returns the rendered image content as a plain string.
 func (m *Model) String() string { return m.View().Content }
 
-// IsPictureMsg reports whether msg is a picture-owned async update.
+// IsPictureMsg reports whether msg is a picture-owned async update. Includes
+// uv.CellSizeEvent because Update auto-applies it via SetCellPixelSize —
+// consumers that gate forwarding on this helper must route the terminal's
+// CSI 16 t reply to Update, or Kitty placements stay at the default 8×16
+// cell-pixel size and visibly letterbox on non-1:2 terminals.
 func IsPictureMsg(msg tea.Msg) bool {
 	switch msg.(type) {
-	case KittyFrameMsg:
+	case KittyFrameMsg, uv.CellSizeEvent:
 		return true
 	}
 	return false
