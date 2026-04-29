@@ -493,6 +493,23 @@ func TestIsPictureMsg_RejectsUnrelated(t *testing.T) {
 	}
 }
 
+// TestSetSize_NegativeClampedToZero verifies SetSize never lets negative dims
+// reach the stored state. 0 is the natural sentinel for "no size yet" — used
+// by renderCmd's <=0 guard — and clamping at the boundary keeps consumers
+// (and the demo layer) from having to defend against negative-dim arithmetic
+// upstream of the call.
+func TestSetSize_NegativeClampedToZero(t *testing.T) {
+	m := New()
+	m.SetSize(-5, -10)
+	if m.cols != 0 || m.rows != 0 {
+		t.Errorf("expected SetSize(-5,-10) to clamp to (0,0), got (%d,%d)", m.cols, m.rows)
+	}
+	// SetSize(0, 0) after clamped SetSize(-5,-10) should be a no-op (already 0,0).
+	if cmd := m.SetSize(0, 0); cmd != nil {
+		t.Errorf("SetSize(0,0) after clamped SetSize(-5,-10) should be no-op, got non-nil Cmd")
+	}
+}
+
 // Compile-time check that Update accepts arbitrary tea.Msg without panicking.
 type unrelatedMsg struct{}
 

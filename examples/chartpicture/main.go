@@ -113,7 +113,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// Reserve a 1-row title and 1-row footer.
+		// Reserve a 1-row title and 1-row footer; -2 for the pane border.
 		if c := m.chart.SetSize(m.width-2, m.height-4); c != nil {
 			cmds = append(cmds, c)
 		}

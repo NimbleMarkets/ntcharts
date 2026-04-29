@@ -218,9 +218,17 @@ func (m *Model) SetCursor(p Point) {
 }
 
 // Resize will resize canvas to new height and width, and resets cursor.
-// Will truncate existing content if canvas size shrinks.
-// Does not change viewport for displaying contents.
+// Will truncate existing content if canvas size shrinks. Does not change
+// viewport for displaying contents. Negative w or h are clamped to 0 — Go's
+// make([]T, n) would otherwise panic, and dimension underflow is common in
+// UI layout math (e.g. msg.Height-N during initial WindowSizeMsg).
 func (m *Model) Resize(w, h int) {
+	if w < 0 {
+		w = 0
+	}
+	if h < 0 {
+		h = 0
+	}
 	// create new lines and copy over previous contents
 	newLines := make([]CellLine, h)
 	for i := range newLines {

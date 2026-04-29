@@ -136,9 +136,18 @@ func (m *Model) SetImage(img image.Image) tea.Cmd {
 	return m.renderCmd()
 }
 
-// SetSize updates the rendering dimensions in terminal cells. Returns a render
-// Cmd in Kitty mode (re-encode for the new size) or nil otherwise.
+// SetSize updates the rendering dimensions in terminal cells. Negative values
+// are clamped to 0 — 0 is the existing sentinel for "no size yet" honored by
+// renderCmd's <=0 guard, and clamping at the boundary keeps consumers from
+// needing to defend against negative-dim arithmetic upstream. Returns a
+// render Cmd in Kitty mode (re-encode for the new size) or nil otherwise.
 func (m *Model) SetSize(cols, rows int) tea.Cmd {
+	if cols < 0 {
+		cols = 0
+	}
+	if rows < 0 {
+		rows = 0
+	}
 	if cols == m.cols && rows == m.rows {
 		return nil
 	}

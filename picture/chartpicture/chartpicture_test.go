@@ -48,6 +48,20 @@ func TestNewWithConfigOverrides(t *testing.T) {
 	}
 }
 
+// TestSetSize_NegativeClampedToZero verifies SetSize never lets negative dims
+// reach the stored cols/rows. 0 is honored as "no size yet" by renderCmd; the
+// clamp at the boundary keeps consumers from defending upstream of the call.
+func TestSetSize_NegativeClampedToZero(t *testing.T) {
+	m := New()
+	m.SetSize(-5, -10)
+	if m.cols != 0 || m.rows != 0 {
+		t.Errorf("expected SetSize(-5,-10) to clamp to (0,0), got (%d,%d)", m.cols, m.rows)
+	}
+	if cmd := m.SetSize(0, 0); cmd != nil {
+		t.Errorf("SetSize(0,0) after clamped SetSize(-5,-10) should be no-op, got non-nil Cmd")
+	}
+}
+
 func TestSetLineChartOptionDeferredUntilSize(t *testing.T) {
 	m := New()
 	cmd := m.SetLineChartOption(charts.NewLineChartOptionWithData([][]float64{{1, 2, 3}}))

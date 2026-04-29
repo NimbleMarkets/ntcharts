@@ -74,6 +74,19 @@ func TestCursor(t *testing.T) {
 	}
 }
 
+// TestResize_NegativeClampedToZero verifies Resize never lets negative dims
+// reach the underlying make([]CellLine, h) call, which would panic. Higher
+// layers (heatmap, picture) can pass negative values when their windowsize
+// math underflows; clamping here removes a class of crashes from any
+// upstream user of canvas.
+func TestResize_NegativeClampedToZero(t *testing.T) {
+	c := New(20, 10)
+	c.Resize(-5, -3)
+	if w, h := c.Width(), c.Height(); w != 0 || h != 0 {
+		t.Errorf("expected Resize(-5,-3) to clamp to 0x0, got %dx%d", w, h)
+	}
+}
+
 func TestResize(t *testing.T) {
 	w := 30
 	h := 15

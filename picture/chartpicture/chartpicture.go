@@ -159,11 +159,18 @@ func (m *Model) renderCmd() tea.Cmd {
 	}
 }
 
-// SetSize updates the rendering dimensions in terminal cells. Forwards to the
-// embedded picture.Model and re-runs the current chart recipe (if any) at the
-// new size. Returns a Cmd that may batch a Kitty-encode Cmd from the picture
-// layer with the chart re-render Cmd.
+// SetSize updates the rendering dimensions in terminal cells. Negative values
+// are clamped to 0; renderCmd's <=0 guard treats 0 as "no size yet". Forwards
+// the clamped values to the embedded picture.Model and re-runs the current
+// chart recipe (if any) at the new size. Returns a Cmd that may batch a
+// Kitty-encode Cmd from the picture layer with the chart re-render Cmd.
 func (m *Model) SetSize(cols, rows int) tea.Cmd {
+	if cols < 0 {
+		cols = 0
+	}
+	if rows < 0 {
+		rows = 0
+	}
 	if cols == m.cols && rows == m.rows {
 		return nil
 	}
