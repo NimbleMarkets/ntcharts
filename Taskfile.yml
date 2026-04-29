@@ -269,10 +269,16 @@ tasks:
       - go run ./cmd/wasm-build
 
   serve-wasm-site:
-    desc: 'Serve web/ on http://localhost:8000'
+    desc: 'Serve web/ at http://localhost:8000/ntcharts/ (matches GH Pages prefix)'
     deps: [build-wasm-site]
+    vars:
+      SERVE_DIR: /tmp/ntcharts-site
     cmds:
-      - cd web && python3 -m http.server 8000
+      - mkdir -p {{.SERVE_DIR}}
+      - rm -f {{.SERVE_DIR}}/ntcharts
+      - ln -sfn "$(pwd)/web" {{.SERVE_DIR}}/ntcharts
+      - echo 'Serving at http://localhost:8000/ntcharts/'
+      - cd {{.SERVE_DIR}} && python3 -m http.server 8000
 
   clean-wasm-site:
     desc: 'Remove generated showcase artifacts'
