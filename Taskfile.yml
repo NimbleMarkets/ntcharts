@@ -260,6 +260,30 @@ tasks:
       - rm -f bin/ntcharts-sparkline
 
 ###############################################################################
+# WASM showcase site
+
+  build-wasm-site:
+    desc: 'Build the WASM showcase site into web/'
+    deps: [go-tidy]
+    cmds:
+      - go run ./cmd/wasm-build
+
+  serve-wasm-site:
+    desc: 'Serve web/ on http://localhost:8000'
+    deps: [build-wasm-site]
+    cmds:
+      - cd web && python3 -m http.server 8000
+
+  clean-wasm-site:
+    desc: 'Remove generated showcase artifacts'
+    cmds:
+      - rm -rf web/_assets/booba web/_assets/ghostty-web
+      - rm -f web/_assets/wasm_exec.js web/_assets/index.html
+      - rm -f web/index.html
+      - rm -f web/demos/*/app.wasm
+      - find web/demos -name 'index.html' -delete
+
+###############################################################################
 # GIF Generation from VHS Cassettes
 
   deps-gifs:
