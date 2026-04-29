@@ -9,7 +9,13 @@ import (
 	"github.com/charmbracelet/x/ansi/kitty"
 )
 
-func buildKittyAPC(img image.Image, id, cols, rows int) string {
+// buildKittyAPC encodes img as a Kitty graphics APC sequence. cellPixelW and
+// cellPixelH are the terminal cell pixel dimensions; multiplied by cols and
+// rows they form the explicit display pixel size (w=, h=) so the placed
+// image fills the c×r cell rectangle. Without w/h, Kitty fits the source
+// while preserving its AR — when source AR ≠ terminal cell-rect AR, the
+// result letterboxes inside the cell rectangle.
+func buildKittyAPC(img image.Image, id, cols, rows, cellPixelW, cellPixelH int) string {
 	var buf bytes.Buffer
 	opts := &kitty.Options{
 		Action:           kitty.TransmitAndPut,
@@ -18,6 +24,8 @@ func buildKittyAPC(img image.Image, id, cols, rows int) string {
 		ID:               id,
 		Columns:          cols,
 		Rows:             rows,
+		Width:            cols * cellPixelW,
+		Height:           rows * cellPixelH,
 		VirtualPlacement: true,
 		Quite:            2,
 		Chunk:            true,

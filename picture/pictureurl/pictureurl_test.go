@@ -15,6 +15,25 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
+// TestInit_DispatchesCellSizeRequest verifies the pictureurl wrapper's Init
+// bubbles the picture-layer cell-size request so consumers can call a single
+// Init Cmd and have terminal-reported cell dims auto-applied for Kitty
+// placement.
+func TestInit_DispatchesCellSizeRequest(t *testing.T) {
+	m := New()
+	cmd := m.Init()
+	if cmd == nil {
+		t.Fatal("Init must return a non-nil Cmd")
+	}
+	raw, ok := cmd().(tea.RawMsg)
+	if !ok {
+		t.Fatalf("expected tea.RawMsg, got %T", cmd())
+	}
+	if seq, _ := raw.Msg.(string); seq != "\x1b[16t" {
+		t.Errorf("expected CSI 16 t, got %q", seq)
+	}
+}
+
 // tinyPNG returns a 4×4 solid-color PNG as bytes.
 func tinyPNG(t *testing.T, c color.RGBA) []byte {
 	t.Helper()

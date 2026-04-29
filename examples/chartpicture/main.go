@@ -54,7 +54,7 @@ func initialModel() model {
 	m := model{chart: c, mode: "line"}
 	m.series = generateSeries(windowLen)
 	cmd := m.chart.SetLineChartOption(lineOptFromSeries(m.series))
-	m.initCmd = tea.Batch(cmd, tickCmd())
+	m.initCmd = tea.Batch(m.chart.Init(), cmd, tickCmd())
 	return m
 }
 

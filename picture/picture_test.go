@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 )
 
 // smallImage returns a 4×4 *image.RGBA filled with a solid color.
@@ -249,6 +250,203 @@ func TestModel_KittyMode_RejectsOtherModelsFrame(t *testing.T) {
 	}
 	if got := b.View().Content; got == frameA.Grid {
 		t.Fatal("expected b's View not to be set to a's grid")
+	}
+}
+
+// TestKittyAPC_IncludesDefaultDisplayPixelDims verifies the rendered Kitty APC
+// carries explicit w=,h= options derived from the default cell pixel size
+// (8x16) so the image fills the cell rectangle regardless of source AR.
+//
+// On terminals whose actual cell pixel ratio is not 1:2, omitting w/h causes
+// Kitty to AR-preserve-fit the source image inside the c×r cell rectangle,
+// leaving a visible letterbox gap on one axis.
+func TestKittyAPC_IncludesDefaultDisplayPixelDims(t *testing.T) {
+	m := New()
+	m.SetSize(10, 5)
+	m.Toggle() // Kitty
+	cmd := m.SetImage(smallImage(color.RGBA{R: 1, G: 2, B: 3, A: 255}))
+	if cmd == nil {
+		t.Fatal("expected non-nil Cmd from SetImage in Kitty mode")
+	}
+	msg := cmd()
+	frame, ok := msg.(KittyFrameMsg)
+	if !ok {
+		t.Fatalf("expected KittyFrameMsg, got %T", msg)
+	}
+	// Defaults: 10 cols * 8 px = 80 wide; 5 rows * 16 px = 80 tall.
+	if !strings.Contains(frame.APC, "w=80,") {
+		t.Errorf("APC should contain w=80 (cols × default cellPixelW), got %q", frame.APC)
+	}
+	if !strings.Contains(frame.APC, "h=80,") {
+		t.Errorf("APC should contain h=80 (rows × default cellPixelH), got %q", frame.APC)
+	}
+}
+
+// TestSetCellPixelSize_AffectsAPC verifies that SetCellPixelSize updates the
+// w=,h= options of subsequently rendered Kitty APCs.
+func TestSetCellPixelSize_AffectsAPC(t *testing.T) {
+	m := New()
+	m.SetSize(10, 5)
+	m.Toggle() // Kitty
+	if cmd := m.SetCellPixelSize(9, 18); cmd != nil {
+		// No image yet, render Cmd should be nil.
+		t.Fatalf("SetCellPixelSize before any image should return nil, got %v", cmd)
+	}
+	cmd := m.SetImage(smallImage(color.RGBA{R: 1, G: 2, B: 3, A: 255}))
+	if cmd == nil {
+		t.Fatal("expected non-nil Cmd from SetImage in Kitty mode")
+	}
+	frame := cmd().(KittyFrameMsg)
+	// 10 cols * 9 = 90; 5 rows * 18 = 90.
+	if !strings.Contains(frame.APC, "w=90,") {
+		t.Errorf("APC should contain w=90, got %q", frame.APC)
+	}
+	if !strings.Contains(frame.APC, "h=90,") {
+		t.Errorf("APC should contain h=90, got %q", frame.APC)
+	}
+}
+
+// TestSetCellPixelSize_NoOpOnSameValue verifies that re-setting the current
+// cell pixel size does not churn the renderer (returns nil).
+func TestSetCellPixelSize_NoOpOnSameValue(t *testing.T) {
+	m := New()
+	if cmd := m.SetCellPixelSize(8, 16); cmd != nil {
+		t.Errorf("default 8x16, SetCellPixelSize(8,16) should be no-op, got non-nil Cmd")
+	}
+}
+
+// TestSetCellPixelSize_ClampsNonPositive verifies that zero or negative inputs
+// are clamped to 1 (a valid display pixel count).
+func TestSetCellPixelSize_ClampsNonPositive(t *testing.T) {
+	m := New()
+	m.SetCellPixelSize(0, -5)
+	gotW, gotH := m.CellPixelSize()
+	if gotW != 1 || gotH != 1 {
+		t.Errorf("expected non-positive inputs clamped to 1, got w=%d h=%d", gotW, gotH)
+	}
+}
+
+// TestSetCellPixelSize_RerendersInFlightImage verifies that changing the cell
+// pixel size while an image is set in Kitty mode triggers a re-render.
+func TestSetCellPixelSize_RerendersInFlightImage(t *testing.T) {
+	m := New()
+	m.SetSize(10, 5)
+	m.Toggle() // Kitty
+	if cmd := m.SetImage(smallImage(color.RGBA{R: 1, A: 255})); cmd == nil {
+		t.Fatal("expected non-nil Cmd from SetImage")
+	}
+	cmd := m.SetCellPixelSize(10, 20)
+	if cmd == nil {
+		t.Fatal("expected non-nil render Cmd from SetCellPixelSize while image is set in Kitty mode")
+	}
+	frame, ok := cmd().(KittyFrameMsg)
+	if !ok {
+		t.Fatalf("expected KittyFrameMsg, got %T", cmd())
+	}
+	// 10 cols * 10 = 100; 5 rows * 20 = 100.
+	if !strings.Contains(frame.APC, "w=100,") || !strings.Contains(frame.APC, "h=100,") {
+		t.Errorf("APC after SetCellPixelSize(10,20) should contain w=100 and h=100, got %q", frame.APC)
+	}
+}
+
+// TestCellPixelSize_DefaultsAreReportedByGetter verifies the getter returns
+// the default 8x16 when no Config override and no SetCellPixelSize call.
+func TestCellPixelSize_DefaultsAreReportedByGetter(t *testing.T) {
+	m := New()
+	w, h := m.CellPixelSize()
+	if w != 8 || h != 16 {
+		t.Errorf("default CellPixelSize should be 8x16, got %dx%d", w, h)
+	}
+}
+
+// TestNewWithConfig_OverridesCellPixelSize verifies Config.CellPixelWidth/
+// Height are honored at construction.
+func TestNewWithConfig_OverridesCellPixelSize(t *testing.T) {
+	m := NewWithConfig(Config{CellPixelWidth: 12, CellPixelHeight: 24})
+	w, h := m.CellPixelSize()
+	if w != 12 || h != 24 {
+		t.Errorf("Config override should apply, got %dx%d", w, h)
+	}
+}
+
+// TestRequestCellSize_EmitsRawWindowOp16 verifies that RequestCellSize returns
+// a Cmd whose result is a tea.RawMsg carrying the CSI 16 t (XTWINOPS) escape,
+// which asks the terminal to report its cell pixel size.
+func TestRequestCellSize_EmitsRawWindowOp16(t *testing.T) {
+	cmd := RequestCellSize()
+	if cmd == nil {
+		t.Fatal("RequestCellSize must return a non-nil Cmd")
+	}
+	msg := cmd()
+	raw, ok := msg.(tea.RawMsg)
+	if !ok {
+		t.Fatalf("expected tea.RawMsg, got %T", msg)
+	}
+	seq, ok := raw.Msg.(string)
+	if !ok {
+		t.Fatalf("RawMsg.Msg should be a string, got %T", raw.Msg)
+	}
+	if seq != "\x1b[16t" {
+		t.Errorf("expected CSI 16 t (\\x1b[16t), got %q", seq)
+	}
+}
+
+// TestUpdate_AppliesCellSizeEvent verifies Update auto-applies a
+// uv.CellSizeEvent via SetCellPixelSize and returns the resulting render Cmd
+// when an image is in flight in Kitty mode.
+func TestUpdate_AppliesCellSizeEvent(t *testing.T) {
+	m := New()
+	m.SetSize(10, 5)
+	m.Toggle() // Kitty
+	if cmd := m.SetImage(smallImage(color.RGBA{R: 1, A: 255})); cmd == nil {
+		t.Fatal("expected non-nil Cmd from SetImage")
+	}
+
+	cmd := m.Update(uv.CellSizeEvent{Width: 9, Height: 18})
+	if cmd == nil {
+		t.Fatal("Update with CellSizeEvent should return a render Cmd in Kitty mode with an image set")
+	}
+	frame, ok := cmd().(KittyFrameMsg)
+	if !ok {
+		t.Fatalf("expected KittyFrameMsg, got %T", cmd())
+	}
+	// 10*9 = 90; 5*18 = 90.
+	if !strings.Contains(frame.APC, "w=90,") || !strings.Contains(frame.APC, "h=90,") {
+		t.Errorf("expected w=90,h=90 in APC, got %q", frame.APC)
+	}
+	if w, h := m.CellPixelSize(); w != 9 || h != 18 {
+		t.Errorf("expected CellPixelSize 9x18 after CellSizeEvent, got %dx%d", w, h)
+	}
+}
+
+// TestUpdate_CellSizeEventNoImage verifies Update returns nil for a cell-size
+// event when there is no image to render, but still updates the stored size
+// so the next render uses it.
+func TestUpdate_CellSizeEventNoImage(t *testing.T) {
+	m := New()
+	if cmd := m.Update(uv.CellSizeEvent{Width: 12, Height: 24}); cmd != nil {
+		t.Errorf("Update with no image should return nil Cmd, got %v", cmd)
+	}
+	if w, h := m.CellPixelSize(); w != 12 || h != 24 {
+		t.Errorf("expected stored cell size to update to 12x24, got %dx%d", w, h)
+	}
+}
+
+// TestInit_DispatchesCellSizeRequest verifies Model.Init returns the same
+// cell-size query as RequestCellSize so consumers can batch m.pic.Init() into
+// their own Init Cmd and have terminal-reported cell dims auto-applied.
+func TestInit_DispatchesCellSizeRequest(t *testing.T) {
+	m := New()
+	cmd := m.Init()
+	if cmd == nil {
+		t.Fatal("Init must return a non-nil Cmd")
+	}
+	raw, ok := cmd().(tea.RawMsg)
+	if !ok {
+		t.Fatalf("expected tea.RawMsg, got %T", cmd())
+	}
+	if seq, _ := raw.Msg.(string); seq != "\x1b[16t" {
+		t.Errorf("expected CSI 16 t, got %q", seq)
 	}
 }
 

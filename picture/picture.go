@@ -17,6 +17,8 @@ import (
 	"sync/atomic"
 
 	tea "charm.land/bubbletea/v2"
+	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/eliukblau/pixterm/pkg/ansimage"
 )
 
@@ -30,10 +32,28 @@ const (
 
 const DefaultKittyID = 43
 
+// Sensible defaults for terminal cell pixel size. Most monospace fonts have
+// ~1:2 cell ratios (8×16, 9×18, 10×20). Consumers can pre-set via Config or
+// update at runtime via Model.SetCellPixelSize when the terminal reports its
+// actual cell dims (CSI 16 t).
+const (
+	defaultCellPixelW = 8
+	defaultCellPixelH = 16
+)
+
 // Config configures a Model at construction.
 type Config struct {
 	KittyID    int         // default 43
 	Background color.Color // default color.Transparent (no compositing)
+
+	// CellPixelWidth and CellPixelHeight are the terminal cell dimensions in
+	// pixels. Used in Kitty mode to set explicit display pixel dimensions on
+	// the APC (w=, h=) so the placed image fills the c×r cell rectangle
+	// regardless of source AR. Default 8×16 (typical 1:2 font cell). Update
+	// at runtime via Model.SetCellPixelSize when the terminal reports its
+	// real cell size.
+	CellPixelWidth  int
+	CellPixelHeight int
 }
 
 // Model renders an image.Image as half-blocks or Kitty graphics inside a
@@ -54,6 +74,8 @@ type Model struct {
 
 	kittyID    int
 	background color.Color
+
+	cellPixelW, cellPixelH int
 }
 
 var nextModelID atomic.Uint64
@@ -72,11 +94,19 @@ func NewWithConfig(cfg Config) Model {
 	if cfg.Background == nil {
 		cfg.Background = color.Transparent
 	}
+	if cfg.CellPixelWidth <= 0 {
+		cfg.CellPixelWidth = defaultCellPixelW
+	}
+	if cfg.CellPixelHeight <= 0 {
+		cfg.CellPixelHeight = defaultCellPixelH
+	}
 	return Model{
 		modelID:    nextModelID.Add(1),
 		mode:       PictureGlyph,
 		kittyID:    cfg.KittyID,
 		background: cfg.Background,
+		cellPixelW: cfg.CellPixelWidth,
+		cellPixelH: cfg.CellPixelHeight,
 	}
 }
 
@@ -143,6 +173,39 @@ func (m *Model) Toggle() tea.Cmd {
 // Mode returns the current rendering mode.
 func (m *Model) Mode() PictureMode { return m.mode }
 
+// Init returns a Cmd that asks the terminal for its cell pixel size so that
+// Kitty placements use real display dims rather than the 8×16 default.
+// Consumers should batch this with their own Init Cmd; the response is
+// auto-applied by Update via SetCellPixelSize.
+func (m *Model) Init() tea.Cmd { return RequestCellSize() }
+
+// CellPixelSize returns the configured terminal cell pixel size used to size
+// Kitty placements (w=, h= on the APC).
+func (m *Model) CellPixelSize() (w, h int) {
+	return m.cellPixelW, m.cellPixelH
+}
+
+// SetCellPixelSize updates the terminal cell pixel size used for Kitty
+// placements. Non-positive values are clamped to 1. Returns a render Cmd if
+// the new size differs from the current one and there's an in-flight image
+// in Kitty mode; otherwise nil.
+func (m *Model) SetCellPixelSize(w, h int) tea.Cmd {
+	if w < 1 {
+		w = 1
+	}
+	if h < 1 {
+		h = 1
+	}
+	if w == m.cellPixelW && h == m.cellPixelH {
+		return nil
+	}
+	m.cellPixelW = w
+	m.cellPixelH = h
+	m.seq++
+	m.invalidateKitty()
+	return m.renderCmd()
+}
+
 // String returns the rendered image content as a plain string.
 func (m *Model) String() string { return m.View().Content }
 
@@ -156,7 +219,9 @@ func IsPictureMsg(msg tea.Msg) bool {
 }
 
 // Update processes the picture component's own messages. Forward every tea.Msg
-// to it; unknown messages are ignored and return nil.
+// to it; unknown messages are ignored and return nil. A uv.CellSizeEvent
+// (the terminal's reply to RequestCellSize) is auto-applied via
+// SetCellPixelSize so consumers don't need to relay it manually.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case KittyFrameMsg:
@@ -165,8 +230,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 		m.kittyGrid = msg.Grid
 		return tea.Raw(msg.APC)
+	case uv.CellSizeEvent:
+		return m.SetCellPixelSize(msg.Width, msg.Height)
 	}
 	return nil
+}
+
+// RequestCellSize returns a Cmd that asks the terminal for its cell pixel
+// dimensions via CSI 16 t (XTWINOPS). The terminal replies with a
+// uv.CellSizeEvent which Model.Update auto-applies via SetCellPixelSize, so
+// consumers typically just batch this with their own Init Cmd and forward
+// every tea.Msg to Model.Update as usual.
+func RequestCellSize() tea.Cmd {
+	return tea.Raw(ansi.WindowOp(16))
 }
 
 // View returns the rendered image as a tea.View, or an empty view if there is
@@ -224,8 +300,9 @@ func (m *Model) renderCmd() tea.Cmd {
 	}
 	img := composite(m.img, m.background)
 	modelID, id, cols, rows, seq := m.modelID, m.kittyID, m.cols, m.rows, m.seq
+	cpw, cph := m.cellPixelW, m.cellPixelH
 	return func() tea.Msg {
-		apc := buildKittyAPC(img, id, cols, rows)
+		apc := buildKittyAPC(img, id, cols, rows, cpw, cph)
 		grid := buildKittyGrid(cols, rows, id)
 		return KittyFrameMsg{modelID: modelID, ID: id, Seq: seq, APC: apc, Grid: grid}
 	}

@@ -4,8 +4,28 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/go-analyze/charts"
 )
+
+// TestInit_DispatchesCellSizeRequest verifies the chartpicture wrapper's Init
+// bubbles the picture-layer cell-size request so consumers can call a single
+// Init Cmd and have terminal-reported cell dims auto-applied for Kitty
+// placement.
+func TestInit_DispatchesCellSizeRequest(t *testing.T) {
+	m := New()
+	cmd := m.Init()
+	if cmd == nil {
+		t.Fatal("Init must return a non-nil Cmd")
+	}
+	raw, ok := cmd().(tea.RawMsg)
+	if !ok {
+		t.Fatalf("expected tea.RawMsg, got %T", cmd())
+	}
+	if seq, _ := raw.Msg.(string); seq != "\x1b[16t" {
+		t.Errorf("expected CSI 16 t, got %q", seq)
+	}
+}
 
 func TestNewDefaults(t *testing.T) {
 	m := New()

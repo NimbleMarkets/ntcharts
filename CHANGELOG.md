@@ -3,6 +3,8 @@
 ## v2.0.4 (unreleased)
 
   * Replace `github.com/eliukblau/pixterm => github.com/NimbleMarkets/pixterm` until bugfixes are upstreamed
+  * Add [web-based demos](https://nimblemarkets.github.io/ntcharts) using [`go-booba`](https://github.com/NimbleMarkets/go-booba)
+  * feat(picture): add `CellPixelWidth` / `CellPixelHeight` / `RequestCellSize`
 
 ## v2.0.3 (2026-04-28)
  

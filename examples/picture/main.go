@@ -75,7 +75,7 @@ func initialModel() model {
 	// Kick off the right-pane fetch here so the SetURL state mutation
 	// (currentURL, loading flag) is captured in the model returned to
 	// bubbletea. Init() can only return the Cmd — not a mutated model.
-	initCmd := right.SetURL(rightURL)
+	initCmd := tea.Batch(left.Init(), right.Init(), right.SetURL(rightURL))
 
 	return model{leftPic: left, rightPic: right, initCmd: initCmd}
 }

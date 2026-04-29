@@ -92,6 +92,11 @@ func (m *Model) Err() error { return m.err }
 // Mode forwards to the embedded picture.Model.
 func (m *Model) Mode() picture.PictureMode { return m.pic.Mode() }
 
+// Init forwards to the embedded picture.Model so the terminal's real cell
+// pixel size is queried at startup and Kitty placements fill the cell
+// rectangle without letterboxing.
+func (m *Model) Init() tea.Cmd { return m.pic.Init() }
+
 // Toggle forwards to the embedded picture.Model.
 func (m *Model) Toggle() tea.Cmd { return m.pic.Toggle() }
 

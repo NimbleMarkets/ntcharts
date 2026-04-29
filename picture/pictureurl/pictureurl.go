@@ -220,6 +220,11 @@ func (m *Model) Clear() tea.Cmd {
 	return m.pic.SetImage(nil)
 }
 
+// Init forwards to the embedded picture.Model so the terminal's real cell
+// pixel size is queried at startup and Kitty placements fill the cell
+// rectangle without letterboxing.
+func (m *Model) Init() tea.Cmd { return m.pic.Init() }
+
 // SetSize forwards to the embedded picture.Model.
 func (m *Model) SetSize(cols, rows int) tea.Cmd { return m.pic.SetSize(cols, rows) }
 
