@@ -1,6 +1,12 @@
 # Source of truth for the WASM showcase site.
 # Consumed by cmd/wasm-build to compile demos and render pages.
 groups:
+  - title: Canvas
+    demos:
+      - name: canvas-logo
+        title: Canvas (logo)
+        blurb: Hand-drawn ntcharts logo on the underlying Canvas primitive.
+        source: ./examples/canvas/logo
   - title: Lines
     demos:
       - name: quickstart
@@ -15,6 +21,22 @@ groups:
         title: Streaming
         blurb: Continuous data flowing right-to-left.
         source: ./examples/linechart/streaming
+      - name: linechart-circles
+        title: Line Chart (circles)
+        blurb: Circles plotted on the line chart's coordinate space.
+        source: ./examples/linechart/circles
+      - name: linechart-lines
+        title: Line Chart (lines)
+        blurb: Standard line chart with multiple series.
+        source: ./examples/linechart/lines
+      - name: linechart-scatter
+        title: Line Chart (scatter)
+        blurb: Scatter plot of (X,Y) data points on a line chart.
+        source: ./examples/linechart/scatter
+      - name: linechart-timeseries
+        title: Time Series
+        blurb: Time-series line chart with a date axis.
+        source: ./examples/linechart/timeseries
   - title: Bars & Sparks
     demos:
       - name: barchart-vertical
@@ -25,15 +47,43 @@ groups:
         title: Sparkline
         blurb: Compact at-a-glance trend visual.
         source: ./examples/sparkline
+      - name: barchart-horizontal
+        title: Bar Chart (horizontal)
+        blurb: Horizontal bar chart with styled labels.
+        source: ./examples/barchart/horizontal
   - title: Heatmap
     demos:
       - name: heatmap-perlin
         title: Heatmap (Perlin)
         blurb: Color-mapped 2D Perlin-noise field.
         source: ./examples/heatmap/perlin
+      - name: heatmap-functor
+        title: Heatmap (functor)
+        blurb: Heatmap rendering of an arbitrary 2D math functor.
+        source: ./examples/heatmap/functor
   - title: Graph
     demos:
       - name: graph-braille
         title: Graph (braille)
         blurb: Braille-rune graph rendering.
         source: ./examples/graph/braille
+      - name: graph-candlesticks
+        title: Graph (candlesticks)
+        blurb: OHLC-style candlesticks on the Canvas grid.
+        source: ./examples/graph/candlesticks
+      - name: graph-circles
+        title: Graph (circles)
+        blurb: Circle drawing on the Canvas grid.
+        source: ./examples/graph/circles
+      - name: graph-columns
+        title: Graph (columns)
+        blurb: Column rendering on the Canvas grid.
+        source: ./examples/graph/columns
+      - name: graph-lines
+        title: Graph (lines)
+        blurb: Line drawing on the Canvas grid.
+        source: ./examples/graph/lines
+      - name: graph-rows
+        title: Graph (rows)
+        blurb: Row rendering on the Canvas grid.
+        source: ./examples/graph/rows
