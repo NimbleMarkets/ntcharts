@@ -26,13 +26,24 @@
 </main>
 <script src="/ntcharts/_assets/wasm_exec.js"></script>
 <script type="module">
-  // Boot ghostty-web + load this demo's app.wasm.
-  // The exact init shape will be confirmed against booba's index.html during Task 5.
-  import { boot } from "/ntcharts/_assets/ghostty-web/index.js";
-  boot({
-    container: document.getElementById("terminal"),
-    wasmURL: "./app.wasm",
-  });
+  // Mirrors the booba reference index.html: instantiate the Go WASM runtime
+  // with this demo's app.wasm, then mount a BoobaTerminal on the container.
+  import { BoobaTerminal } from "/ntcharts/_assets/booba/booba.js";
+
+  async function main() {
+    const go = new Go();
+    const result = await WebAssembly.instantiateStreaming(
+      fetch("./app.wasm"), go.importObject
+    );
+    go.run(result.instance);
+
+    const booba = new BoobaTerminal("terminal");
+    await booba.init();
+    booba.connectWasm();
+    booba.focus();
+  }
+
+  main().catch(console.error);
 </script>
 </body>
 </html>
