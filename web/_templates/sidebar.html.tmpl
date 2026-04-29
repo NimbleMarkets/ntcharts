@@ -1,0 +1,29 @@
+{{- define "sidebar" -}}
+{{- /* Renders the left-hand navigation. Data: { Active: "<demo-name>" or "" for landing, Manifest: *Manifest } */ -}}
+<aside class="sidebar">
+  <a href="/ntcharts/" class="sidebar-brand">
+    <img src="/ntcharts/_assets/logo.svg" alt="" class="sidebar-logo">
+    <span class="sidebar-title">ntcharts</span>
+  </a>
+  <nav class="sidebar-nav">
+    {{- range .Manifest.Groups }}
+    <h2 class="sidebar-group">{{ .Title }}</h2>
+    <ul class="sidebar-list">
+      {{- range .Demos }}
+      <li>
+        <a href="/ntcharts/demos/{{ .Name }}/"
+           class="sidebar-link{{ if eq $.Active .Name }} sidebar-link-active{{ end }}">
+          {{ .Title }}
+        </a>
+      </li>
+      {{- end }}
+    </ul>
+    {{- end }}
+  </nav>
+  <footer class="sidebar-footer">
+    <a href="https://github.com/NimbleMarkets/ntcharts">GitHub</a>
+    <a href="https://pkg.go.dev/github.com/NimbleMarkets/ntcharts/v2">godoc</a>
+    <a href="https://nimble.markets/">Nimble.Markets</a>
+  </footer>
+</aside>
+{{- end -}}

@@ -20,6 +20,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	booba "github.com/NimbleMarkets/go-booba"
 	"github.com/NimbleMarkets/ntcharts/v2/picture"
 	"github.com/NimbleMarkets/ntcharts/v2/picture/pictureurl"
 )
@@ -311,8 +312,10 @@ func wrapToLines(s string, width, maxLines int) []string {
 }
 
 func main() {
-	p := tea.NewProgram(initialModel())
-	if _, err := p.Run(); err != nil {
+	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
+	// or the WASM/ghostty-web bridge depending on build target.
+	// See https://github.com/NimbleMarkets/go-booba-example.
+	if err := booba.Run(initialModel()); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}

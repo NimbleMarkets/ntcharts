@@ -15,6 +15,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	booba "github.com/NimbleMarkets/go-booba"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 )
 
@@ -287,7 +288,10 @@ func (m Model) View() tea.View {
 
 func main() {
 	m := NewModel()
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
+	// or the WASM/ghostty-web bridge depending on build target.
+	// See https://github.com/NimbleMarkets/go-booba-example.
+	if err := booba.Run(m); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

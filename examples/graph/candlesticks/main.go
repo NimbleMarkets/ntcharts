@@ -11,6 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	booba "github.com/NimbleMarkets/go-booba"
 )
 
 var defaultStyle = lipgloss.NewStyle().
@@ -119,7 +120,10 @@ func main() {
 
 	// canvas shows different color style and usage of DrawCandlestickBottomToTop() function
 	m := model{c1, c2, canvas.Point{0, h - 1}}
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
+	// or the WASM/ghostty-web bridge depending on build target.
+	// See https://github.com/NimbleMarkets/go-booba-example.
+	if err := booba.Run(m); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}

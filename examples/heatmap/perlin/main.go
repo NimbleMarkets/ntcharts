@@ -17,6 +17,7 @@ import (
 	"charm.land/bubbles/v2/timer"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	booba "github.com/NimbleMarkets/go-booba"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/aquilax/go-perlin"
 	"github.com/spf13/pflag"
@@ -315,7 +316,10 @@ func main() {
 	}
 
 	m := NewPerlinModel(alpha, beta, n, seed, int64(timeoutSecs*1000))
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
+	// or the WASM/ghostty-web bridge depending on build target.
+	// See https://github.com/NimbleMarkets/go-booba-example.
+	if err := booba.Run(m); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
