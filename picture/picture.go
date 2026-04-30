@@ -76,6 +76,26 @@ type Model struct {
 	background color.Color
 
 	cellPixelW, cellPixelH int
+
+	// lastRenderedGeom records the (cols, rows, cellPixelW, cellPixelH)
+	// of the most recently *applied* KittyFrame — i.e. the geometry
+	// currently placed on the terminal. renderCmd compares the current
+	// geometry against this snapshot and prepends a kittyDeleteImage to
+	// the APC when they differ; some Kitty-protocol terminals (Ghostty,
+	// confirmed) don't honor a c/r change for an already-on-screen
+	// virtual placement, leaving the previous geometry stuck. Resets to
+	// the zero value whenever we explicitly emit kittyDeleteImage
+	// (Toggle Kitty→Glyph, SetImage(nil)).
+	lastRenderedGeom kittyGeom
+}
+
+// kittyGeom is the four-tuple of "what dimensions does the Kitty image
+// currently on screen occupy". Zero value means "no image currently
+// placed at this Model's kittyID" — used as a sentinel by renderCmd to
+// skip the delete-prepend on first render.
+type kittyGeom struct {
+	cols, rows           int
+	cellPixelW, cellPixelH int
 }
 
 var nextModelID atomic.Uint64
@@ -129,6 +149,10 @@ func (m *Model) SetImage(img image.Image) tea.Cmd {
 	if img == nil {
 		m.invalidateKitty()
 		if m.mode == PictureKitty && prev != nil {
+			// Image gone from the terminal: clear the geom snapshot so
+			// the next render is treated as a fresh placement (no
+			// spurious delete prepended on first re-render).
+			m.lastRenderedGeom = kittyGeom{}
 			return tea.Raw(kittyDeleteImage(m.kittyID))
 		}
 		return nil
@@ -180,8 +204,10 @@ func (m *Model) Toggle() tea.Cmd {
 	if prev == PictureKitty && m.img != nil {
 		// Leaving Kitty: the Kitty image is being deleted from the
 		// terminal registry; the placeholder grid would resolve to
-		// nothing now, so clear it.
+		// nothing now, so clear it. Also clear the geom snapshot —
+		// nothing is placed at this kittyID anymore.
 		m.invalidateKitty()
+		m.lastRenderedGeom = kittyGeom{}
 		return tea.Raw(kittyDeleteImage(m.kittyID))
 	}
 	return m.renderCmd()
@@ -250,6 +276,15 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		m.kittyGrid = msg.Grid
+		// This frame is the placement that's about to land on the
+		// terminal — record its geometry so the next renderCmd can
+		// detect a geometry change and prepend a delete.
+		m.lastRenderedGeom = kittyGeom{
+			cols:        m.cols,
+			rows:        m.rows,
+			cellPixelW:  m.cellPixelW,
+			cellPixelH:  m.cellPixelH,
+		}
 		return tea.Raw(msg.APC)
 	case uv.CellSizeEvent:
 		return m.SetCellPixelSize(msg.Width, msg.Height)
@@ -331,8 +366,18 @@ func (m *Model) renderCmd() tea.Cmd {
 	img := composite(m.img, m.background)
 	modelID, id, cols, rows, seq := m.modelID, m.kittyID, m.cols, m.rows, m.seq
 	cpw, cph := m.cellPixelW, m.cellPixelH
+	prevGeom := m.lastRenderedGeom
 	return func() tea.Msg {
 		apc := buildKittyAPC(img, id, cols, rows, cpw, cph)
+		// If a previous placement exists at different geometry, prepend
+		// a delete so terminals that don't honor a c/r change for
+		// already-on-screen virtual placements (Ghostty) drop the old
+		// geometry first. Composing into one APC string keeps delete
+		// and re-place atomic from bubbletea's renderer perspective.
+		currGeom := kittyGeom{cols: cols, rows: rows, cellPixelW: cpw, cellPixelH: cph}
+		if prevGeom != (kittyGeom{}) && prevGeom != currGeom {
+			apc = kittyDeleteImage(id) + apc
+		}
 		grid := buildKittyGrid(cols, rows, id)
 		return KittyFrameMsg{modelID: modelID, ID: id, Seq: seq, APC: apc, Grid: grid}
 	}

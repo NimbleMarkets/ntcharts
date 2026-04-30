@@ -528,6 +528,101 @@ func TestSetSize_NegativeClampedToZero(t *testing.T) {
 	}
 }
 
+// kittyDeletePrefix is the leading bytes of every kittyDeleteImage escape
+// (kitty.go: "\x1b_Ga=d,d=I,i=%d,q=2\x1b\\"). Tests use this to assert
+// presence/absence in the rendered APC string.
+const kittyDeletePrefix = "\x1b_Ga=d,d=I,i="
+
+// TestKittyAPC_GeometryChange_PrependsDelete verifies that when the
+// renderable geometry (cols, rows, cellPixelW, cellPixelH) changes between
+// successive renders, the new APC prepends a kittyDeleteImage so the
+// terminal drops the previous placement before the new one transmits.
+//
+// Some Kitty-protocol terminals (Ghostty, confirmed) don't honor a c/r
+// change for a virtual-placement image already on screen — the previous
+// geometry sticks until the image is explicitly deleted. Forcing a delete
+// before re-transmit keeps placements glued to the new cell rectangle.
+func TestKittyAPC_GeometryChange_PrependsDelete(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle() // Kitty
+	cmd := m.SetImage(smallImage(color.RGBA{R: 100, A: 255}))
+	if cmd == nil {
+		t.Fatal("expected render Cmd from SetImage")
+	}
+	frame1 := cmd().(KittyFrameMsg)
+	if strings.Contains(frame1.APC, kittyDeletePrefix) {
+		t.Errorf("first KittyFrame (no prior placement) should not contain delete escape, got %q", truncateForLog(frame1.APC))
+	}
+	// Apply frame so lastRenderedGeom records the dims of the placement now on screen.
+	if cmd := m.Update(frame1); cmd == nil {
+		t.Fatal("Update with matching frame should return tea.Raw Cmd")
+	}
+
+	// Geometry change: bump cols/rows. The next render must prepend delete.
+	cmd2 := m.SetSize(30, 15)
+	if cmd2 == nil {
+		t.Fatal("expected render Cmd from second SetSize")
+	}
+	frame2 := cmd2().(KittyFrameMsg)
+	if !strings.Contains(frame2.APC, kittyDeletePrefix) {
+		t.Errorf("KittyFrame after geometry change should contain delete escape, got %q", truncateForLog(frame2.APC))
+	}
+}
+
+// TestKittyAPC_CellPixelSizeChange_PrependsDelete is the same idea as
+// TestKittyAPC_GeometryChange_PrependsDelete but verifies that a change in
+// cellPixelW/cellPixelH (display-pixel-dim shift, e.g. font rescale via
+// uv.CellSizeEvent) also forces a delete on the next render.
+func TestKittyAPC_CellPixelSizeChange_PrependsDelete(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle()
+	cmd := m.SetImage(smallImage(color.RGBA{B: 100, A: 255}))
+	frame1 := cmd().(KittyFrameMsg)
+	m.Update(frame1)
+
+	cmd2 := m.SetCellPixelSize(10, 20) // change from default 8x16
+	if cmd2 == nil {
+		t.Fatal("expected render Cmd from SetCellPixelSize")
+	}
+	frame2 := cmd2().(KittyFrameMsg)
+	if !strings.Contains(frame2.APC, kittyDeletePrefix) {
+		t.Errorf("KittyFrame after cell-pixel-size change should contain delete escape, got %q", truncateForLog(frame2.APC))
+	}
+}
+
+// TestKittyAPC_SameGeometry_NoDelete verifies the negative case: a re-
+// render at identical geometry (e.g. animation frame replacing the image
+// without a resize) must not gain a spurious delete escape, since
+// TransmitAndPut at the same dims is honored everywhere.
+func TestKittyAPC_SameGeometry_NoDelete(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle()
+	cmd := m.SetImage(smallImage(color.RGBA{G: 100, A: 255}))
+	frame1 := cmd().(KittyFrameMsg)
+	m.Update(frame1)
+
+	// New image, identical cols/rows/cellPixel: pure re-transmit.
+	cmd2 := m.SetImage(smallImage(color.RGBA{R: 200, A: 255}))
+	if cmd2 == nil {
+		t.Fatal("expected render Cmd from second SetImage")
+	}
+	frame2 := cmd2().(KittyFrameMsg)
+	if strings.Contains(frame2.APC, kittyDeletePrefix) {
+		t.Errorf("same-geometry re-render should not prepend delete, got %q", truncateForLog(frame2.APC))
+	}
+}
+
+// truncateForLog clips a long APC string for readable test failure output.
+func truncateForLog(s string) string {
+	if len(s) > 200 {
+		return s[:200] + "...(truncated)"
+	}
+	return s
+}
+
 // Compile-time check that Update accepts arbitrary tea.Msg without panicking.
 type unrelatedMsg struct{}
 
