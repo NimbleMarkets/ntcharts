@@ -162,6 +162,12 @@ func (m *Model) SetSize(cols, rows int) tea.Cmd {
 // Toggle switches between Glyph and Kitty modes. When toggling away from
 // Kitty after an image was placed, returns a Cmd that emits the Kitty delete
 // sequence; otherwise returns the Cmd to render in the new mode (or nil).
+//
+// Caches are NOT eagerly invalidated: the seq bump is enough to invalidate
+// them via the cache key check on next render, and keeping the leaving-mode
+// cache around lets View show transitional content while the new mode's
+// async render is in flight (avoids a visible "blank window" during a
+// Glyph→Kitty toggle).
 func (m *Model) Toggle() tea.Cmd {
 	prev := m.mode
 	if m.mode == PictureGlyph {
@@ -170,10 +176,12 @@ func (m *Model) Toggle() tea.Cmd {
 		m.mode = PictureGlyph
 	}
 	m.seq++
-	m.invalidateGlyph()
-	m.invalidateKitty()
 
 	if prev == PictureKitty && m.img != nil {
+		// Leaving Kitty: the Kitty image is being deleted from the
+		// terminal registry; the placeholder grid would resolve to
+		// nothing now, so clear it.
+		m.invalidateKitty()
 		return tea.Raw(kittyDeleteImage(m.kittyID))
 	}
 	return m.renderCmd()
@@ -259,7 +267,12 @@ func RequestCellSize() tea.Cmd {
 }
 
 // View returns the rendered image as a tea.View, or an empty view if there is
-// no image, no size, or (in Kitty mode) the encoded frame is not yet ready.
+// no image or no size. In Kitty mode the placeholder grid is returned; if it
+// hasn't been computed yet (e.g. during a Glyph→Kitty toggle while the new
+// frame is being encoded), View falls through to render Glyph half-blocks of
+// the current image as a transitional fallback, so consumers don't see a
+// blank window during the mode switch.
+//
 // The Model never renders user-facing loading or error text; layers above
 // (e.g. pictureurl) own that.
 func (m *Model) View() tea.View {
@@ -267,9 +280,13 @@ func (m *Model) View() tea.View {
 		return tea.NewView("")
 	}
 
-	if m.mode == PictureKitty {
+	if m.mode == PictureKitty && m.kittyGrid != "" {
 		return tea.NewView(m.kittyGrid)
 	}
+	// Falls through here in two cases:
+	//   - mode == PictureGlyph (the normal Glyph path)
+	//   - mode == PictureKitty but kittyGrid hasn't been computed yet
+	//     (transitional fallback during a Glyph→Kitty toggle)
 
 	key := fmt.Sprintf("%d|%d|%d", m.seq, m.cols, m.rows)
 	if m.glyphKey == key && m.glyphCache != "" {

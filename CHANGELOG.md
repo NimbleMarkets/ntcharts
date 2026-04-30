@@ -1,10 +1,15 @@
 # CHANGELOG
 
-## v2.0.4 (unreleased)
+## v2.0.4 (2026-04-29)
 
   * Replace `github.com/eliukblau/pixterm => github.com/NimbleMarkets/pixterm` until bugfixes are upstreamed
   * Add [web-based demos](https://nimblemarkets.github.io/ntcharts) using [`go-booba`](https://github.com/NimbleMarkets/go-booba)
-  * feat(picture): add `CellPixelWidth` / `CellPixelHeight` / `RequestCellSize`
+    * feat(picture): add `Config.CellPixelWidth` / `CellPixelHeight`,
+      `Model.SetCellPixelSize` / `CellPixelSize`, and `Model.Init` /                                                                         
+      `RequestCellSize` 
+    * fix(canvas,picture): clamp negative dims to 0 in `canvas.Model.Resize`,                                                                
+      `picture.Model.SetSize`, and `chartpicture.Model.SetSize`
+    * feat: add [`picture/heatpicture`](examples/README.md#heat-picture) — continuous-field heatmap rendered through `picture.Model`. Sampler-driven (`func(x, y float64) float64`); Kitty mode samples at full terminal-pixel resolution for smooth gradients, Glyph mode samples at half-block resolution for fast fallback. Includes a render throttle (one in-flight at a time, with dirty-flush follow-up) and a runtime `SamplingFactor` knob to trade quality for animation smoothness on large terminals. New `examples/heatpicture/perlin` demo.
 
 ## v2.0.3 (2026-04-28)
  

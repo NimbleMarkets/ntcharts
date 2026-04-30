@@ -178,15 +178,19 @@ tasks:
       - go build -o bin/ntcharts-heatmap-functor examples/heatmap/functor/*.go
       - go build -o bin/ntcharts-heatmap-perlin examples/heatmap/perlin/*.go
       - go build -o bin/ntcharts-heatmap-simple examples/heatmap/simple/*.go
+      - go build -o bin/ntcharts-heatpicture-perlin examples/heatpicture/perlin/*.go
     sources:
-      - heatmap/**/*.go
       - canvas/**/*.go
+      - heatmap/**/*.go
+      - heatpicture/**/*.go
       - examples/heatmap/**/*.go
+      - examples/heatpicture/**/*.go
     generates:
       - bin/ntcharts-heatmap-aoc2024
       - bin/ntcharts-heatmap-functor
       - bin/ntcharts-heatmap-perlin
       - bin/ntcharts-heatmap-simple
+      - bin/ntcharts-heatpicture-perlin
 
   build-ex-linechart:
     desc: 'Build linechart examples'
@@ -216,13 +220,16 @@ tasks:
     cmds:
       - go build -o bin/ntcharts-chartpicture examples/chartpicture/*.go
       - go build -o bin/ntcharts-picture examples/picture/*.go
+      - go build -o bin/ntcharts-heatpicture-perlin examples/heatpicture/perlin/*.go
     sources:
       - picture/**/*.go
       - examples/chartpicture/*.go
       - examples/picture/*.go
+      - examples/heatpicture/perlin/*.go
     generates:
       - bin/ntcharts-chartpicture
       - bin/ntcharts-picture
+      - bin/ntcharts-heatpicture-perlin
 
   build-ex-quickstart:
     desc: 'Build quickstart example'
@@ -253,7 +260,7 @@ tasks:
     cmds:
       - rm -f bin/ntcharts-barchart-horizontal bin/ntcharts-barchart-vertical
       - rm -f bin/ntcharts-canvas-logo
-      - rm -f bin/ntcharts-heatmap-aoc2024 bin/ntcharts-heatmap-functor bin/ntcharts-heatmap-perlin bin/ntcharts-heatmap-simple
+      - rm -f bin/ntcharts-heatmap-aoc2024 bin/ntcharts-heatmap-functor bin/ntcharts-heatmap-perlin bin/ntcharts-heatmap-simple bin/ntcharts-heatpicture-perlin
       - rm -f bin/ntcharts-graph-braille bin/ntcharts-graph-candlesticks bin/ntcharts-graph-circles bin/ntcharts-graph-columns bin/ntcharts-graph-lines bin/ntcharts-graph-rows
       - rm -f bin/ntcharts-linechart-circles bin/ntcharts-linechart-lines bin/ntcharts-linechart-scatter bin/ntcharts-linechart-streaming bin/ntcharts-linechart-timeseries bin/ntcharts-linechart-wavelines
       - rm -f bin/ntcharts-chartpicture bin/ntcharts-picture

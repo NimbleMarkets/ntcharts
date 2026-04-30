@@ -58,7 +58,13 @@ func TestModel_SetImageNil_ClearsView(t *testing.T) {
 	}
 }
 
-func TestModel_KittyMode_ViewSilentUntilFrameDelivered(t *testing.T) {
+// TestModel_KittyMode_FallsBackToGlyphUntilFrameDelivered verifies the
+// transitional Glyph fallback: in Kitty mode, if the placeholder grid
+// hasn't been encoded yet (e.g., immediately after a Glyph→Kitty toggle
+// or SetImage), View returns Glyph half-blocks of the current image so
+// callers don't see a blank window during the async encode. Once a real
+// KittyFrameMsg lands, View returns the placeholder grid as usual.
+func TestModel_KittyMode_FallsBackToGlyphUntilFrameDelivered(t *testing.T) {
 	m := New()
 	m.SetSize(20, 10)
 	if cmd := m.Toggle(); cmd != nil {
@@ -74,9 +80,14 @@ func TestModel_KittyMode_ViewSilentUntilFrameDelivered(t *testing.T) {
 		t.Fatal("SetImage in Kitty mode should return a render Cmd, got nil")
 	}
 
-	// Before delivering the frame, View should be empty (silent mid-render).
-	if got := m.View().Content; got != "" {
-		t.Fatalf("expected empty View() before KittyFrameMsg, got %q", got)
+	// Before delivering the frame, View should fall back to Glyph
+	// half-blocks of the current image (transitional content).
+	pre := m.View().Content
+	if pre == "" {
+		t.Fatal("expected non-empty View() (Glyph fallback) before KittyFrameMsg")
+	}
+	if !strings.Contains(pre, "▄") {
+		t.Errorf("expected Glyph fallback to contain half-block ▄, got %q", pre[:min(120, len(pre))])
 	}
 
 	// Execute the Cmd to produce the KittyFrameMsg.
@@ -95,8 +106,15 @@ func TestModel_KittyMode_ViewSilentUntilFrameDelivered(t *testing.T) {
 		t.Fatal("Cmd from Update should produce a non-nil tea.Msg")
 	}
 
-	if got := m.View().Content; got == "" {
+	post := m.View().Content
+	if post == "" {
 		t.Fatal("expected non-empty View() after frame applied")
+	}
+	// After the frame lands the View switches to the Kitty placeholder
+	// grid (built from kitty.Placeholder + diacritics — distinguishable
+	// from Glyph half-blocks).
+	if post == pre {
+		t.Errorf("View should switch from Glyph fallback to Kitty grid after frame applied; got identical pre/post")
 	}
 }
 

@@ -151,3 +151,11 @@ The example's source image is a hand-made 1-bit recreation of Hokusai's waves:
 `ntcharts-chartpicture` [(source)](./chartpicture/main.go)<br>
 <img src="chartpicture/demo.gif" alt="chartpicture animated image"/>
 
+## Heat Picture
+
+`heatpicture` is a continuous-field heatmap rendered through an embedded `picture.Model` — a `Sampler func(x, y float64) float64` is sampled at full terminal-pixel resolution in Kitty mode (smooth gradients, no cell-grid quantization), and at half-block resolution in Glyph mode for fast fallback.  Compared to `heatmap` (which stores sparse data points and renders one solid color per cell), `heatpicture` is the right fit for function-driven sources where every pixel can be sampled cheaply.
+
+The Perlin demo animates a 2D Perlin-noise field. `<space>` starts/stops the animation; `t` toggles Glyph ↔ Kitty; `F` cycles the sampling factor (1.0 → 0.5 → 0.25) to trade quality for animation smoothness on large terminals; `g`/`i` cycle/invert the gradient; `a`/`z`, `s`/`x`, `d`/`c`, `f`/`v` adjust α, β, n, and seed.  The info bar shows per-frame render time and frame/composite counters.
+
+`ntcharts-heatpicture-perlin` [(source)](./heatpicture/perlin/main.go)
+
