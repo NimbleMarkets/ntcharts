@@ -37,7 +37,7 @@ func TestCursor(t *testing.T) {
 	h := 15
 	c := New(w, h)
 
-	c.SetCursor(Point{w / 2, h / 2})
+	c.SetCursor(Point{X: w / 2, Y: h / 2})
 	p := c.Cursor()
 	if p.X != w/2 {
 		t.Errorf("CursorX not set correctly:%d", p.X)
@@ -55,7 +55,7 @@ func TestCursor(t *testing.T) {
 		t.Errorf("CursorY not set correctly after clear:%d", p.Y)
 	}
 
-	c.SetCursor(Point{-1, -1})
+	c.SetCursor(Point{X: -1, Y: -1})
 	p = c.Cursor()
 	if p.X != 0 {
 		t.Errorf("CursorX not bounded:%d", p.X)
@@ -64,7 +64,7 @@ func TestCursor(t *testing.T) {
 		t.Errorf("CursorY not bounded:%d", p.Y)
 	}
 
-	c.SetCursor(Point{w, h})
+	c.SetCursor(Point{X: w, Y: h})
 	p = c.Cursor()
 	if p.X != w-1 {
 		t.Errorf("CursorX not bounded:%d", p.X)
@@ -91,7 +91,7 @@ func TestResize(t *testing.T) {
 	w := 30
 	h := 15
 	c := New(w, h)
-	c.SetCursor(Point{w / 2, h / 2})
+	c.SetCursor(Point{X: w / 2, Y: h / 2})
 
 	nW := w + 5
 	nH := h + 5
@@ -102,7 +102,7 @@ func TestResize(t *testing.T) {
 		t.Error("Cursor not set to (0,0) after Resize()")
 	}
 
-	c.SetCursor(Point{w, h})
+	c.SetCursor(Point{X: w, Y: h})
 	p = c.Cursor()
 	if p.X != w {
 		t.Errorf("CursorX not set correctly after resize:%d", p.X)
@@ -117,26 +117,26 @@ func TestSetRune(t *testing.T) {
 	h := 5
 	c := New(w, h)
 
-	r := c.Cell(Point{w / 2, h / 2}).Rune
+	r := c.Cell(Point{X: w / 2, Y: h / 2}).Rune
 	if r != 0 {
 		t.Errorf("Rune not initialized:'%c'", r)
 	}
 
-	if c.SetRune(Point{w, h}, 'A') {
+	if c.SetRune(Point{X: w, Y: h}, 'A') {
 		t.Error("SetRune not bounded")
 	}
 
-	if !c.SetRune(Point{w / 2, h / 2}, 'A') {
+	if !c.SetRune(Point{X: w / 2, Y: h / 2}, 'A') {
 		t.Error("SetRune not set correctly")
 	}
 
-	r = c.Cell(Point{w / 2, h / 2}).Rune
+	r = c.Cell(Point{X: w / 2, Y: h / 2}).Rune
 	if r != 'A' {
 		t.Errorf("Rune not set correctly:'%c'", r)
 	}
 
 	c.Clear()
-	r = c.Cell(Point{w / 2, h / 2}).Rune
+	r = c.Cell(Point{X: w / 2, Y: h / 2}).Rune
 	if r != 0 {
 		t.Errorf("Rune not clear correctly:'%c'", r)
 	}
@@ -151,7 +151,7 @@ func TestFill(t *testing.T) {
 
 	for y := 0; y < c.Height(); y++ {
 		for x := 0; x < c.Width(); x++ {
-			r := c.Cell(Point{x, y}).Rune
+			r := c.Cell(Point{X: x, Y: y}).Rune
 			if r != 'B' {
 				t.Errorf("Rune did not fill correctly:'%c'", r)
 				return

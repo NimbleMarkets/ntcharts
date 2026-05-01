@@ -54,7 +54,7 @@ func (p Float64Point) Sub(f Float64Point) Float64Point {
 
 // NewPointFromFloat64Point returns a new Point from a given Float64Point.
 func NewPointFromFloat64Point(f Float64Point) Point {
-	return Point{int(math.Round(f.X)), int(math.Round(f.Y))}
+	return Point{X: int(math.Round(f.X)), Y: int(math.Round(f.Y))}
 }
 
 // CanvasYCoordinates returns a sequence of Y coordinates in the
@@ -94,7 +94,7 @@ func CanvasPoints(origin Point, seq []Point) (r []Point) {
 // in the Cartesian coordinates system (X,Y is bottom left)
 // by passing the graph origin in the canvas coordinates system.
 func CanvasPoint(origin Point, p Point) (r Point) {
-	return Point{origin.X + p.X, origin.Y - p.Y}
+	return Point{X: origin.X + p.X, Y: origin.Y - p.Y}
 }
 
 // CanvasPointFromFloat64Point returns a Point
@@ -272,7 +272,7 @@ func (m *Model) SetLinesWithStyle(lines []string, s lipgloss.Style) bool {
 		if y >= m.area.Dy() {
 			break
 		}
-		if !m.SetStringWithStyle(Point{0, y}, l, s) {
+		if !m.SetStringWithStyle(Point{X: 0, Y: y}, l, s) {
 			return false // should not happen
 		}
 	}

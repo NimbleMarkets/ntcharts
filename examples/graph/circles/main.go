@@ -132,7 +132,7 @@ func main() {
 	// canvas 3 draws two filled circles around the cursor
 	// with the intersection of the circles not filled
 
-	m := model{c1, c2, c3, canvas.Point{w / 2, h / 2}}
+	m := model{c1, c2, c3, canvas.Point{X: w / 2, Y: h / 2}}
 	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
 	// or the WASM/ghostty-web bridge depending on build target.
 	// See https://github.com/NimbleMarkets/go-booba-example.

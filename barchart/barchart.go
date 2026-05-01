@@ -449,12 +449,12 @@ func (m *Model) drawBars() {
 				}
 				if m.horizontal {
 					graph.DrawRowLeftToRight(&m.Canvas,
-						canvas.Point{startX, i},
+						canvas.Point{X: startX, Y: i},
 						math.Min(sum, barLen),
 						style)
 				} else {
 					graph.DrawColumnBottomToTop(&m.Canvas,
-						canvas.Point{i, m.origin.Y - 1},
+						canvas.Point{X: i, Y: m.origin.Y - 1},
 						math.Min(sum, barLen), style)
 				}
 				sum -= v[j]
@@ -482,12 +482,12 @@ func (m *Model) drawAxisAndLabels() {
 		if b >= 0 && b < dLen {
 			if b != lastIdx {
 				l := m.data[b].bd.Label
-				p := canvas.Point{i, m.origin.Y + 1}
+				p := canvas.Point{X: i, Y: m.origin.Y + 1}
 				if m.horizontal {
 					if len(l) > m.origin.X {
 						l = l[:m.origin.X]
 					}
-					p = canvas.Point{0, i}
+					p = canvas.Point{X: 0, Y: i}
 				} else {
 					if len(l) > m.barWidth {
 						l = l[:m.barWidth]

@@ -137,7 +137,7 @@ func main() {
 	graphYCoords2 := []int{9, 3, 1, 8, 9, 7, 2, 4, 5, 4, 0, 4, 0, 5, 7, 8, 5} // Cartesian coordinates with (0,0) as bottom left
 	canvasYCoords2 := canvas.CanvasYCoordinates(xAxis, graphYCoords2)         // Canvas coordinates with (0,0) as top left
 
-	m := model{c1, c2, c3, canvasYCoords1, canvasYCoords2, canvas.Point{yAxis, xAxis}, z}
+	m := model{c1, c2, c3, canvasYCoords1, canvasYCoords2, canvas.Point{X: yAxis, Y: xAxis}, z}
 	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
 	// or the WASM/ghostty-web bridge depending on build target.
 	// See https://github.com/NimbleMarkets/go-booba-example.

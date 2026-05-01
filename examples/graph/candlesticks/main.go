@@ -119,7 +119,7 @@ func main() {
 	c2 := canvas.New(w, h)
 
 	// canvas shows different color style and usage of DrawCandlestickBottomToTop() function
-	m := model{c1, c2, canvas.Point{0, h - 1}}
+	m := model{c1, c2, canvas.Point{X: 0, Y: h - 1}}
 	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
 	// or the WASM/ghostty-web bridge depending on build target.
 	// See https://github.com/NimbleMarkets/go-booba-example.

@@ -42,18 +42,18 @@ func (m model) Init() tea.Cmd {
 	// draw data set 1
 	m.c1.Clear()
 	graph.DrawXYAxisLeft(&m.c1, m.cursor, axisStyle) // demo X axis extending left
-	graph.DrawColumns(&m.c1, m.cursor.Add(canvas.Point{1, -1}), columnLens1, blockStyle)
+	graph.DrawColumns(&m.c1, m.cursor.Add(canvas.Point{X: 1, Y: -1}), columnLens1, blockStyle)
 
 	// draw data set 2
 	m.c2.Clear()
 	graph.DrawXYAxisLeft(&m.c2, m.cursor, axisStyle)
-	graph.DrawColumns(&m.c2, m.cursor.Add(canvas.Point{1, -1}), columnLens2, blockStyle2)
+	graph.DrawColumns(&m.c2, m.cursor.Add(canvas.Point{X: 1, Y: -1}), columnLens2, blockStyle2)
 
 	// draw data set 2 on top of data set 1
 	m.c3.Clear()
 	graph.DrawXYAxisLeft(&m.c3, m.cursor, axisStyle)
-	graph.DrawColumns(&m.c3, m.cursor.Add(canvas.Point{1, -1}), columnLens1, blockStyle)
-	graph.DrawColumns(&m.c3, m.cursor.Add(canvas.Point{1, -1}), columnLens2, blockStyle2)
+	graph.DrawColumns(&m.c3, m.cursor.Add(canvas.Point{X: 1, Y: -1}), columnLens1, blockStyle)
+	graph.DrawColumns(&m.c3, m.cursor.Add(canvas.Point{X: 1, Y: -1}), columnLens2, blockStyle2)
 	return nil
 }
 
@@ -99,7 +99,7 @@ func main() {
 	// canvas 3 draws columns set 2 on top of columns set 1
 	// columns will replace existing ones if the total rune heights are the same
 
-	m := model{c1, c2, c3, canvas.Point{yAxis, xAxis}}
+	m := model{c1, c2, c3, canvas.Point{X: yAxis, Y: xAxis}}
 	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea
 	// or the WASM/ghostty-web bridge depending on build target.
 	// See https://github.com/NimbleMarkets/go-booba-example.

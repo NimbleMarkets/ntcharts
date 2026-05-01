@@ -136,7 +136,7 @@ func (m *Model) DrawColumnsOnly() {
 	m.Canvas.Clear()
 	d := m.buf.ReadAll()
 	graph.DrawColumns(&m.Canvas,
-		canvas.Point{m.Canvas.Width() - len(d), m.Canvas.Height() - 1},
+		canvas.Point{X: m.Canvas.Width() - len(d), Y: m.Canvas.Height() - 1},
 		d,
 		m.Style)
 }

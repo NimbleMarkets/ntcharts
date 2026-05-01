@@ -89,7 +89,7 @@ func selectedData() (r string) {
 
 func (m *model) setBarData(b *barchart.Model, msg tea.MouseMsg) {
 	x, y := m.zM.Get(b.ZoneID()).Pos(msg)
-	selectedBarData = b.BarDataFromPoint(canvas.Point{x, y})
+	selectedBarData = b.BarDataFromPoint(canvas.Point{X: x, Y: y})
 }
 
 func (m model) Init() tea.Cmd {

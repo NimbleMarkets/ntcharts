@@ -107,17 +107,17 @@ func getExampleCanvas1() (c canvas.Model) {
 
 	// Canvas coordinate system uses (0,0) as top left of Canvas
 	// set runes in line 4 using string starting at (X,Y) coordinates (7,4) (\u2588 is █)
-	c1.SetString(canvas.Point{7, 4}, " IMBLE   \u2588 █ this will be dropped")
+	c1.SetString(canvas.Point{X: 7, Y: 4}, " IMBLE   \u2588 █ this will be dropped")
 
 	// set runes in line 5 using []rune starting at (X,Y) coordinates (1,5)
 	// (\u2588 and 0x2588 are both █)
-	c1.SetRunes(canvas.Point{1, 5}, []rune{'\u2588', ' ', 0x2588, ' ', ' ', ' ', 'M', 'A', 'R', 'K', 'E', 'T', 'S'})
+	c1.SetRunes(canvas.Point{X: 1, Y: 5}, []rune{'\u2588', ' ', 0x2588, ' ', ' ', ' ', 'M', 'A', 'R', 'K', 'E', 'T', 'S'})
 
 	// set specific Cell at coordinates (7, 4)
-	c1.SetCell(canvas.Point{7, 4}, canvas.NewCellWithStyle('N', highlightStyle))
+	c1.SetCell(canvas.Point{X: 7, Y: 4}, canvas.NewCellWithStyle('N', highlightStyle))
 
 	// set specific Cell styles at coordinates (7, 5)
-	c1.SetCellStyle(canvas.Point{7, 5}, highlightStyle) // 'M'
+	c1.SetCellStyle(canvas.Point{X: 7, Y: 5}, highlightStyle) // 'M'
 
 	c1.ViewHeight = 6
 	c1.ViewWidth = 18
