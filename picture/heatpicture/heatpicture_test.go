@@ -394,3 +394,21 @@ func TestIsHeatPictureMsg(t *testing.T) {
 		t.Error("expected IsHeatPictureMsg to reject unrelated messages")
 	}
 }
+
+func TestModel_Fit_FromConfig(t *testing.T) {
+	m := NewWithConfig(Config{Fit: picture.FitFill})
+	if got := m.Fit(); got != picture.FitFill {
+		t.Fatalf("Fit from Config not honored: got %v want FitFill", got)
+	}
+}
+
+func TestModel_SetFit_Forwards(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	if cmd := m.SetFit(picture.FitCover); cmd != nil {
+		t.Fatalf("SetFit in Glyph mode should return nil, got %v", cmd)
+	}
+	if got := m.Fit(); got != picture.FitCover {
+		t.Fatalf("SetFit didn't take: got %v want FitCover", got)
+	}
+}

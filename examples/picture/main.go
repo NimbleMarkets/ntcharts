@@ -99,6 +99,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if c := m.rightPic.Toggle(); c != nil {
 				cmds = append(cmds, c)
 			}
+		case "f":
+			next := nextFit(m.leftPic.Fit())
+			if c := m.leftPic.SetFit(next); c != nil {
+				cmds = append(cmds, c)
+			}
+			if c := m.rightPic.SetFit(next); c != nil {
+				cmds = append(cmds, c)
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -221,7 +229,8 @@ func (m model) View() tea.View {
 	footer := lipgloss.NewStyle().
 		Width(m.width).
 		Foreground(lipgloss.Color("242")).
-		Render(fmt.Sprintf("mode: %s   g toggle   q quit", mode))
+		Render(fmt.Sprintf("mode: %s   fit: %s   g toggle   f cycle fit   q quit",
+			mode, fitName(m.leftPic.Fit())))
 
 	parts := []string{title, panes}
 	if err := m.rightPic.Err(); err != nil {
@@ -266,6 +275,28 @@ func buildPane(content, top string, captions []string, innerCols, innerRows int)
 		lines = append(lines, captionStyle.Render(truncate(c, innerCols)))
 	}
 	return strings.Join(lines, "\n")
+}
+
+func nextFit(f picture.FitMode) picture.FitMode {
+	switch f {
+	case picture.FitContain:
+		return picture.FitFill
+	case picture.FitFill:
+		return picture.FitCover
+	default:
+		return picture.FitContain
+	}
+}
+
+func fitName(f picture.FitMode) string {
+	switch f {
+	case picture.FitFill:
+		return "Fill"
+	case picture.FitCover:
+		return "Cover"
+	default:
+		return "Contain"
+	}
 }
 
 func truncate(s string, width int) string {

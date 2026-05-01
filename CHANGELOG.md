@@ -1,7 +1,10 @@
 # CHANGELOG
 
-## v2.0.4 (2026-04-29)
+## v2.1.0 (2026-05-01)
 
+  * **BREAKING (visual only):** `picture.Model` in Kitty mode now defaults to `FitContain` (preserve aspect ratio, letterbox) instead of stretching to fill the cell rectangle. Glyph and Kitty paths now produce identical aspect ratio. Restore previous Kitty behavior with `picture.Config{Fit: picture.FitFill}`.
+  * feat(picture): add `FitMode` (`FitContain`, `FitFill`, `FitCover`), `Config.Fit`, `Model.Fit()`, `Model.SetFit()`. Both render paths flow through a shared `prepareSource` helper so fit semantics are applied identically in Glyph and Kitty modes. `chartpicture`, `heatpicture`, and `pictureurl` add the same `Config.Fit` field and `Fit()` / `SetFit()` forwarders for API parity.
+  * feat(examples/picture): `f` key cycles fit modes (Contain → Fill → Cover) on both panes; footer shows the current fit.
   * Replace `github.com/eliukblau/pixterm => github.com/NimbleMarkets/pixterm` until bugfixes are upstreamed
   * fix(kitty): geometry-change renders now delete the previous placement before re-transmitting, fixing stuck-at-old-geometry behavior in Ghostty (and other terminals where TransmitAndPut at new c/r doesn't relocate an already-on-screen virtual placement)
   * Add [web-based demos](https://nimblemarkets.github.io/ntcharts) using [`go-booba`](https://github.com/NimbleMarkets/go-booba)

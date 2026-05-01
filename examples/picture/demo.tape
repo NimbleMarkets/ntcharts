@@ -23,5 +23,14 @@ Type "g"
 Sleep 1.5s
 Type "g"
 
+Sleep 1.5s
+Type "f"
+
+Sleep 1.5s
+Type "f"
+
+Sleep 1.5s
+Type "f"
+
 Hide
 Type "q"

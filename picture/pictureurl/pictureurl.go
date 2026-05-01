@@ -33,6 +33,7 @@ type Config struct {
 	// Base passthrough.
 	KittyID    int
 	Background color.Color
+	Fit        picture.FitMode
 
 	// URL-specific.
 	MaxSize    int64         // default 15 MiB
@@ -102,6 +103,7 @@ func NewWithConfig(cfg Config) Model {
 		pic: picture.NewWithConfig(picture.Config{
 			KittyID:    cfg.KittyID,
 			Background: cfg.Background,
+			Fit:        cfg.Fit,
 		}),
 		cache:      make(map[string]image.Image),
 		errs:       make(map[string]error),
@@ -233,6 +235,12 @@ func (m *Model) Toggle() tea.Cmd { return m.pic.Toggle() }
 
 // Mode forwards to the embedded picture.Model.
 func (m *Model) Mode() picture.PictureMode { return m.pic.Mode() }
+
+// Fit forwards to the embedded picture.Model.
+func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
+
+// SetFit forwards to the embedded picture.Model.
+func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
 // Update routes fetch-completion messages and delegates everything else to
 // the embedded picture.Model.

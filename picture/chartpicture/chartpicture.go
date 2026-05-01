@@ -23,6 +23,13 @@ type Config struct {
 	CellWidthPx  int
 	CellHeightPx int
 	Theme        string
+
+	// Fit controls how the rendered chart is mapped onto the cell
+	// rectangle in the embedded picture.Model. The zero value is
+	// FitContain. In practice chartpicture renders at the cell-rect
+	// pixel dimensions, so all three modes look identical here — the
+	// field exists for API parity with picture.Model.
+	Fit picture.FitMode
 }
 
 // Model wraps picture.Model with go-analyze/charts as the image source.
@@ -65,6 +72,7 @@ func NewWithConfig(cfg Config) Model {
 		pic: picture.NewWithConfig(picture.Config{
 			KittyID:    cfg.KittyID,
 			Background: cfg.Background,
+			Fit:        cfg.Fit,
 		}),
 		cellW: cfg.CellWidthPx,
 		cellH: cfg.CellHeightPx,
@@ -91,6 +99,12 @@ func (m *Model) Err() error { return m.err }
 
 // Mode forwards to the embedded picture.Model.
 func (m *Model) Mode() picture.PictureMode { return m.pic.Mode() }
+
+// Fit forwards to the embedded picture.Model.
+func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
+
+// SetFit forwards to the embedded picture.Model.
+func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
 // Init forwards to the embedded picture.Model so the terminal's real cell
 // pixel size is queried at startup and Kitty placements fill the cell

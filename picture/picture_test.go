@@ -681,6 +681,142 @@ func extractAPCPayload(apc string) ([]byte, bool) {
 	return decoded, err == nil
 }
 
+func TestModel_Fit_Default_IsContain(t *testing.T) {
+	m := New()
+	if got := m.Fit(); got != FitContain {
+		t.Fatalf("default Fit should be FitContain, got %v", got)
+	}
+}
+
+func TestModel_Fit_FromConfig(t *testing.T) {
+	m := NewWithConfig(Config{Fit: FitCover})
+	if got := m.Fit(); got != FitCover {
+		t.Fatalf("Fit from Config not honored: got %v want FitCover", got)
+	}
+}
+
+func TestModel_SetFit_NoOpWhenUnchanged(t *testing.T) {
+	m := New()
+	m.SetSize(40, 20)
+	m.SetImage(smallImage(color.RGBA{R: 200, G: 0, B: 0, A: 255}))
+	seqBefore := m.seq
+	if cmd := m.SetFit(FitContain); cmd != nil {
+		t.Fatalf("SetFit(current) should return nil, got %v", cmd)
+	}
+	if m.seq != seqBefore {
+		t.Fatalf("SetFit(current) bumped seq: before=%d after=%d", seqBefore, m.seq)
+	}
+}
+
+func TestModel_SetFit_GlyphMode_BumpsSeqReturnsNil(t *testing.T) {
+	m := New()
+	m.SetSize(40, 20)
+	m.SetImage(smallImage(color.RGBA{R: 0, G: 200, B: 0, A: 255}))
+	seqBefore := m.seq
+	if cmd := m.SetFit(FitFill); cmd != nil {
+		t.Fatalf("SetFit in Glyph mode should return nil, got %v", cmd)
+	}
+	if m.seq <= seqBefore {
+		t.Fatalf("SetFit should bump seq: before=%d after=%d", seqBefore, m.seq)
+	}
+	if m.Fit() != FitFill {
+		t.Fatalf("Fit should be FitFill after SetFit, got %v", m.Fit())
+	}
+	// Glyph cache should have been invalidated.
+	if m.glyphCache != "" {
+		t.Errorf("expected glyphCache invalidated after SetFit, got non-empty")
+	}
+}
+
+func TestModel_SetFit_KittyMode_ReturnsRenderCmd(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle() // → Kitty
+	m.SetImage(smallImage(color.RGBA{R: 50, G: 50, B: 200, A: 255}))
+	if cmd := m.SetFit(FitFill); cmd == nil {
+		t.Fatal("SetFit in Kitty mode with image set should return a non-nil Cmd")
+	}
+}
+
+func TestModel_SetFit_KittyMode_PrependsDeleteOnFitChange(t *testing.T) {
+	// After a successful Kitty placement, a fit change should produce a
+	// render Cmd whose APC starts with the kittyDeleteImage sequence.
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle()
+	m.SetImage(smallImage(color.RGBA{R: 50, G: 50, B: 200, A: 255}))
+	cmd := m.renderCmd()
+	if cmd == nil {
+		t.Fatal("setup: renderCmd should be non-nil after SetImage in Kitty mode")
+	}
+	msg := cmd().(KittyFrameMsg)
+	// Simulate the placement landing.
+	m.Update(msg)
+
+	// Now flip fit; the resulting Cmd's APC should start with delete.
+	cmd2 := m.SetFit(FitFill)
+	if cmd2 == nil {
+		t.Fatal("SetFit should return a Cmd")
+	}
+	msg2 := cmd2().(KittyFrameMsg)
+	deletePrefix := kittyDeleteImage(m.kittyID)
+	if !strings.HasPrefix(msg2.APC, deletePrefix) {
+		// Show first ~50 bytes for diagnosis.
+		head := msg2.APC
+		if len(head) > 60 {
+			head = head[:60]
+		}
+		t.Fatalf("expected APC to start with kittyDeleteImage on fit change; got first bytes: %q", head)
+	}
+}
+
+// TestModel_FitContain_GlyphAndKitty_AgreeOnLetterbox is the canary for
+// "consistency in this API". For a non-square source and non-square cell
+// rect, both render paths consume the same prepared bitmap from
+// prepareSource — we assert at the prepared-bitmap level since the encoded
+// Kitty APC is opaque, then sanity-check that both backends produce
+// non-empty output for the same Model state.
+func TestModel_FitContain_GlyphAndKitty_AgreeOnLetterbox(t *testing.T) {
+	// 200x100 source (AR 2.0) into a 10x10 cell rect with 8x16 cell pixels
+	// → 80x160 target (AR 0.5). Inscribed band rows 60..100; bars rows 0..60
+	// and 100..160.
+	src := solidImage(200, 100, color.RGBA{R: 0, G: 0, B: 200, A: 255})
+
+	prepared := prepareSource(src, FitContain, 10, 10, 8, 16, color.Transparent)
+	rgba := prepared.(*image.RGBA)
+
+	// Confirm the prepared bitmap has the letterbox we expect — this is the
+	// single source of truth that BOTH backends will encode.
+	if a := rgba.RGBAAt(40, 30).A; a != 0 {
+		t.Errorf("prepared bitmap top bar should be transparent, got alpha=%d", a)
+	}
+	if a := rgba.RGBAAt(40, 80).A; a != 255 {
+		t.Errorf("prepared bitmap inscribed band should be opaque, got alpha=%d", a)
+	}
+	if a := rgba.RGBAAt(40, 130).A; a != 0 {
+		t.Errorf("prepared bitmap bottom bar should be transparent, got alpha=%d", a)
+	}
+
+	// Glyph path: View() in Glyph mode must produce non-empty output.
+	m := NewWithConfig(Config{Fit: FitContain, CellPixelWidth: 8, CellPixelHeight: 16})
+	m.SetSize(10, 10)
+	m.SetImage(src)
+	if got := m.View().Content; got == "" {
+		t.Fatal("Glyph FitContain View should be non-empty")
+	}
+
+	// Kitty path: switch and confirm renderCmd produces a non-empty APC.
+	m.Toggle()
+	cmd := m.renderCmd()
+	if cmd == nil {
+		t.Fatal("Kitty renderCmd should be non-nil")
+	}
+	msg := cmd().(KittyFrameMsg)
+	if msg.APC == "" {
+		t.Fatal("Kitty APC should be non-empty for FitContain")
+	}
+}
+
 func hasAPCOption(apc, key string) bool {
 	const (
 		prefix = "\x1b_G"

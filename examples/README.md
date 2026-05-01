@@ -141,6 +141,8 @@ Heatmaps display (x,y) data over a grid with color mapping.
 The example's source image is a hand-made 1-bit recreation of Hokusai's waves:
  [*01 of 36 views of Mt Fuji by hypertalking*](https://www.hypertalking.com/2023/05/08/1-bit-pixel-art-of-hokusais-the-great-wave-off-kanagawa/)
 
+`g` toggles Glyph ↔ Kitty; `f` cycles fit mode (Contain → Fill → Cover); `q` quits.
+
 `ntcharts-picture` [(source)](./picture/main.go)<br>
 <img src="picture/demo.gif" alt="picture wave image"/>
 

@@ -7,24 +7,14 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi/kitty"
-	"golang.org/x/image/draw"
 )
 
-// buildKittyAPC encodes img as a Kitty graphics APC sequence. cellPixelW and
-// cellPixelH are the terminal cell pixel dimensions; multiplied by cols and
-// rows they form the source pixel size that matches the c×r cell rectangle.
-// Kitty preserves source aspect ratio when placing into cells, so pre-scaling
-// the source to the cell-rect pixel dimensions makes that fit a true fill.
-func buildKittyAPC(img image.Image, id, cols, rows, cellPixelW, cellPixelH int) string {
-	targetW := cols * cellPixelW
-	targetH := rows * cellPixelH
-	srcForAPC := img
-	if b := img.Bounds(); b.Dx() != targetW || b.Dy() != targetH {
-		scaled := image.NewRGBA(image.Rect(0, 0, targetW, targetH))
-		draw.CatmullRom.Scale(scaled, scaled.Bounds(), img, b, draw.Src, nil)
-		srcForAPC = scaled
-	}
-
+// buildKittyAPC encodes img as a Kitty graphics APC sequence at the given
+// (cols, rows) cell rectangle. The caller is responsible for sizing img to
+// (cols*cellPixelW × rows*cellPixelH) — do that via prepareSource. Kitty
+// places the image into the cell rectangle preserving source AR, which is
+// a no-op when source AR matches cell-rect AR.
+func buildKittyAPC(img image.Image, id, cols, rows int) string {
 	var buf bytes.Buffer
 	opts := &kitty.Options{
 		Action:           kitty.TransmitAndPut,
@@ -37,7 +27,7 @@ func buildKittyAPC(img image.Image, id, cols, rows, cellPixelW, cellPixelH int) 
 		Quite:            2,
 		Chunk:            true,
 	}
-	if err := kitty.EncodeGraphics(&buf, srcForAPC, opts); err != nil {
+	if err := kitty.EncodeGraphics(&buf, img, opts); err != nil {
 		return ""
 	}
 	return buf.String()

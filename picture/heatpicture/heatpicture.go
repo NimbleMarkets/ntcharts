@@ -56,6 +56,13 @@ type Config struct {
 	// (already at half-block resolution). Out-of-range values are
 	// clamped to (0, 1].
 	SamplingFactor float64
+
+	// Fit controls how the rendered field is mapped onto the cell
+	// rectangle in the embedded picture.Model. The zero value is
+	// FitContain. In practice heatpicture renders at exactly the cell-rect
+	// pixel dimensions, so all three modes look identical here — the
+	// field exists for API parity with picture.Model.
+	Fit picture.FitMode
 }
 
 // Model wraps picture.Model with a continuous heatmap as the image source.
@@ -132,6 +139,7 @@ func NewWithConfig(cfg Config) Model {
 	picCfg := picture.Config{
 		KittyID:         cfg.KittyID,
 		Background:      cfg.Background,
+		Fit:             cfg.Fit,
 		CellPixelWidth:  cfg.CellPixelWidth,
 		CellPixelHeight: cfg.CellPixelHeight,
 	}
@@ -340,6 +348,12 @@ func (m *Model) Toggle() tea.Cmd {
 
 // Mode returns the current rendering mode.
 func (m *Model) Mode() picture.PictureMode { return m.pic.Mode() }
+
+// Fit forwards to the embedded picture.Model.
+func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
+
+// SetFit forwards to the embedded picture.Model.
+func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
 // Err returns the last sampling/encoding error, or nil if the most recent
 // render succeeded.

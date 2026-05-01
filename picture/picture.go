@@ -30,6 +30,16 @@ const (
 	PictureKitty                    // High-res Kitty graphics protocol
 )
 
+// FitMode controls how the source image is mapped onto the cell rectangle.
+// The zero value is FitContain. Out-of-range values are treated as FitContain.
+type FitMode int8
+
+const (
+	FitContain FitMode = iota // preserve aspect ratio, letterbox (default)
+	FitFill                   // stretch to fill the cell rectangle
+	FitCover                  // preserve aspect ratio, crop to fill
+)
+
 const DefaultKittyID = 43
 
 // Sensible defaults for terminal cell pixel size. Most monospace fonts have
@@ -45,6 +55,11 @@ const (
 type Config struct {
 	KittyID    int         // default 43
 	Background color.Color // default color.Transparent (no compositing)
+
+	// Fit controls how the source image is mapped onto the cell
+	// rectangle. The zero value is FitContain (preserve aspect ratio,
+	// letterbox).
+	Fit FitMode
 
 	// CellPixelWidth and CellPixelHeight are the terminal cell dimensions in
 	// pixels. Used in Kitty mode to pre-scale the source image to the c×r
@@ -74,6 +89,7 @@ type Model struct {
 
 	kittyID    int
 	background color.Color
+	fit        FitMode
 
 	cellPixelW, cellPixelH int
 
@@ -89,13 +105,14 @@ type Model struct {
 	lastRenderedGeom kittyGeom
 }
 
-// kittyGeom is the four-tuple of "what dimensions does the Kitty image
-// currently on screen occupy". Zero value means "no image currently
+// kittyGeom is the five-tuple of "what dimensions and fit mode does the Kitty
+// image currently on screen occupy". Zero value means "no image currently
 // placed at this Model's kittyID" — used as a sentinel by renderCmd to
 // skip the delete-prepend on first render.
 type kittyGeom struct {
-	cols, rows           int
+	cols, rows             int
 	cellPixelW, cellPixelH int
+	fit                    FitMode
 }
 
 var nextModelID atomic.Uint64
@@ -127,6 +144,7 @@ func NewWithConfig(cfg Config) Model {
 		background: cfg.Background,
 		cellPixelW: cfg.CellPixelWidth,
 		cellPixelH: cfg.CellPixelHeight,
+		fit:        cfg.Fit,
 	}
 }
 
@@ -216,6 +234,23 @@ func (m *Model) Toggle() tea.Cmd {
 // Mode returns the current rendering mode.
 func (m *Model) Mode() PictureMode { return m.mode }
 
+// Fit returns the current fit mode.
+func (m *Model) Fit() FitMode { return m.fit }
+
+// SetFit updates the fit mode. No-ops if fit is unchanged. Otherwise stores
+// it, bumps seq, invalidates both render caches, and returns m.renderCmd()
+// (nil in Glyph mode, a render Cmd in Kitty mode with an image set).
+func (m *Model) SetFit(fit FitMode) tea.Cmd {
+	if fit == m.fit {
+		return nil
+	}
+	m.fit = fit
+	m.seq++
+	m.invalidateGlyph()
+	m.invalidateKitty()
+	return m.renderCmd()
+}
+
 // Init returns a Cmd that asks the terminal for its cell pixel size so that
 // Kitty placements use real display dims rather than the 8×16 default.
 // Consumers should batch this with their own Init Cmd; the response is
@@ -280,10 +315,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		// terminal — record its geometry so the next renderCmd can
 		// detect a geometry change and prepend a delete.
 		m.lastRenderedGeom = kittyGeom{
-			cols:        m.cols,
-			rows:        m.rows,
-			cellPixelW:  m.cellPixelW,
-			cellPixelH:  m.cellPixelH,
+			cols:       m.cols,
+			rows:       m.rows,
+			cellPixelW: m.cellPixelW,
+			cellPixelH: m.cellPixelH,
+			fit:        m.fit,
 		}
 		return tea.Raw(msg.APC)
 	case uv.CellSizeEvent:
@@ -323,12 +359,15 @@ func (m *Model) View() tea.View {
 	//   - mode == PictureKitty but kittyGrid hasn't been computed yet
 	//     (transitional fallback during a Glyph→Kitty toggle)
 
-	key := fmt.Sprintf("%d|%d|%d", m.seq, m.cols, m.rows)
+	key := fmt.Sprintf("%d|%d|%d|%d", m.seq, m.cols, m.rows, m.fit)
 	if m.glyphKey == key && m.glyphCache != "" {
 		return tea.NewView(m.glyphCache)
 	}
 
-	rendered := composite(m.img, m.background)
+	rendered := prepareSource(m.img, m.fit, m.cols, m.rows, m.cellPixelW, m.cellPixelH, m.background)
+	if rendered == nil {
+		return tea.NewView("")
+	}
 	ascii, err := ansimage.NewScaledFromImage(
 		rendered,
 		m.rows*2,
@@ -363,18 +402,21 @@ func (m *Model) renderCmd() tea.Cmd {
 	if m.mode != PictureKitty || m.img == nil || m.cols <= 0 || m.rows <= 0 {
 		return nil
 	}
-	img := composite(m.img, m.background)
+	// Capture inputs by value; defer the heavy work (prepareSource's
+	// CatmullRom scale + bg compositing, plus buildKittyAPC's PNG encode)
+	// to the returned closure so SetImage/SetSize/SetFit/Update return
+	// immediately and bubbletea runs the render off the main loop.
+	img, bg := m.img, m.background
 	modelID, id, cols, rows, seq := m.modelID, m.kittyID, m.cols, m.rows, m.seq
-	cpw, cph := m.cellPixelW, m.cellPixelH
+	cpw, cph, fit := m.cellPixelW, m.cellPixelH, m.fit
 	prevGeom := m.lastRenderedGeom
 	return func() tea.Msg {
-		apc := buildKittyAPC(img, id, cols, rows, cpw, cph)
-		// If a previous placement exists at different geometry, prepend
-		// a delete so terminals that don't honor a c/r change for
-		// already-on-screen virtual placements (Ghostty) drop the old
-		// geometry first. Composing into one APC string keeps delete
-		// and re-place atomic from bubbletea's renderer perspective.
-		currGeom := kittyGeom{cols: cols, rows: rows, cellPixelW: cpw, cellPixelH: cph}
+		prepared := prepareSource(img, fit, cols, rows, cpw, cph, bg)
+		if prepared == nil {
+			return nil
+		}
+		apc := buildKittyAPC(prepared, id, cols, rows)
+		currGeom := kittyGeom{cols: cols, rows: rows, cellPixelW: cpw, cellPixelH: cph, fit: fit}
 		if prevGeom != (kittyGeom{}) && prevGeom != currGeom {
 			apc = kittyDeleteImage(id) + apc
 		}
