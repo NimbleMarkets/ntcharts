@@ -355,6 +355,10 @@ func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
 // SetFit forwards to the embedded picture.Model.
 func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
+// KittySupported forwards to the embedded picture.Model — Kitty
+// capability is process-wide.
+func (m *Model) KittySupported() picture.KittyCapability { return m.pic.KittySupported() }
+
 // Err returns the last sampling/encoding error, or nil if the most recent
 // render succeeded.
 func (m *Model) Err() error { return m.err }

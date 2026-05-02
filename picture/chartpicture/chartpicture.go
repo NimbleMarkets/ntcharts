@@ -106,6 +106,10 @@ func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
 // SetFit forwards to the embedded picture.Model.
 func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
+// KittySupported forwards to the embedded picture.Model — Kitty
+// capability is process-wide.
+func (m *Model) KittySupported() picture.KittyCapability { return m.pic.KittySupported() }
+
 // Init forwards to the embedded picture.Model so the terminal's real cell
 // pixel size is queried at startup and Kitty placements fill the cell
 // rectangle without letterboxing.

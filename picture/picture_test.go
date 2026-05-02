@@ -474,13 +474,40 @@ func TestInit_DispatchesCellSizeRequest(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("Init must return a non-nil Cmd")
 	}
-	raw, ok := cmd().(tea.RawMsg)
-	if !ok {
-		t.Fatalf("expected tea.RawMsg, got %T", cmd())
+	// Init batches the cell-size request and the Kitty support probe.
+	// Walk the batch and look for the CSI 16 t.
+	found := false
+	for _, sub := range collectBatchCmds(cmd) {
+		if sub == nil {
+			continue
+		}
+		raw, ok := sub().(tea.RawMsg)
+		if !ok {
+			continue
+		}
+		if seq, _ := raw.Msg.(string); seq == "\x1b[16t" {
+			found = true
+			break
+		}
 	}
-	if seq, _ := raw.Msg.(string); seq != "\x1b[16t" {
-		t.Errorf("expected CSI 16 t, got %q", seq)
+	if !found {
+		t.Error("expected Init batch to include a CSI 16 t request")
 	}
+}
+
+// collectBatchCmds runs a Cmd and, if it produced a tea.BatchMsg, returns
+// the sub-Cmds; otherwise returns the single Cmd as a one-element slice.
+// Helps tests inspect Cmds that may be batched.
+func collectBatchCmds(cmd tea.Cmd) []tea.Cmd {
+	if cmd == nil {
+		return nil
+	}
+	msg := cmd()
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		return batch
+	}
+	// Not a batch — wrap the original Cmd so the caller can re-invoke it.
+	return []tea.Cmd{func() tea.Msg { return msg }}
 }
 
 // TestIsPictureMsg_IncludesCellSizeEvent verifies the helper matches the

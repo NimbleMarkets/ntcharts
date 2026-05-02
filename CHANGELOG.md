@@ -1,9 +1,14 @@
 # CHANGELOG
 
+## v2.1.1 (2026-05-02)
+
+ * feat(picture): detect Kitty graphics support and gate Toggle on capability.  In other words, don't blast the terminal with characters when it doesn't support Kitty graphics.
+
 ## v2.1.0 (2026-05-01)
 
   * **BREAKING (visual only):** `picture.Model` in Kitty mode now defaults to `FitContain` (preserve aspect ratio, letterbox) instead of stretching to fill the cell rectangle. Glyph and Kitty paths now produce identical aspect ratio. Restore previous Kitty behavior with `picture.Config{Fit: picture.FitFill}`.
   * feat(picture): add `FitMode` (`FitContain`, `FitFill`, `FitCover`), `Config.Fit`, `Model.Fit()`, `Model.SetFit()`. Both render paths flow through a shared `prepareSource` helper so fit semantics are applied identically in Glyph and Kitty modes. `chartpicture`, `heatpicture`, and `pictureurl` add the same `Config.Fit` field and `Fit()` / `SetFit()` forwarders for API parity.
+  * fix(picture): Glyph mode uses ansimage's `ScaleModeResize` (rather than `ScaleModeFit`) so terminals reporting non-1:2 cell pixel ratios (line-spacing, retina cells) no longer cause Glyph to letterbox while Kitty fills. `prepareSource` already applies the chosen `FitMode`, so the half-block grid just renders the prepared bitmap at exactly `(cols, rows*2)`.
   * feat(examples/picture): `f` key cycles fit modes (Contain → Fill → Cover) on both panes; footer shows the current fit.
   * Replace `github.com/eliukblau/pixterm => github.com/NimbleMarkets/pixterm` until bugfixes are upstreamed
   * fix(kitty): geometry-change renders now delete the previous placement before re-transmitting, fixing stuck-at-old-geometry behavior in Ghostty (and other terminals where TransmitAndPut at new c/r doesn't relocate an already-on-screen virtual placement)

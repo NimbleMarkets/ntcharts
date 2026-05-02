@@ -1,6 +1,8 @@
 // Package picture is a source-agnostic image renderer for Bubble Tea.
 // It supports half-block glyphs (universal) and the Kitty graphics protocol
 // (high-resolution).
+// FitMode controls whether images contain, fill, or cover the target cell
+// rectangle.
 //
 // Use picture/pictureurl for URL-driven fetching on top of this base.
 
@@ -213,6 +215,14 @@ func (m *Model) SetSize(cols, rows int) tea.Cmd {
 func (m *Model) Toggle() tea.Cmd {
 	prev := m.mode
 	if m.mode == PictureGlyph {
+		// Don't enter Kitty if we know the terminal can't render it —
+		// emitting Kitty escapes would print as garbage. Unknown is
+		// allowed: Kitty terminals usually respond well before a user
+		// can press a key, and on the rare occasion the user toggles
+		// during the probe window we'd rather attempt than reject.
+		if KittySupported() == KittyCapabilityUnsupported {
+			return nil
+		}
 		m.mode = PictureKitty
 	} else {
 		m.mode = PictureGlyph
@@ -251,11 +261,18 @@ func (m *Model) SetFit(fit FitMode) tea.Cmd {
 	return m.renderCmd()
 }
 
-// Init returns a Cmd that asks the terminal for its cell pixel size so that
-// Kitty placements use real display dims rather than the 8×16 default.
-// Consumers should batch this with their own Init Cmd; the response is
-// auto-applied by Update via SetCellPixelSize.
-func (m *Model) Init() tea.Cmd { return RequestCellSize() }
+// Init returns a Cmd that asks the terminal for its cell pixel size and
+// probes Kitty graphics support. The cell-size response auto-applies via
+// SetCellPixelSize; the Kitty probe response auto-applies to the
+// process-wide capability state read by KittySupported. Consumers
+// batch this with their own Init Cmd.
+func (m *Model) Init() tea.Cmd {
+	return tea.Batch(RequestCellSize(), QueryKittySupport())
+}
+
+// KittySupported is a convenience for KittySupported() — the Kitty
+// graphics capability is process-wide, not per-Model.
+func (m *Model) KittySupported() KittyCapability { return KittySupported() }
 
 // CellPixelSize returns the configured terminal cell pixel size used to
 // pre-scale Kitty image sources to the placement cell rectangle.
@@ -288,13 +305,14 @@ func (m *Model) SetCellPixelSize(w, h int) tea.Cmd {
 func (m *Model) String() string { return m.View().Content }
 
 // IsPictureMsg reports whether msg is a picture-owned async update. Includes
-// uv.CellSizeEvent because Update auto-applies it via SetCellPixelSize —
-// consumers that gate forwarding on this helper must route the terminal's
-// CSI 16 t reply to Update, or Kitty placements stay at the default 8×16
-// cell-pixel size and visibly letterbox on non-1:2 terminals.
+// uv.CellSizeEvent and uv.KittyGraphicsEvent because Update auto-applies
+// them — consumers that gate forwarding on this helper must route the
+// terminal's CSI 16 t reply AND Kitty query reply to Update, or Kitty
+// placements stay at the default 8×16 cell-pixel size and the Kitty
+// capability stays Unknown.
 func IsPictureMsg(msg tea.Msg) bool {
 	switch msg.(type) {
-	case KittyFrameMsg, uv.CellSizeEvent:
+	case KittyFrameMsg, uv.CellSizeEvent, uv.KittyGraphicsEvent, kittyProbeTickMsg:
 		return true
 	}
 	return false
@@ -324,6 +342,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return tea.Raw(msg.APC)
 	case uv.CellSizeEvent:
 		return m.SetCellPixelSize(msg.Width, msg.Height)
+	case uv.KittyGraphicsEvent:
+		recordKittyResponse(msg)
+		return nil
+	case kittyProbeTickMsg:
+		recordKittyTimeout()
+		return nil
 	}
 	return nil
 }
@@ -368,12 +392,20 @@ func (m *Model) View() tea.View {
 	if rendered == nil {
 		return tea.NewView("")
 	}
+	// ScaleModeResize (not Fit): prepareSource already applied the chosen
+	// FitMode against the actual cell pixel dimensions, producing a bitmap
+	// whose AR matches the cell rect. ansimage's job here is "render into
+	// the half-block grid at exactly (cols, rows*2)", not "preserve AR
+	// again" — pixterm hardcodes a 1:2 cell assumption that disagrees
+	// with the prepared bitmap on terminals reporting non-1:2 cell ratios
+	// (line-spacing, retina cells), causing Glyph to letterbox while Kitty
+	// fills. Resize keeps the two backends consistent.
 	ascii, err := ansimage.NewScaledFromImage(
 		rendered,
 		m.rows*2,
 		m.cols,
 		m.background,
-		ansimage.ScaleModeFit,
+		ansimage.ScaleModeResize,
 		ansimage.NoDithering,
 	)
 	if err != nil {

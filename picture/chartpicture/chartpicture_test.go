@@ -19,13 +19,33 @@ func TestInit_DispatchesCellSizeRequest(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("Init must return a non-nil Cmd")
 	}
-	raw, ok := cmd().(tea.RawMsg)
-	if !ok {
-		t.Fatalf("expected tea.RawMsg, got %T", cmd())
+	if !batchContainsCSI16t(cmd) {
+		t.Error("expected Init to include a CSI 16 t request (possibly batched with the Kitty support probe)")
 	}
-	if seq, _ := raw.Msg.(string); seq != "\x1b[16t" {
-		t.Errorf("expected CSI 16 t, got %q", seq)
+}
+
+// batchContainsCSI16t walks a Cmd (running it, then walking a BatchMsg
+// if produced) and reports whether any sub-Cmd produces a tea.RawMsg
+// carrying "\x1b[16t".
+func batchContainsCSI16t(cmd tea.Cmd) bool {
+	if cmd == nil {
+		return false
 	}
+	msg := cmd()
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, sub := range batch {
+			if batchContainsCSI16t(sub) {
+				return true
+			}
+		}
+		return false
+	}
+	if raw, ok := msg.(tea.RawMsg); ok {
+		if seq, _ := raw.Msg.(string); seq == "\x1b[16t" {
+			return true
+		}
+	}
+	return false
 }
 
 func TestNewDefaults(t *testing.T) {

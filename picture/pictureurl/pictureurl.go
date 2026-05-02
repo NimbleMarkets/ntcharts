@@ -242,6 +242,10 @@ func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
 // SetFit forwards to the embedded picture.Model.
 func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
+// KittySupported forwards to the embedded picture.Model — Kitty
+// capability is process-wide.
+func (m *Model) KittySupported() picture.KittyCapability { return m.pic.KittySupported() }
+
 // Update routes fetch-completion messages and delegates everything else to
 // the embedded picture.Model.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
