@@ -113,8 +113,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// Reserve a 1-row title and 1-row footer; -2 for the pane border.
-		if c := m.chart.SetSize(m.width-2, m.height-4); c != nil {
+		// Pane is m.height-3 outer with a 1-cell border, so content area is
+		// (m.width-2) × (m.height-5). Match the chart to that exactly so
+		// Kitty's placeholder grid isn't truncated by lipgloss (which would
+		// squash the placement vertically into one fewer row, making Kitty
+		// and Glyph fill the pane inconsistently).
+		if c := m.chart.SetSize(m.width-2, m.height-5); c != nil {
 			cmds = append(cmds, c)
 		}
 	case tickMsg:
