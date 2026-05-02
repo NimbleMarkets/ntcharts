@@ -2,6 +2,7 @@ package heatpicture
 
 import (
 	"image/color"
+	"os"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -10,6 +11,14 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/v2/picture"
 )
+
+// TestMain defaults the package-wide Kitty capability to Supported so
+// the rendering tests (which Toggle into Kitty as setup) proceed past
+// picture.Model.Toggle's strict capability gate.
+func TestMain(m *testing.M) {
+	picture.ForceKittyCapability(picture.KittyCapabilitySupported)
+	os.Exit(m.Run())
+}
 
 // constSampler returns a Sampler that always reports the same value, useful
 // for verifying the rendering pipeline ignores the input coordinates.

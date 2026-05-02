@@ -215,12 +215,15 @@ func (m *Model) SetSize(cols, rows int) tea.Cmd {
 func (m *Model) Toggle() tea.Cmd {
 	prev := m.mode
 	if m.mode == PictureGlyph {
-		// Don't enter Kitty if we know the terminal can't render it —
-		// emitting Kitty escapes would print as garbage. Unknown is
-		// allowed: Kitty terminals usually respond well before a user
-		// can press a key, and on the rare occasion the user toggles
-		// during the probe window we'd rather attempt than reject.
-		if KittySupported() == KittyCapabilityUnsupported {
+		// Only enter Kitty when capability is affirmatively Supported.
+		// Both Unknown and Unsupported block: Kitty escapes printed to
+		// a non-Kitty terminal show up as visible garbage, so we'd
+		// rather force a second keypress after the probe resolves than
+		// risk a glitch in the early-startup window before the
+		// capability lands. Transports where auto-detection is
+		// unreliable (ssh multiplexers, tmux passthrough) can opt in
+		// via ForceKittyCapability(KittyCapabilitySupported).
+		if KittySupported() != KittyCapabilitySupported {
 			return nil
 		}
 		m.mode = PictureKitty

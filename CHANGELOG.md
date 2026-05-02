@@ -2,7 +2,7 @@
 
 ## v2.1.1 (2026-05-02)
 
- * feat(picture): detect Kitty graphics support and gate Toggle on capability.  In other words, don't blast the terminal with characters when it doesn't support Kitty graphics.
+ * feat(picture): detect Kitty graphics support and gate Toggle on capability.  In other words, don't blast the terminal with characters when it doesn't support Kitty graphics. `QueryKittySupport` gates the probe based on environment variables; `ForceKittyCapability` can override detection.
 
 ## v2.1.0 (2026-05-01)
 

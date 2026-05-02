@@ -2,6 +2,7 @@ package picture
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,9 +20,11 @@ type KittyCapability int8
 
 const (
 	// KittyCapabilityUnknown is the default state, before the probe has
-	// completed. Toggle into Kitty is allowed in this state — Kitty
-	// terminals usually respond within a few milliseconds, so the
-	// Unknown window is brief.
+	// completed. Toggle into Kitty is BLOCKED in this state — both
+	// Unknown and Unsupported keep Kitty escapes off the wire, so a
+	// non-Kitty terminal never sees garbage. Kitty terminals typically
+	// resolve to Supported within a few milliseconds, after which
+	// Toggle works normally.
 	KittyCapabilityUnknown KittyCapability = iota
 
 	// KittyCapabilitySupported means the terminal answered the Kitty
@@ -78,7 +81,18 @@ type kittyProbeTickMsg struct{}
 // from their Init — only the first emission actually queries the
 // terminal.
 //
-// Two messages drive resolution:
+// Pre-flight env check: most well-behaved terminals silently swallow
+// unknown APC sequences, but some non-Kitty terminals display the
+// probe bytes as visible garbage. To avoid that, the probe is only
+// sent when the process environment indicates a terminal known to
+// support Kitty graphics (kitty, Ghostty, WezTerm, iTerm2, or an
+// explicit TERM=xterm-kitty/xterm-ghostty). Terminals without a
+// positive signal resolve immediately to KittyCapabilityUnsupported
+// without sending anything to the wire. False negatives — Kitty-
+// capable terminals whose env vars don't propagate (some ssh paths,
+// custom builds) — can opt in via ForceKittyCapability.
+//
+// Two messages drive resolution when a probe is sent:
 //   - uv.KittyGraphicsEvent with the probe's ID arrives if the terminal
 //     supports the protocol; Model.Update sets the capability to
 //     KittyCapabilitySupported.
@@ -91,6 +105,17 @@ type kittyProbeTickMsg struct{}
 func QueryKittySupport() tea.Cmd {
 	var cmd tea.Cmd
 	kittyQueryOnce.Do(func() {
+		// If capability was already set (e.g., by ForceKittyCapability
+		// before any Model's Init ran), respect that and skip the probe.
+		if KittySupported() != KittyCapabilityUnknown {
+			return
+		}
+		// If the environment doesn't indicate a Kitty-aware terminal,
+		// don't send any bytes — go straight to Unsupported.
+		if !kittyEnvSignal() {
+			kittyCap.CompareAndSwap(int32(KittyCapabilityUnknown), int32(KittyCapabilityUnsupported))
+			return
+		}
 		cmd = tea.Batch(
 			tea.Raw(buildKittyQueryAPC(kittyProbeID)),
 			tea.Tick(kittyProbeTimeout, func(time.Time) tea.Msg {
@@ -99,6 +124,41 @@ func QueryKittySupport() tea.Cmd {
 		)
 	})
 	return cmd
+}
+
+// kittyEnvSignal reports whether the process environment indicates a
+// terminal known to support the Kitty graphics protocol. Used as the
+// pre-flight gate by QueryKittySupport so probes don't go to terminals
+// that may show the probe bytes as garbage.
+//
+// Recognized signals:
+//   - KITTY_WINDOW_ID, KITTY_INSTALLATION_DIR (kitty itself)
+//   - GHOSTTY_RESOURCES_DIR (Ghostty)
+//   - WEZTERM_EXECUTABLE, WEZTERM_PANE (WezTerm)
+//   - TERM=xterm-kitty, TERM=xterm-ghostty (explicit terminfo entries)
+//   - TERM_PROGRAM=ghostty, WezTerm, iTerm.app (well-known terminal IDs)
+//
+// Anything else returns false; consumers can override via
+// ForceKittyCapability if they have out-of-band knowledge.
+func kittyEnvSignal() bool {
+	if os.Getenv("KITTY_WINDOW_ID") != "" || os.Getenv("KITTY_INSTALLATION_DIR") != "" {
+		return true
+	}
+	if os.Getenv("GHOSTTY_RESOURCES_DIR") != "" {
+		return true
+	}
+	if os.Getenv("WEZTERM_EXECUTABLE") != "" || os.Getenv("WEZTERM_PANE") != "" {
+		return true
+	}
+	switch os.Getenv("TERM") {
+	case "xterm-kitty", "xterm-ghostty":
+		return true
+	}
+	switch os.Getenv("TERM_PROGRAM") {
+	case "ghostty", "WezTerm", "kitty", "iTerm.app":
+		return true
+	}
+	return false
 }
 
 // buildKittyQueryAPC encodes a Kitty graphics query (a=q): a tiny 1×1
