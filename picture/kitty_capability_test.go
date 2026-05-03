@@ -99,15 +99,17 @@ func TestRecordKittyTimeout_DoesNotOverwriteSupported(t *testing.T) {
 	}
 }
 
-// TestRecordKittyResponse_DoesNotOverwriteUnsupported verifies a
-// late-arriving response after the probe timed out is a no-op
-// (CompareAndSwap from Unknown fails).
-func TestRecordKittyResponse_DoesNotOverwriteUnsupported(t *testing.T) {
+// TestRecordKittyResponse_OverridesUnsupportedFromTimeout verifies a
+// real response is authoritative even if the timeout fired first.
+// Bubbletea's eventLoop ordering can deliver the timeout msg before
+// the response in the input queue; in that case the response should
+// still flip capability to Supported, not be silently dropped.
+func TestRecordKittyResponse_OverridesUnsupportedFromTimeout(t *testing.T) {
 	resetKittyCapability(t)
-	recordKittyTimeout()
+	recordKittyTimeout() // sets Unsupported
 	recordKittyResponse(uv.KittyGraphicsEvent{Options: kitty.Options{ID: kittyProbeID}})
-	if got := KittySupported(); got != KittyCapabilityUnsupported {
-		t.Fatalf("late response should not overwrite Unsupported; got %v", got)
+	if got := KittySupported(); got != KittyCapabilitySupported {
+		t.Fatalf("response should override Unsupported set by an earlier timeout; got %v", got)
 	}
 }
 

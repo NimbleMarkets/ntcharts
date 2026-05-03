@@ -49,9 +49,20 @@ const kittyProbeID = 42069101
 const kittyProbeTimeout = 250 * time.Millisecond
 
 var (
-	kittyCap       atomic.Int32 // holds KittyCapability values
-	kittyQueryOnce sync.Once
+	kittyCap          atomic.Int32 // holds KittyCapability values
+	kittyEnvSignalled atomic.Bool  // recorded result of the env preflight
+	kittyQueryOnce    sync.Once
 )
+
+// KittyEnvSignalled reports whether the env preflight saw a positive
+// indicator (TERM=xterm-{kitty,ghostty}, KITTY_*, GHOSTTY_*, WEZTERM_*,
+// recognized TERM_PROGRAM) at the time QueryKittySupport ran. Useful
+// alongside KittySupported() for diagnostics: if KittySupported() ==
+// Unsupported AND KittyEnvSignalled() == true, the probe ran but no
+// response arrived within the timeout — likely a real terminal-side
+// or transport issue. If env wasn't signalled, the probe was skipped
+// to avoid emitting bytes to a terminal that may not swallow APCs.
+func KittyEnvSignalled() bool { return kittyEnvSignalled.Load() }
 
 // KittySupported reports the current process-wide Kitty graphics
 // capability. Returns KittyCapabilityUnknown until the probe started by
@@ -113,9 +124,11 @@ func QueryKittySupport() tea.Cmd {
 		// If the environment doesn't indicate a Kitty-aware terminal,
 		// don't send any bytes — go straight to Unsupported.
 		if !kittyEnvSignal() {
+			kittyEnvSignalled.Store(false)
 			kittyCap.CompareAndSwap(int32(KittyCapabilityUnknown), int32(KittyCapabilityUnsupported))
 			return
 		}
+		kittyEnvSignalled.Store(true)
 		cmd = tea.Batch(
 			tea.Raw(buildKittyQueryAPC(kittyProbeID)),
 			tea.Tick(kittyProbeTimeout, func(time.Time) tea.Msg {
@@ -172,13 +185,22 @@ func buildKittyQueryAPC(id int) string {
 // recordKittyResponse handles a uv.KittyGraphicsEvent. Any response
 // carrying our probe's image ID proves the terminal speaks the protocol
 // (even an error response — only a Kitty-aware terminal would have
-// produced it). CompareAndSwap so a Forced capability or an earlier
-// response wins over a late one.
+// produced it).
+//
+// A real response is authoritative and overrides the timeout's
+// pessimistic Unsupported conclusion: bubbletea's startup can deliver
+// the kittyProbeTickMsg before draining the input event queue, so the
+// timeout sometimes fires first even though the terminal responded
+// immediately. Two CompareAndSwaps cover both starting states
+// (Unknown after probe-but-no-tick, Unsupported after tick-but-late-
+// response) without overriding a Forced(Supported) that's already set.
 func recordKittyResponse(ev uv.KittyGraphicsEvent) {
 	if ev.Options.ID != kittyProbeID {
 		return
 	}
-	kittyCap.CompareAndSwap(int32(KittyCapabilityUnknown), int32(KittyCapabilitySupported))
+	if !kittyCap.CompareAndSwap(int32(KittyCapabilityUnknown), int32(KittyCapabilitySupported)) {
+		kittyCap.CompareAndSwap(int32(KittyCapabilityUnsupported), int32(KittyCapabilitySupported))
+	}
 }
 
 // recordKittyTimeout marks Kitty unsupported if the probe window has
