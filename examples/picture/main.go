@@ -226,11 +226,39 @@ func (m model) View() tea.View {
 		mode = "Kitty"
 	}
 
-	footer := lipgloss.NewStyle().
-		Width(m.width).
+	// Footer: left-aligned status + keybindings, plus a right-aligned
+	// Kitty-capability badge. 'g toggle' is appended last and only
+	// when Kitty is affirmatively Supported — during the probe window
+	// (Unknown) and on non-Kitty terminals (Unsupported), Toggle is a
+	// no-op so we hide the hint to match.
+	cap := m.leftPic.KittySupported()
+	leftParts := []string{
+		fmt.Sprintf("mode: %s", mode),
+		fmt.Sprintf("fit: %s", fitName(m.leftPic.Fit())),
+		"f cycle fit",
+		"q quit",
+	}
+	if cap == picture.KittyCapabilitySupported {
+		leftParts = append(leftParts, "g toggle")
+	}
+	leftText := strings.Join(leftParts, "   ")
+
+	badgeText, badgeColor := kittyBadge(cap)
+	badge := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(badgeColor)).
+		Bold(true).
+		Render(badgeText)
+
+	leftWidth := m.width - lipgloss.Width(badge)
+	if leftWidth < 0 {
+		leftWidth = 0
+	}
+	leftRendered := lipgloss.NewStyle().
+		Width(leftWidth).
 		Foreground(lipgloss.Color("242")).
-		Render(fmt.Sprintf("mode: %s   fit: %s   g toggle   f cycle fit   q quit",
-			mode, fitName(m.leftPic.Fit())))
+		Render(leftText)
+
+	footer := lipgloss.JoinHorizontal(lipgloss.Top, leftRendered, badge)
 
 	parts := []string{title, panes}
 	if err := m.rightPic.Err(); err != nil {
@@ -296,6 +324,26 @@ func fitName(f picture.FitMode) string {
 		return "Cover"
 	default:
 		return "Contain"
+	}
+}
+
+// kittyBadge returns the right-aligned footer badge text and its ANSI
+// color: green for Supported, red for Unsupported, yellow during the
+// brief Unknown probe window. The Unsupported text disambiguates the
+// failure mode so users can diagnose: "no env" means we didn't probe
+// (no recognized terminal env vars); "no response" means the probe
+// went out but the terminal didn't reply within the timeout.
+func kittyBadge(c picture.KittyCapability) (text, color string) {
+	switch c {
+	case picture.KittyCapabilitySupported:
+		return "[ Kitty: yes ]", "10" // bright green
+	case picture.KittyCapabilityUnsupported:
+		if picture.KittyEnvSignalled() {
+			return "[ Kitty: no (no response) ]", "9"
+		}
+		return "[ Kitty: no (no env) ]", "9"
+	default:
+		return "[ Kitty: probing… ]", "11" // bright yellow
 	}
 }
 
