@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="/ntcharts/style.css">
 </head>
 <body class="layout">
+<button class="menu-button" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-overlay"></div>
 {{ template "sidebar" . }}
 <main class="main">
   <header class="demo-header">
@@ -44,6 +46,34 @@
   }
 
   main().catch(console.error);
+</script>
+<script>
+(function() {
+  const menuButton = document.querySelector('.menu-button');
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+
+  function toggleMenu() {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+    menuButton.textContent = sidebar.classList.contains('open') ? '×' : '☰';
+  }
+
+  function closeMenu() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    menuButton.textContent = '☰';
+  }
+
+  menuButton.addEventListener('click', toggleMenu);
+  overlay.addEventListener('click', toggleMenu);
+  document.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', closeMenu);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenu();
+  });
+})();
 </script>
 </body>
 </html>
