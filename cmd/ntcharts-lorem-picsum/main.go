@@ -11,6 +11,7 @@ import (
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/NimbleMarkets/ntcharts/v2/picture"
 	"github.com/NimbleMarkets/ntcharts/v2/picture/pictureurl"
 )
 
@@ -23,8 +24,9 @@ const (
 )
 
 type model struct {
-	leftPic  pictureurl.Model // Glyph
-	rightPic pictureurl.Model // Kitty
+	leftPic       pictureurl.Model // Glyph
+	rightPic      pictureurl.Model // Kitty (deferred toggle until probe resolves)
+	rightToggled  bool             // true once rightPic has been switched into Kitty mode
 
 	items  []picsumItem
 	cursor int
@@ -47,9 +49,10 @@ type model struct {
 func initialModel() model {
 	leftPic := pictureurl.NewWithConfig(pictureurl.Config{CacheLimit: imageCacheLimit})
 	rightPic := pictureurl.NewWithConfig(pictureurl.Config{KittyID: kittyIDRight, CacheLimit: imageCacheLimit})
-	// right starts in Glyph by default; flip to Kitty. URL is empty so the
-	// returned Cmd is nil and can be ignored here.
-	_ = rightPic.Toggle()
+	// rightPic should render in Kitty mode, but Toggle() silently no-ops when
+	// the Kitty capability is still Unknown — and the probe hasn't run yet at
+	// construction time. The toggle is retried in Update once the probe
+	// resolves (see ensureRightKitty).
 
 	return model{
 		leftPic:      leftPic,
@@ -60,7 +63,14 @@ func initialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return fetchListCmd(catalogPages, catalogLimit)
+	// Both pane Init()s must be called so the picture.Model issues the
+	// Kitty support probe and cell-size query; otherwise capability stays
+	// Unknown forever and the rightPic deferred toggle never fires.
+	return tea.Batch(
+		m.leftPic.Init(),
+		m.rightPic.Init(),
+		fetchListCmd(catalogPages, catalogLimit),
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -229,7 +239,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, c)
 	}
 
+	if c := m.ensureRightKitty(); c != nil {
+		cmds = append(cmds, c)
+	}
+
 	return m, tea.Batch(cmds...)
+}
+
+// ensureRightKitty toggles rightPic into Kitty mode the first time the probe
+// resolves to Supported. The eager Toggle() at construction time is a silent
+// no-op while the capability is still Unknown.
+func (m *model) ensureRightKitty() tea.Cmd {
+	if m.rightToggled {
+		return nil
+	}
+	if m.rightPic.KittySupported() != picture.KittyCapabilitySupported {
+		return nil
+	}
+	m.rightToggled = true
+	return m.rightPic.Toggle()
 }
 
 // setCurrentURL points both panes at the URL for items[cursor]. It re-applies
@@ -314,7 +342,7 @@ func (m *model) layout() layoutDims {
 	}
 	paneOuter := (m.width - 1) / 2
 	d.innerCols = paneOuter - 2
-	d.innerRows = m.height - 14
+	d.innerRows = m.height - 15
 	if d.innerCols < 1 {
 		d.innerCols = 1
 	}
@@ -536,6 +564,11 @@ func (m model) View() tea.View {
 		Align(lipgloss.Center).
 		Render("🖼️  ntcharts · picture — picsum browser")
 
+	badge := lipgloss.NewStyle().
+		Width(m.width).
+		Align(lipgloss.Center).
+		Render(m.statusBadge())
+
 	// lipgloss v2 Width/Height are OUTER dimensions (including border).
 	// Add 2 so the inner content area equals d.innerCols × d.innerRows,
 	// which matches the size the picture model is rendering at.
@@ -582,11 +615,53 @@ func (m model) View() tea.View {
 		Render("←/→ prev·next   c catalog   g jump   r reload   q quit")
 
 	return tea.NewView(
-		title + "\n\n" +
+		title + "\n" +
+			badge + "\n\n" +
 			panes + "\n\n" +
 			details + "\n\n" +
 			footer,
 	)
+}
+
+// statusBadge formats the Kitty probe state and the current render mode of
+// each pane on a single line. Green/yellow/red color the probe state to make
+// at-a-glance terminal-capability debugging easier.
+func (m model) statusBadge() string {
+	probe := m.leftPic.KittySupported()
+	probeColor := "11" // yellow (unknown)
+	switch probe {
+	case picture.KittyCapabilitySupported:
+		probeColor = "10" // green
+	case picture.KittyCapabilityUnsupported:
+		probeColor = "9" // red
+	}
+	probeStr := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(probeColor)).
+		Render("kitty:" + capabilityString(probe))
+
+	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
+	return dim.Render("[ ") + probeStr +
+		dim.Render("  ·  L:") + modeBadge(m.leftPic.Mode()) +
+		dim.Render("  ·  R:") + modeBadge(m.rightPic.Mode()) +
+		dim.Render(" ]")
+}
+
+func capabilityString(c picture.KittyCapability) string {
+	switch c {
+	case picture.KittyCapabilitySupported:
+		return "supported"
+	case picture.KittyCapabilityUnsupported:
+		return "unsupported"
+	default:
+		return "unknown"
+	}
+}
+
+func modeBadge(mode picture.PictureMode) string {
+	if mode == picture.PictureKitty {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render("kitty")
+	}
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render("glyph")
 }
 
 func (m model) catalogView() tea.View {
