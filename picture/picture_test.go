@@ -23,6 +23,20 @@ func smallImage(c color.RGBA) image.Image {
 	return img
 }
 
+// commitFrame replays the production KittyFrameMsg pipeline in test code.
+// Update(frame) returns a tea.Sequence(tea.Raw(APC), <applyKittyGridMsg>);
+// the bubbletea runtime walks the sequence, but unit tests don't run the
+// loop, so we manually fire the second step. The APC step is a no-op in
+// tests (no terminal to write to). After this returns, m.kittyGrid is set
+// and View() emits the placeholder grid.
+func commitFrame(t *testing.T, m *Model, frame KittyFrameMsg) {
+	t.Helper()
+	if cmd := m.Update(frame); cmd == nil {
+		t.Fatalf("Update with matching KittyFrameMsg returned nil cmd")
+	}
+	m.Update(applyKittyGridMsg{modelID: m.modelID, seq: m.seq, grid: frame.Grid})
+}
+
 func TestModel_GlyphSmoke_RendersNonEmpty(t *testing.T) {
 	m := New()
 	if cmd := m.SetSize(40, 20); cmd != nil {
@@ -97,14 +111,10 @@ func TestModel_KittyMode_FallsBackToGlyphUntilFrameDelivered(t *testing.T) {
 		t.Fatalf("expected KittyFrameMsg, got %T", msg)
 	}
 
-	// Feed it back via Update; should produce a tea.Raw of the APC.
-	out := m.Update(frame)
-	if out == nil {
-		t.Fatal("Update with matching KittyFrameMsg should return a Cmd, got nil")
-	}
-	if rawMsg := out(); rawMsg == nil {
-		t.Fatal("Cmd from Update should produce a non-nil tea.Msg")
-	}
+	// Feed the frame through the full two-step pipeline. Update(frame)
+	// returns a sequence (APC RawMsg, applyKittyGridMsg); commitFrame
+	// fires both halves so kittyGrid is committed.
+	commitFrame(t, &m, frame)
 
 	post := m.View().Content
 	if post == "" {
@@ -169,7 +179,7 @@ func TestModel_View_NeitherModeEndsWithTrailingNewline(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected KittyFrameMsg from Toggle, got %T", msg)
 	}
-	m.Update(frame)
+	commitFrame(t, &m, frame)
 
 	kitty := m.View().Content
 	if kitty == "" {
@@ -206,9 +216,7 @@ func TestModel_KittyMode_ToggleWithImage_EmitsFrame(t *testing.T) {
 		t.Fatalf("expected populated frame, got APC=%q Grid=%q", frame.APC, frame.Grid)
 	}
 
-	if out := m.Update(frame); out == nil {
-		t.Fatal("Update with the Toggle-emitted frame should return a Cmd")
-	}
+	commitFrame(t, &m, frame)
 	if got := m.View().Content; got == "" {
 		t.Fatal("expected non-empty View() after Toggle's frame applied")
 	}
@@ -228,7 +236,7 @@ func TestModel_KittyMode_SetImage_KeepsOldGridUntilNewFrame(t *testing.T) {
 		t.Fatal("expected non-nil render Cmd from initial SetImage")
 	}
 	frame1 := cmd().(KittyFrameMsg)
-	m.Update(frame1)
+	commitFrame(t, &m, frame1)
 	grid1 := m.View().Content
 	if grid1 == "" {
 		t.Fatal("precondition: expected non-empty View after first frame applied")

@@ -307,6 +307,19 @@ func (m *Model) SetCellPixelSize(w, h int) tea.Cmd {
 // String returns the rendered image content as a plain string.
 func (m *Model) String() string { return m.View().Content }
 
+// applyKittyGridMsg is the second half of the KittyFrameMsg pipeline.
+// KittyFrameMsg's handler returns a tea.Sequence that first emits the APC via
+// tea.Raw and then sends this msg, so the new image is placed at kittyID
+// before View starts rendering placeholder cells that reference it. Setting
+// kittyGrid synchronously in the KittyFrameMsg handler caused the next render
+// to emit cells pointing at a kittyID still holding the *previous* image,
+// producing a one-frame "previous-image" flash during navigation.
+type applyKittyGridMsg struct {
+	modelID uint64
+	seq     uint64
+	grid    string
+}
+
 // IsPictureMsg reports whether msg is a picture-owned async update. Includes
 // uv.CellSizeEvent and uv.KittyGraphicsEvent because Update auto-applies
 // them — consumers that gate forwarding on this helper must route the
@@ -315,7 +328,7 @@ func (m *Model) String() string { return m.View().Content }
 // capability stays Unknown.
 func IsPictureMsg(msg tea.Msg) bool {
 	switch msg.(type) {
-	case KittyFrameMsg, uv.CellSizeEvent, uv.KittyGraphicsEvent, kittyProbeTickMsg:
+	case KittyFrameMsg, applyKittyGridMsg, uv.CellSizeEvent, uv.KittyGraphicsEvent, kittyProbeTickMsg:
 		return true
 	}
 	return false
@@ -331,10 +344,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if msg.modelID != m.modelID || msg.Seq != m.seq {
 			return nil
 		}
-		m.kittyGrid = msg.Grid
-		// This frame is the placement that's about to land on the
-		// terminal — record its geometry so the next renderCmd can
-		// detect a geometry change and prepend a delete.
+		// Record the geometry now: lastRenderedGeom is consumed by the
+		// next renderCmd, and any SetSize that arrives between the APC
+		// emission and the deferred grid apply must see this snapshot
+		// to compute delete-prev correctly.
 		m.lastRenderedGeom = kittyGeom{
 			cols:       m.cols,
 			rows:       m.rows,
@@ -342,7 +355,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cellPixelH: m.cellPixelH,
 			fit:        m.fit,
 		}
-		return tea.Raw(msg.APC)
+		modelID, seq, grid := m.modelID, msg.Seq, msg.Grid
+		return tea.Sequence(
+			tea.Raw(msg.APC),
+			func() tea.Msg {
+				return applyKittyGridMsg{modelID: modelID, seq: seq, grid: grid}
+			},
+		)
+	case applyKittyGridMsg:
+		if msg.modelID != m.modelID || msg.seq != m.seq {
+			return nil
+		}
+		m.kittyGrid = msg.grid
+		return nil
 	case uv.CellSizeEvent:
 		return m.SetCellPixelSize(msg.Width, msg.Height)
 	case uv.KittyGraphicsEvent:
