@@ -316,8 +316,15 @@ func (m *Model) String() string { return m.View().Content }
 // producing a one-frame "previous-image" flash during navigation.
 type applyKittyGridMsg struct {
 	modelID uint64
-	seq     uint64
-	grid    string
+	// Grid is a pure function of (cols, rows, kittyID); seq is NOT used
+	// for staleness because SetImage bumps seq without invalidating the
+	// grid. We compare geometry instead — if any of these changed since
+	// the grid was computed, the grid is stale and gets dropped. This
+	// matters in WASM where Kitty encode time can exceed the tick
+	// interval, so multiple SetImage bumps happen between KittyFrameMsg
+	// and applyKittyGridMsg arrival.
+	cols, rows, kittyID int
+	grid                string
 }
 
 // IsPictureMsg reports whether msg is a picture-owned async update. Includes
@@ -355,15 +362,22 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cellPixelH: m.cellPixelH,
 			fit:        m.fit,
 		}
-		modelID, seq, grid := m.modelID, msg.Seq, msg.Grid
+		modelID, grid := m.modelID, msg.Grid
+		gridCols, gridRows, gridID := m.cols, m.rows, m.kittyID
 		return tea.Sequence(
 			tea.Raw(msg.APC),
 			func() tea.Msg {
-				return applyKittyGridMsg{modelID: modelID, seq: seq, grid: grid}
+				return applyKittyGridMsg{modelID: modelID, cols: gridCols, rows: gridRows, kittyID: gridID, grid: grid}
 			},
 		)
 	case applyKittyGridMsg:
-		if msg.modelID != m.modelID || msg.seq != m.seq {
+		if msg.modelID != m.modelID {
+			return nil
+		}
+		// Geometry-based staleness: SetImage bumps seq but doesn't change
+		// (cols, rows, kittyID), so an in-flight grid stays valid across
+		// SetImage. SetSize / kittyID changes do invalidate.
+		if msg.cols != m.cols || msg.rows != m.rows || msg.kittyID != m.kittyID {
 			return nil
 		}
 		m.kittyGrid = msg.grid

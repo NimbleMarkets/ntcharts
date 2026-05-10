@@ -34,7 +34,7 @@ func commitFrame(t *testing.T, m *Model, frame KittyFrameMsg) {
 	if cmd := m.Update(frame); cmd == nil {
 		t.Fatalf("Update with matching KittyFrameMsg returned nil cmd")
 	}
-	m.Update(applyKittyGridMsg{modelID: m.modelID, seq: m.seq, grid: frame.Grid})
+	m.Update(applyKittyGridMsg{modelID: m.modelID, cols: m.cols, rows: m.rows, kittyID: m.kittyID, grid: frame.Grid})
 }
 
 func TestModel_GlyphSmoke_RendersNonEmpty(t *testing.T) {
