@@ -122,6 +122,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, c)
 	}
 
+	// Re-apply layout each tick. SetSize is a no-op when dims are
+	// unchanged, so this is cheap; it picks up the row count change
+	// when rightPic.Err() transitions in or out (a one- or two-line
+	// status bar appears/disappears between panes and footer).
+	cmds = append(cmds, m.applyLayout()...)
+
 	return m, tea.Batch(cmds...)
 }
 
@@ -129,7 +135,11 @@ type layoutDims struct {
 	innerCols, innerRows int
 	leftCaptions         []string
 	rightCaptions        []string
-	tooSmall             bool
+	// errorLines is the wrapped pictureurl-error text shown as a status
+	// bar between panes and footer. Capped at 2 lines; the bar's vertical
+	// space is reserved out of innerRows so panes shrink to make room.
+	errorLines []string
+	tooSmall   bool
 }
 
 const (
@@ -137,9 +147,10 @@ const (
 	minHeight = 12
 )
 
-// Layout: 1 title + Hpic + 1 footer = m.height, so Hpic = m.height - 2 and
-// pane inner rows = Hpic - 2 = m.height - 4. The status line, when shown for
-// errors, is appended in View() and pushes the footer down by one row.
+// Layout: 1 title + Hpic + N error rows + 1 footer = m.height, so
+// Hpic = m.height - 2 - N and pane inner rows = Hpic - 2. When an error
+// is active, the status bar wraps to at most two lines and panes shrink
+// by that many rows to keep the footer on-screen.
 func (m *model) layout() layoutDims {
 	var d layoutDims
 	if m.width < minWidth || m.height < minHeight {
@@ -148,10 +159,13 @@ func (m *model) layout() layoutDims {
 	}
 	paneOuter := (m.width - 1) / 2
 	d.innerCols = paneOuter - 2
-	d.innerRows = m.height - 4
 	if d.innerCols < 1 {
 		d.innerCols = 1
 	}
+	if err := m.rightPic.Err(); err != nil {
+		d.errorLines = wrapToLines(fmt.Sprintf("right: error: %v", err), m.width, 2)
+	}
+	d.innerRows = m.height - 4 - len(d.errorLines)
 	if d.innerRows < 1 {
 		d.innerRows = 1
 	}
@@ -214,7 +228,16 @@ func (m model) View() tea.View {
 
 	leftContent := buildPane(m.leftPic.View().Content, leftTopLabel,
 		d.leftCaptions, d.innerCols, d.innerRows)
-	rightContent := buildPane(m.rightPic.View().Content, rightTopLabel,
+	// When the right fetch errored, pictureurl.View() returns the long
+	// error string; that overflows innerCols and visually wraps inside
+	// the bordered pane, making the right look taller than the left.
+	// The error is already reported in the status bar below — keep the
+	// pane interior empty so both panes render identically.
+	rightInner := m.rightPic.View().Content
+	if m.rightPic.Err() != nil {
+		rightInner = ""
+	}
+	rightContent := buildPane(rightInner, rightTopLabel,
 		d.rightCaptions, d.innerCols, d.innerRows)
 
 	leftBox := paneStyle.Render(leftContent)
@@ -261,12 +284,13 @@ func (m model) View() tea.View {
 	footer := lipgloss.JoinHorizontal(lipgloss.Top, leftRendered, badge)
 
 	parts := []string{title, panes}
-	if err := m.rightPic.Err(); err != nil {
-		statusBar := lipgloss.NewStyle().
+	if len(d.errorLines) > 0 {
+		errStyle := lipgloss.NewStyle().
 			Width(m.width).
-			Foreground(lipgloss.Color("9")).
-			Render(fmt.Sprintf("right: error: %v", err))
-		parts = append(parts, statusBar)
+			Foreground(lipgloss.Color("9"))
+		for _, line := range d.errorLines {
+			parts = append(parts, errStyle.Render(line))
+		}
 	}
 	parts = append(parts, footer)
 
