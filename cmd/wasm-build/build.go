@@ -9,9 +9,6 @@ import (
 )
 
 // compileAll builds GOOS=js GOARCH=wasm binaries for every demo, in parallel.
-// Uses booba-wasm-build (NOT plain `go build`) because bubbletea/v2 lacks
-// js/wasm build tags upstream — booba-wasm-build patches them in via a
-// temporary module before compiling.
 // Output: <outDir>/demos/<demo.Name>/app.wasm
 func compileAll(m *Manifest, outDir string) error {
 	demos := m.AllDemos()
@@ -38,11 +35,8 @@ func compileOne(d Demo, outDir string) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
-	cmd := exec.Command("go", "run",
-		"github.com/NimbleMarkets/go-booba/cmd/booba-wasm-build",
-		"-o", dst,
-		d.Source,
-	)
+	cmd := exec.Command("go", "build", "-o", dst, d.Source)
+	cmd.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	fmt.Printf("[wasm-build] compiling %s -> %s\n", d.Source, dst)
@@ -58,10 +52,7 @@ func copyAssets(outDir string) error {
 	if err := os.MkdirAll(assetsDir, 0o755); err != nil {
 		return err
 	}
-	cmd := exec.Command("go", "run",
-		"github.com/NimbleMarkets/go-booba/cmd/booba-assets",
-		assetsDir,
-	)
+	cmd := exec.Command("go", "tool", "booba-assets", assetsDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	fmt.Printf("[wasm-build] copying booba assets into %s\n", assetsDir)
