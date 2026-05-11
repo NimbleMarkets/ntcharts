@@ -30,7 +30,15 @@
 <script type="module">
   // Mirrors the booba reference index.html: instantiate the Go WASM runtime
   // with this demo's app.wasm, then mount a BoobaTerminal on the container.
-  import { BoobaTerminal } from "/ntcharts/_assets/booba/booba.js";
+  // installRendererHud/parseRendererFromURL are re-exported by booba from
+  // ghostty-web — the renderer HUD source lives upstream now (cycles
+  // webgpu → webgl → canvas2d, uses e.code so the macOS Option dead-key
+  // transform doesn't break the hotkey).
+  import {
+    BoobaTerminal,
+    installRendererHud,
+    parseRendererFromURL,
+  } from "/ntcharts/_assets/booba/booba.js";
 
   async function main() {
     const go = new Go();
@@ -39,10 +47,21 @@
     );
     go.run(result.instance);
 
-    const booba = new BoobaTerminal("terminal");
+    const booba = new BoobaTerminal("terminal", {
+      renderer: parseRendererFromURL(),
+    });
     await booba.init();
     booba.connectWasm();
     booba.focus();
+
+    const frame = document.querySelector(".terminal-frame");
+    installRendererHud(booba.term, {
+      parent: frame ?? undefined,
+      position: "absolute",
+      className: "demo-renderer-hud",
+      // Demo embedders own keyboard UX; click-to-toggle is enough.
+      bindToggleHotkey: false,
+    });
   }
 
   main().catch(console.error);
