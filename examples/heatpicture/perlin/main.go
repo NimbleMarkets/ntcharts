@@ -22,8 +22,8 @@ package main
 import (
 	"fmt"
 	"image/color"
-	"log"
 	"os"
+	"runtime"
 	"slices"
 	"time"
 
@@ -34,13 +34,17 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	booba "github.com/NimbleMarkets/go-booba"
-	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/NimbleMarkets/ntcharts/v2/picture"
 	"github.com/NimbleMarkets/ntcharts/v2/picture/heatpicture"
 	"github.com/aquilax/go-perlin"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/spf13/pflag"
 )
 
-const tickPeriod = 100 * time.Millisecond
+const (
+	tickPeriod      = 100 * time.Millisecond
+	kittyTickStride = 2 // sample every 10th tick in Kitty/WASM (~1 fps)
+)
 
 type keymap struct {
 	start    key.Binding
@@ -95,6 +99,13 @@ type model struct {
 	n, seed     int64
 	zoom        float64
 
+	// kittyTickCount throttles Perlin re-sampling in Kitty mode under
+	// browser-WASM. Each Kitty render is ~400ms of PNG encode + ~700KB
+	// of APC bytes, far too expensive at the Glyph 100ms tick rate.
+	// Sampling once every kittyTickStride ticks gives ~1 Kitty frame
+	// per second — visibly animating without locking the JS thread.
+	kittyTickCount int
+
 	gradientIndex int
 	gradients     [][]color.Color
 	gradientNames []string
@@ -124,6 +135,15 @@ func newModel(alpha, beta float64, n, seed int64) *model {
 	m.hp.SetValueRange(-1, 1)
 	m.hp.SetXYRange(0, 1, 0, 1)
 	m.hp.SetColorScale(m.gradients[0])
+	if runtime.GOOS == "js" && runtime.GOARCH == "wasm" {
+		// In browser-WASM, Go's runtime puts every goroutine on the
+		// browser's main thread, so a full-resolution Kitty render at
+		// 100ms ticks locks the UI. Compute scales quadratically with
+		// the factor; 0.25 cuts per-frame Perlin work by 16× while
+		// staying visually indistinguishable at typical demo sizes.
+		// Native targets keep the heatpicture default (1.0).
+		m.hp.SetSamplingFactor(0.25)
+	}
 	return m
 }
 
@@ -174,36 +194,37 @@ func (m *model) Init() tea.Cmd {
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Debug instrumentation: log every msg type so we can see whether the
-	// heatRenderedMsg ever arrives, whether CellSizeEvent fires unexpectedly,
-	// etc. Logs go to /tmp/heatpic.log; tail in another terminal.
-	log.Printf("Update: %T %+v", msg, msg)
-
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		log.Printf("  WindowSizeMsg: %dx%d", msg.Width, msg.Height)
 		// Reserve 4 rows: blank + info + 2 help bars.
 		if c := m.hp.SetSize(msg.Width, msg.Height-4); c != nil {
-			log.Printf("  SetSize returned non-nil Cmd")
 			cmds = append(cmds, c)
-		} else {
-			log.Printf("  SetSize returned nil Cmd")
 		}
 		return m, tea.Batch(cmds...)
 	case uv.CellSizeEvent:
-		log.Printf("  CellSizeEvent: %dx%d", msg.Width, msg.Height)
 		// fall through to m.hp.Update below to trigger re-render
 
 	case stopwatch.TickMsg:
 		var cmd tea.Cmd
-		m.alpha += 0.01
-		m.beta += 0.01
-		if c := m.hp.SetSampler(m.sampler()); c != nil {
-			cmds = append(cmds, c)
-		}
 		m.stopwatch, cmd = m.stopwatch.Update(msg)
 		cmds = append(cmds, cmd)
+		// Throttle Perlin re-sampling in Kitty/WASM. The Glyph mode
+		// renders ~10 frames/sec from this 100ms tick; in Kitty/WASM,
+		// each render is ~400ms of compute + transmission, so we drop
+		// to ~1 frame/sec. Native and Glyph paths sample every tick.
+		skipSample := false
+		if runtime.GOOS == "js" && runtime.GOARCH == "wasm" && m.hp.Mode() == picture.PictureKitty {
+			m.kittyTickCount++
+			skipSample = m.kittyTickCount%kittyTickStride != 0
+		}
+		if !skipSample {
+			m.alpha += 0.01
+			m.beta += 0.01
+			if c := m.hp.SetSampler(m.sampler()); c != nil {
+				cmds = append(cmds, c)
+			}
+		}
 		return m, tea.Batch(cmds...)
 
 	case stopwatch.StartStopMsg:
@@ -240,10 +261,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, c)
 			}
 		case key.Matches(msg, m.keymap.toggle):
-			log.Printf("  toggle pressed; mode before: %v", m.hp.Mode())
-			c := m.hp.Toggle()
-			log.Printf("  toggle: mode after: %v, returned Cmd: %v", m.hp.Mode(), c != nil)
-			if c != nil {
+			if c := m.hp.Toggle(); c != nil {
 				cmds = append(cmds, c)
 			}
 		case key.Matches(msg, m.keymap.factor):
@@ -290,7 +308,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if c := m.hp.Update(msg); c != nil {
-		log.Printf("  m.hp.Update returned non-nil Cmd for %T", msg)
 		cmds = append(cmds, c)
 	}
 	return m, tea.Batch(cmds...)
@@ -298,7 +315,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *model) View() tea.View {
 	hpContent := m.hp.View().Content
-	log.Printf("View: hpContent len=%d, mode=%v", len(hpContent), m.hp.Mode())
 	pxW, pxH := m.hp.SamplePixelSize()
 	cellW, cellH := m.hp.CellPixelSize()
 	info := fmt.Sprintf("\n%s  α: %.3f  β: %.3f  n: %d  seed: %d  zoom: %.3f  sf: %.2f  mode: %v  Δ: %s  frames: %d  composites: %d  px: %d×%d  cell: %d×%d",
@@ -317,13 +333,6 @@ func (m *model) View() tea.View {
 }
 
 func main() {
-	// Debug log to /tmp/heatpic.log; tail in another terminal while running.
-	logFile, err := os.OpenFile("/tmp/heatpic.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err == nil {
-		log.SetOutput(logFile)
-		defer logFile.Close()
-	}
-
 	var alpha, beta float64
 	var seed, n int64
 	var showHelp bool
