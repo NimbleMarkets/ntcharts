@@ -24,9 +24,9 @@ func BenchmarkSampleField_TerminalSize(b *testing.B) {
 	sampler := func(x, y float64) float64 { return p.Noise2D(x*20, y*20) }
 
 	for _, sz := range []struct {
-		name             string
-		cellW, cellH     int
-		cols, rows       int
+		name         string
+		cellW, cellH int
+		cols, rows   int
 	}{
 		{"80x24_8x16", 8, 16, 80, 24},
 		{"160x40_8x16", 8, 16, 160, 40},

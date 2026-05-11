@@ -71,6 +71,17 @@ type Config struct {
 	// Model.SetCellPixelSize when the terminal reports its real cell size.
 	CellPixelWidth  int
 	CellPixelHeight int
+
+	// KittyResolutionFactor scales the encoded Kitty image's per-cell
+	// pixel resolution. Values in (0, 1] shrink the transmitted bitmap;
+	// the terminal upscales the image to fill the c×r cell rectangle on
+	// display. Default 1.0 (full terminal-pixel resolution). Smaller
+	// values produce a chunkier, lower-bandwidth image — useful when
+	// the renderer's per-frame composite cost is the bottleneck (e.g.
+	// browser-WASM with ghostty-web), or when matching the perceived
+	// fidelity of Glyph mode is desirable. Out-of-range values clamp
+	// to 1.0.
+	KittyResolutionFactor float64
 }
 
 // Model renders an image.Image as half-blocks or Kitty graphics inside a
@@ -94,6 +105,10 @@ type Model struct {
 	fit        FitMode
 
 	cellPixelW, cellPixelH int
+
+	// kittyResolutionFactor scales the effective per-cell pixel
+	// resolution used for Kitty encoding (see Config.KittyResolutionFactor).
+	kittyResolutionFactor float64
 
 	// lastRenderedGeom records the (cols, rows, cellPixelW, cellPixelH)
 	// of the most recently *applied* KittyFrame — i.e. the geometry
@@ -139,14 +154,18 @@ func NewWithConfig(cfg Config) Model {
 	if cfg.CellPixelHeight <= 0 {
 		cfg.CellPixelHeight = defaultCellPixelH
 	}
+	if cfg.KittyResolutionFactor <= 0 || cfg.KittyResolutionFactor > 1 {
+		cfg.KittyResolutionFactor = 1.0
+	}
 	return Model{
-		modelID:    nextModelID.Add(1),
-		mode:       PictureGlyph,
-		kittyID:    cfg.KittyID,
-		background: cfg.Background,
-		cellPixelW: cfg.CellPixelWidth,
-		cellPixelH: cfg.CellPixelHeight,
-		fit:        cfg.Fit,
+		modelID:               nextModelID.Add(1),
+		mode:                  PictureGlyph,
+		kittyID:               cfg.KittyID,
+		background:            cfg.Background,
+		cellPixelW:            cfg.CellPixelWidth,
+		cellPixelH:            cfg.CellPixelHeight,
+		kittyResolutionFactor: cfg.KittyResolutionFactor,
+		fit:                   cfg.Fit,
 	}
 }
 
@@ -299,6 +318,28 @@ func (m *Model) SetCellPixelSize(w, h int) tea.Cmd {
 	}
 	m.cellPixelW = w
 	m.cellPixelH = h
+	m.seq++
+	m.invalidateKitty()
+	return m.renderCmd()
+}
+
+// KittyResolutionFactor returns the current Kitty-image resolution
+// multiplier. See Config.KittyResolutionFactor.
+func (m *Model) KittyResolutionFactor() float64 { return m.kittyResolutionFactor }
+
+// SetKittyResolutionFactor updates the multiplier applied to cell pixel
+// dimensions when encoding Kitty images. Values in (0, 1] shrink the
+// transmitted bitmap; the terminal upscales to fill the cell rectangle.
+// Out-of-range values clamp to 1.0. Returns a render Cmd if the factor
+// changed and a Kitty image is currently placed; otherwise nil.
+func (m *Model) SetKittyResolutionFactor(f float64) tea.Cmd {
+	if f <= 0 || f > 1 {
+		f = 1.0
+	}
+	if f == m.kittyResolutionFactor {
+		return nil
+	}
+	m.kittyResolutionFactor = f
 	m.seq++
 	m.invalidateKitty()
 	return m.renderCmd()
@@ -482,7 +523,19 @@ func (m *Model) renderCmd() tea.Cmd {
 	// immediately and bubbletea runs the render off the main loop.
 	img, bg := m.img, m.background
 	modelID, id, cols, rows, seq := m.modelID, m.kittyID, m.cols, m.rows, m.seq
-	cpw, cph, fit := m.cellPixelW, m.cellPixelH, m.fit
+	fit := m.fit
+	// Apply kittyResolutionFactor to the cell-pixel dims used for the
+	// transmitted image. The placement rectangle (cols × rows cells) is
+	// unchanged, so the terminal upscales the smaller source image to
+	// fill the cell area on display.
+	cpw := int(float64(m.cellPixelW) * m.kittyResolutionFactor)
+	cph := int(float64(m.cellPixelH) * m.kittyResolutionFactor)
+	if cpw < 1 {
+		cpw = 1
+	}
+	if cph < 1 {
+		cph = 1
+	}
 	prevGeom := m.lastRenderedGeom
 	return func() tea.Msg {
 		prepared := prepareSource(img, fit, cols, rows, cpw, cph, bg)

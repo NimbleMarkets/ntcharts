@@ -137,11 +137,12 @@ func NewWithConfig(cfg Config) Model {
 		cfg.SamplingFactor = 1.0
 	}
 	picCfg := picture.Config{
-		KittyID:         cfg.KittyID,
-		Background:      cfg.Background,
-		Fit:             cfg.Fit,
-		CellPixelWidth:  cfg.CellPixelWidth,
-		CellPixelHeight: cfg.CellPixelHeight,
+		KittyID:               cfg.KittyID,
+		Background:            cfg.Background,
+		Fit:                   cfg.Fit,
+		CellPixelWidth:        cfg.CellPixelWidth,
+		CellPixelHeight:       cfg.CellPixelHeight,
+		KittyResolutionFactor: cfg.SamplingFactor,
 	}
 	return Model{
 		pic:     picture.NewWithConfig(picCfg),
@@ -206,8 +207,11 @@ func (m *Model) SamplePixelSize() (w, h int) {
 
 // SetSamplingFactor updates the sampling-factor multiplier at runtime
 // (see Config.SamplingFactor). Out-of-range values are clamped to (0, 1].
-// Returns a render Cmd if the new value differs and a render isn't
-// already in flight; nil otherwise.
+// Also propagates to the embedded picture.Model's KittyResolutionFactor
+// so the transmitted Kitty image shrinks in lockstep with the source
+// bitmap — one knob controls both Perlin compute cost and displayed
+// Kitty fidelity. Returns a render Cmd if the new value differs and a
+// render isn't already in flight; nil otherwise.
 func (m *Model) SetSamplingFactor(f float64) tea.Cmd {
 	if f <= 0 || f > 1 {
 		f = 1.0
@@ -217,6 +221,11 @@ func (m *Model) SetSamplingFactor(f float64) tea.Cmd {
 	}
 	m.samplingFactor = f
 	m.seq++
+	// Propagate to picture's factor for state consistency. Discard its
+	// returned render Cmd — heatpicture's scheduleRender (below) will
+	// produce a fresh image whose SetImage triggers a picture render at
+	// the new factor anyway. Avoids two redundant Kitty re-encodes.
+	_ = m.pic.SetKittyResolutionFactor(f)
 	return m.scheduleRender()
 }
 
@@ -474,8 +483,19 @@ func (m *Model) renderCmd() tea.Cmd {
 			pixelH = 1
 		}
 	} else {
+		// Match the cell rectangle's pixel aspect ratio so prepareSource's
+		// Fit step letterboxes the Glyph bitmap identically to Kitty (both
+		// source ARs equal target AR → Contain/Fill/Cover all produce the
+		// same visual result). The typical 1:2 cell aspect (8×16 default)
+		// yields cellH/cellW = 2, preserving the original "one pixel per
+		// half-block" shortcut. Non-1:2 cell aspects — e.g. ghostty-web
+		// reporting 10×16 — get a slightly different pixelH but matching
+		// AR so the user can't tell Glyph from Kitty by the fit bars.
 		pixelW = m.cols
-		pixelH = m.rows * 2
+		pixelH = m.rows * m.cellH / m.cellW
+		if pixelH < 1 {
+			pixelH = 1
+		}
 	}
 	// Snapshot all sampling parameters into the closure so a subsequent
 	// setter call doesn't race against the goroutine.
