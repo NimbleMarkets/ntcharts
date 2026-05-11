@@ -24,9 +24,9 @@ const (
 )
 
 type model struct {
-	leftPic       pictureurl.Model // Glyph
-	rightPic      pictureurl.Model // Kitty (deferred toggle until probe resolves)
-	rightToggled  bool             // true once rightPic has been switched into Kitty mode
+	leftPic      pictureurl.Model // Glyph
+	rightPic     pictureurl.Model // Kitty (deferred toggle until probe resolves)
+	rightToggled bool             // true once rightPic has been switched into Kitty mode
 
 	items  []picsumItem
 	cursor int

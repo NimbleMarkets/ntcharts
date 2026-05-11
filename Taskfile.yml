@@ -78,6 +78,7 @@ tasks:
     deps:
       - build-cmd-ntcharts-lorem-picsum
       - build-cmd-ntcharts-ohlc
+      - build-cmd-ntcharts-yomomma
 
   build-cmd-ntcharts-lorem-picsum:
     desc: 'Build ntcharts-ohlc command'
@@ -103,11 +104,24 @@ tasks:
     generates:
       - bin/ntcharts-ohlc
 
+  build-cmd-ntcharts-yomomma:
+    desc: 'Build ntcharts-yomamma command'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/ntcharts-yomamma cmd/ntcharts-yomamma/*.go
+    sources:
+      - cmd/ntcharts-yomamma/*.go
+      - canvas/**/*.go
+      - go.mod
+    generates:
+      - bin/ntcharts-yomamma
+
   clean-cmds:
     desc: 'Cleans all commands'
     cmds:
       - rm -f bin/ntcharts-lorem-picsum
       - rm -f bin/ntcharts-ohlc
+      - rm -f bin/ntcharts-yomamma
     
 ###############################################################################
 # Examples
