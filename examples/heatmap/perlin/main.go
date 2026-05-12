@@ -162,6 +162,9 @@ func (m *PerlinModel) SampleNoise() {
 			noise := p.Noise2D(float64(i)*m.Zoom, float64(j)*m.Zoom)
 			m.Heatmap.Push(heatmap.NewHeatPoint(float64(i), float64(j), noise))
 		}
+		// Yield to JS once per column so a wide viewport's sample doesn't
+		// hold the WASM thread for the full nested loop. No-op on native.
+		yieldToJS()
 	}
 }
 

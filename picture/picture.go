@@ -542,7 +542,14 @@ func (m *Model) renderCmd() tea.Cmd {
 		if prepared == nil {
 			return nil
 		}
+		// prepareSource just ran a CatmullRom 4-tap scale over the full
+		// cell-rect; give JS a slice before the PNG encode (no-op on
+		// native). Without this, WASM holds the thread for the entire
+		// scale+encode duration and queued fetch resolves / key events
+		// can't drain.
+		yieldToJS()
 		apc := buildKittyAPC(prepared, id, cols, rows)
+		yieldToJS()
 		currGeom := kittyGeom{cols: cols, rows: rows, cellPixelW: cpw, cellPixelH: cph, fit: fit}
 		if prevGeom != (kittyGeom{}) && prevGeom != currGeom {
 			apc = kittyDeleteImage(id) + apc

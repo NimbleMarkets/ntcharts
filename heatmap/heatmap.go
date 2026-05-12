@@ -234,8 +234,15 @@ func (m *Model) DrawPoint(pt HeatPoint) {
 // Columns representing the data will be displayed going from
 // from the bottom to the top and coming from the left to the right of the canvas.
 func (m *Model) Draw() {
-	for _, pt := range m.points {
+	for i, pt := range m.points {
 		m.DrawPoint(pt)
+		// Every 4096 points, give the JS event loop a slice so a long
+		// Draw on a large viewport doesn't lock up the WASM thread.
+		// No-op on native; the bitwise mask keeps the check ~free on
+		// every iteration.
+		if i&0xfff == 0xfff {
+			yieldToJS()
+		}
 	}
 }
 
