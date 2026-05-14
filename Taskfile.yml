@@ -190,7 +190,7 @@ tasks:
     cmds:
       - go build -o bin/ntcharts-heatmap-aoc2024 examples/heatmap/aoc2024/*.go
       - go build -o bin/ntcharts-heatmap-functor examples/heatmap/functor/*.go
-      - go build -o bin/ntcharts-heatmap-perlin examples/heatmap/perlin/*.go
+      - go build -o bin/ntcharts-heatmap-perlin ./examples/heatmap/perlin
       - go build -o bin/ntcharts-heatmap-simple examples/heatmap/simple/*.go
       - go build -o bin/ntcharts-heatpicture-perlin examples/heatpicture/perlin/*.go
     sources:
@@ -234,15 +234,18 @@ tasks:
     cmds:
       - go build -o bin/ntcharts-chartpicture examples/chartpicture/*.go
       - go build -o bin/ntcharts-picture examples/picture/*.go
+      - go build -o bin/ntcharts-picture-grid ./examples/picture/grid
       - go build -o bin/ntcharts-heatpicture-perlin examples/heatpicture/perlin/*.go
     sources:
       - picture/**/*.go
       - examples/chartpicture/*.go
       - examples/picture/*.go
+      - examples/picture/grid/*.go
       - examples/heatpicture/perlin/*.go
     generates:
       - bin/ntcharts-chartpicture
       - bin/ntcharts-picture
+      - bin/ntcharts-picture-grid
       - bin/ntcharts-heatpicture-perlin
 
   build-ex-quickstart:

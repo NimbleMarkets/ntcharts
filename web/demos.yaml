@@ -97,6 +97,10 @@ groups:
         title: Picture
         blurb: Two-pane image demo — embedded PNG via picture.Model (left) and an HTTP-fetched URL via pictureurl.Model (right). Right pane is CORS-blocked in browsers; left pane works.
         source: ./examples/picture
+      - name: picture-grid
+        title: Picture Grid
+        blurb: Coordinate-aligned board rendered as one GridImage bitmap through picture.Model with FitFill. Shows Kitty availability, Glyph fallback, and sprite composition that stays aligned to terminal cells.
+        source: ./examples/picture/grid
       - name: heatpicture-perlin
         title: Heat Picture (Perlin)
         blurb: High-resolution Perlin-noise heatmap rendered through picture.Model — Kitty graphics protocol where supported (per-pixel sampling, smooth gradients, no cell quantization), Glyph half-blocks otherwise. Press <kbd>t</kbd> to toggle modes, <kbd>F</kbd> to cycle sampling factor.

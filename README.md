@@ -27,6 +27,9 @@ We supply many chart types within the glory of your terminal!
 | [Waveline Chart](./examples/README.md#wave-line) | A line chart that connects points in a wave pattern. |
 | [Sparkline](./examples/README.md#sparkline) | A small, simple visual of data chart for quick understanding. |
 
+For Kitty graphics in games, boards, tile maps, or other coordinate-aligned
+UIs, see [KITTY.md](./KITTY.md).
+
 ## Quickstart Tutorial
 
 This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](./examples/README.md#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.

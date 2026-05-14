@@ -1,8 +1,10 @@
 # CHANGELOG
 
-## v2.1.1 (2026-05-02)
+## v2.1.1 (unreleased)
 
- * feat(picture): detect Kitty graphics support and gate Toggle on capability.  In other words, don't blast the terminal with characters when it doesn't support Kitty graphics. `QueryKittySupport` gates the probe based on environment variables; `ForceKittyCapability` can override detection.
+  * feat(picture): detect Kitty graphics support and gate Toggle on capability.  In other words, don't blast the terminal with characters when it doesn't support Kitty graphics. `QueryKittySupport` gates the probe based on environment variables; `ForceKittyCapability` can override detection.
+  * feat(picture): add `GridImage` for composing logical-cell boards and sprites into a single image for grid-aligned Kitty UIs. The config uses explicit logical-grid and terminal-cells-per-cell fields, defaults to nearest-neighbor scaling for crisp board/tile sprites, and includes a full-board `DrawOverlay` helper for grid lines and effects.
+  * Various bug fixes
 
 ## v2.1.0 (2026-05-01)
 

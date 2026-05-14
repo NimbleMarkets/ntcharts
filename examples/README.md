@@ -146,6 +146,9 @@ The example's source image is a hand-made 1-bit recreation of Hokusai's waves:
 `ntcharts-picture` [(source)](./picture/main.go)<br>
 <img src="picture/demo.gif" alt="picture wave image"/>
 
+`ntcharts-picture-grid` [(source)](./picture/grid/main.go)<br>
+Composes sprites into a `picture.GridImage`, then renders that single bitmap with `FitFill` so logical board coordinates stay aligned with Kitty terminal cells.
+
 ## Chart Picture
 
 `chartpicture` displays a [github.com/go-analyze/charts](https://github.com/go-analyze/charts) chart via an embedded `picture.Model`.  In the example, you may toggle between a random line chart and bar chart.  You can toggle between `glyph` mode and Kitty Graphics mode.
@@ -160,4 +163,3 @@ The example's source image is a hand-made 1-bit recreation of Hokusai's waves:
 The Perlin demo animates a 2D Perlin-noise field. `<space>` starts/stops the animation; `t` toggles Glyph ↔ Kitty; `F` cycles the sampling factor (1.0 → 0.5 → 0.25) to trade quality for animation smoothness on large terminals; `g`/`i` cycle/invert the gradient; `a`/`z`, `s`/`x`, `d`/`c`, `f`/`v` adjust α, β, n, and seed.  The info bar shows per-frame render time and frame/composite counters.
 
 `ntcharts-heatpicture-perlin` [(source)](./heatpicture/perlin/main.go)
-

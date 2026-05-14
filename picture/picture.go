@@ -60,7 +60,9 @@ type Config struct {
 
 	// Fit controls how the source image is mapped onto the cell
 	// rectangle. The zero value is FitContain (preserve aspect ratio,
-	// letterbox).
+	// letterbox). Use FitFill for games, boards, tile maps, and other
+	// coordinate-aligned UIs where source pixels must map exactly to the
+	// configured terminal-cell rectangle.
 	Fit FitMode
 
 	// CellPixelWidth and CellPixelHeight are the terminal cell dimensions in
@@ -368,12 +370,17 @@ type applyKittyGridMsg struct {
 	grid                string
 }
 
-// IsPictureMsg reports whether msg is a picture-owned async update. Includes
-// uv.CellSizeEvent and uv.KittyGraphicsEvent because Update auto-applies
-// them — consumers that gate forwarding on this helper must route the
-// terminal's CSI 16 t reply AND Kitty query reply to Update, or Kitty
-// placements stay at the default 8×16 cell-pixel size and the Kitty
-// capability stays Unknown.
+// IsPictureMsg reports whether msg is a picture-related async update that
+// should be forwarded to picture models. These messages are shared at the
+// Bubble Tea program/process level, not necessarily owned by a single
+// picture.Model; individual Model.Update calls filter by model ID where
+// applicable.
+//
+// Includes uv.CellSizeEvent and uv.KittyGraphicsEvent because Update
+// auto-applies them — consumers that gate forwarding on this helper must route
+// the terminal's CSI 16 t reply AND Kitty query reply to Update, or Kitty
+// placements stay at the default 8×16 cell-pixel size and the Kitty capability
+// stays Unknown.
 func IsPictureMsg(msg tea.Msg) bool {
 	switch msg.(type) {
 	case KittyFrameMsg, applyKittyGridMsg, uv.CellSizeEvent, uv.KittyGraphicsEvent, kittyProbeTickMsg:
