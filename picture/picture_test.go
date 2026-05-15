@@ -730,6 +730,20 @@ func TestModel_Fit_FromConfig(t *testing.T) {
 	}
 }
 
+func TestModel_Anchor_Default_IsCenter(t *testing.T) {
+	m := New()
+	if got := m.Anchor(); got != AnchorCenter {
+		t.Fatalf("default Anchor should be AnchorCenter, got %v", got)
+	}
+}
+
+func TestModel_Anchor_FromConfig(t *testing.T) {
+	m := NewWithConfig(Config{Anchor: AnchorTop})
+	if got := m.Anchor(); got != AnchorTop {
+		t.Fatalf("Anchor from Config not honored: got %v want AnchorTop", got)
+	}
+}
+
 func TestModel_SetFit_NoOpWhenUnchanged(t *testing.T) {
 	m := New()
 	m.SetSize(40, 20)
@@ -740,6 +754,19 @@ func TestModel_SetFit_NoOpWhenUnchanged(t *testing.T) {
 	}
 	if m.seq != seqBefore {
 		t.Fatalf("SetFit(current) bumped seq: before=%d after=%d", seqBefore, m.seq)
+	}
+}
+
+func TestModel_SetAnchor_NoOpWhenUnchanged(t *testing.T) {
+	m := New()
+	m.SetSize(40, 20)
+	m.SetImage(smallImage(color.RGBA{R: 200, G: 0, B: 0, A: 255}))
+	seqBefore := m.seq
+	if cmd := m.SetAnchor(AnchorCenter); cmd != nil {
+		t.Fatalf("SetAnchor(current) should return nil, got %v", cmd)
+	}
+	if m.seq != seqBefore {
+		t.Fatalf("SetAnchor(current) bumped seq: before=%d after=%d", seqBefore, m.seq)
 	}
 }
 
@@ -763,6 +790,25 @@ func TestModel_SetFit_GlyphMode_BumpsSeqReturnsNil(t *testing.T) {
 	}
 }
 
+func TestModel_SetAnchor_GlyphMode_BumpsSeqReturnsNil(t *testing.T) {
+	m := New()
+	m.SetSize(40, 20)
+	m.SetImage(smallImage(color.RGBA{R: 0, G: 200, B: 0, A: 255}))
+	seqBefore := m.seq
+	if cmd := m.SetAnchor(AnchorTop); cmd != nil {
+		t.Fatalf("SetAnchor in Glyph mode should return nil, got %v", cmd)
+	}
+	if m.seq <= seqBefore {
+		t.Fatalf("SetAnchor should bump seq: before=%d after=%d", seqBefore, m.seq)
+	}
+	if m.Anchor() != AnchorTop {
+		t.Fatalf("Anchor should be AnchorTop after SetAnchor, got %v", m.Anchor())
+	}
+	if m.glyphCache != "" {
+		t.Errorf("expected glyphCache invalidated after SetAnchor, got non-empty")
+	}
+}
+
 func TestModel_SetFit_KittyMode_ReturnsRenderCmd(t *testing.T) {
 	m := New()
 	m.SetSize(20, 10)
@@ -770,6 +816,16 @@ func TestModel_SetFit_KittyMode_ReturnsRenderCmd(t *testing.T) {
 	m.SetImage(smallImage(color.RGBA{R: 50, G: 50, B: 200, A: 255}))
 	if cmd := m.SetFit(FitFill); cmd == nil {
 		t.Fatal("SetFit in Kitty mode with image set should return a non-nil Cmd")
+	}
+}
+
+func TestModel_SetAnchor_KittyMode_ReturnsRenderCmd(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle()
+	m.SetImage(smallImage(color.RGBA{R: 50, G: 50, B: 200, A: 255}))
+	if cmd := m.SetAnchor(AnchorTop); cmd == nil {
+		t.Fatal("SetAnchor in Kitty mode with image set should return a non-nil Cmd")
 	}
 }
 
@@ -805,6 +861,35 @@ func TestModel_SetFit_KittyMode_PrependsDeleteOnFitChange(t *testing.T) {
 	}
 }
 
+func TestModel_SetAnchor_KittyMode_PrependsDeleteOnAnchorChange(t *testing.T) {
+	// After a successful Kitty placement, an anchor change should produce a
+	// render Cmd whose APC starts with the kittyDeleteImage sequence.
+	m := New()
+	m.SetSize(20, 10)
+	m.Toggle()
+	m.SetImage(smallImage(color.RGBA{R: 50, G: 50, B: 200, A: 255}))
+	cmd := m.renderCmd()
+	if cmd == nil {
+		t.Fatal("setup: renderCmd should be non-nil after SetImage in Kitty mode")
+	}
+	msg := cmd().(KittyFrameMsg)
+	m.Update(msg)
+
+	cmd2 := m.SetAnchor(AnchorTop)
+	if cmd2 == nil {
+		t.Fatal("SetAnchor should return a Cmd")
+	}
+	msg2 := cmd2().(KittyFrameMsg)
+	deletePrefix := kittyDeleteImage(m.kittyID)
+	if !strings.HasPrefix(msg2.APC, deletePrefix) {
+		head := msg2.APC
+		if len(head) > 60 {
+			head = head[:60]
+		}
+		t.Fatalf("expected APC to start with kittyDeleteImage on anchor change; got first bytes: %q", head)
+	}
+}
+
 // TestModel_FitContain_GlyphAndKitty_AgreeOnLetterbox is the canary for
 // "consistency in this API". For a non-square source and non-square cell
 // rect, both render paths consume the same prepared bitmap from
@@ -817,7 +902,7 @@ func TestModel_FitContain_GlyphAndKitty_AgreeOnLetterbox(t *testing.T) {
 	// and 100..160.
 	src := solidImage(200, 100, color.RGBA{R: 0, G: 0, B: 200, A: 255})
 
-	prepared := prepareSource(src, FitContain, 10, 10, 8, 16, color.Transparent)
+	prepared := prepareSource(src, FitContain, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	rgba := prepared.(*image.RGBA)
 
 	// Confirm the prepared bitmap has the letterbox we expect — this is the

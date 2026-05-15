@@ -431,6 +431,13 @@ func TestModel_Fit_FromConfig(t *testing.T) {
 	}
 }
 
+func TestModel_Anchor_FromConfig(t *testing.T) {
+	m := NewWithConfig(Config{Anchor: picture.AnchorTop})
+	if got := m.Anchor(); got != picture.AnchorTop {
+		t.Fatalf("Anchor from Config not honored: got %v want AnchorTop", got)
+	}
+}
+
 func TestModel_SetFit_Forwards(t *testing.T) {
 	m := New()
 	m.SetSize(20, 10)
@@ -439,5 +446,16 @@ func TestModel_SetFit_Forwards(t *testing.T) {
 	}
 	if got := m.Fit(); got != picture.FitCover {
 		t.Fatalf("SetFit didn't take: got %v want FitCover", got)
+	}
+}
+
+func TestModel_SetAnchor_Forwards(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	if cmd := m.SetAnchor(picture.AnchorTop); cmd != nil {
+		t.Fatalf("SetAnchor in Glyph mode should return nil, got %v", cmd)
+	}
+	if got := m.Anchor(); got != picture.AnchorTop {
+		t.Fatalf("SetAnchor didn't take: got %v want AnchorTop", got)
 	}
 }

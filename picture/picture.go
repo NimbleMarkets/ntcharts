@@ -42,6 +42,19 @@ const (
 	FitCover                  // preserve aspect ratio, crop to fill
 )
 
+// FitAnchor controls which edge or center is preserved when a fit mode
+// must crop overflow. Today only FitCover consults this; FitContain and
+// FitFill never crop.
+type FitAnchor int8
+
+const (
+	AnchorCenter FitAnchor = iota // center crop (default)
+	AnchorTop
+	AnchorBottom
+	AnchorLeft
+	AnchorRight
+)
+
 const DefaultKittyID = 43
 
 // Sensible defaults for terminal cell pixel size. Most monospace fonts have
@@ -64,6 +77,11 @@ type Config struct {
 	// coordinate-aligned UIs where source pixels must map exactly to the
 	// configured terminal-cell rectangle.
 	Fit FitMode
+
+	// Anchor controls which edge or center is preserved when Fit must
+	// crop overflow. Only consulted by FitCover today. Zero value is
+	// AnchorCenter, matching prior behavior.
+	Anchor FitAnchor
 
 	// CellPixelWidth and CellPixelHeight are the terminal cell dimensions in
 	// pixels. Used in Kitty mode to pre-scale the source image to the c×r
@@ -105,6 +123,7 @@ type Model struct {
 	kittyID    int
 	background color.Color
 	fit        FitMode
+	anchor     FitAnchor
 
 	cellPixelW, cellPixelH int
 
@@ -132,6 +151,7 @@ type kittyGeom struct {
 	cols, rows             int
 	cellPixelW, cellPixelH int
 	fit                    FitMode
+	anchor                 FitAnchor
 }
 
 var nextModelID atomic.Uint64
@@ -168,6 +188,7 @@ func NewWithConfig(cfg Config) Model {
 		cellPixelH:            cfg.CellPixelHeight,
 		kittyResolutionFactor: cfg.KittyResolutionFactor,
 		fit:                   cfg.Fit,
+		anchor:                cfg.Anchor,
 	}
 }
 
@@ -271,6 +292,9 @@ func (m *Model) Mode() PictureMode { return m.mode }
 // Fit returns the current fit mode.
 func (m *Model) Fit() FitMode { return m.fit }
 
+// Anchor returns the current fit anchor.
+func (m *Model) Anchor() FitAnchor { return m.anchor }
+
 // SetFit updates the fit mode. No-ops if fit is unchanged. Otherwise stores
 // it, bumps seq, invalidates both render caches, and returns m.renderCmd()
 // (nil in Glyph mode, a render Cmd in Kitty mode with an image set).
@@ -279,6 +303,21 @@ func (m *Model) SetFit(fit FitMode) tea.Cmd {
 		return nil
 	}
 	m.fit = fit
+	m.seq++
+	m.invalidateGlyph()
+	m.invalidateKitty()
+	return m.renderCmd()
+}
+
+// SetAnchor updates the fit anchor. No-ops if anchor is unchanged. Otherwise
+// stores it, bumps seq, invalidates both render caches, and returns
+// m.renderCmd() (nil in Glyph mode, a render Cmd in Kitty mode with an image
+// set).
+func (m *Model) SetAnchor(anchor FitAnchor) tea.Cmd {
+	if anchor == m.anchor {
+		return nil
+	}
+	m.anchor = anchor
 	m.seq++
 	m.invalidateGlyph()
 	m.invalidateKitty()
@@ -409,6 +448,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cellPixelW: m.cellPixelW,
 			cellPixelH: m.cellPixelH,
 			fit:        m.fit,
+			anchor:     m.anchor,
 		}
 		modelID, grid := m.modelID, msg.Grid
 		gridCols, gridRows, gridID := m.cols, m.rows, m.kittyID
@@ -473,12 +513,12 @@ func (m *Model) View() tea.View {
 	//   - mode == PictureKitty but kittyGrid hasn't been computed yet
 	//     (transitional fallback during a Glyph→Kitty toggle)
 
-	key := fmt.Sprintf("%d|%d|%d|%d", m.seq, m.cols, m.rows, m.fit)
+	key := fmt.Sprintf("%d|%d|%d|%d|%d", m.seq, m.cols, m.rows, m.fit, m.anchor)
 	if m.glyphKey == key && m.glyphCache != "" {
 		return tea.NewView(m.glyphCache)
 	}
 
-	rendered := prepareSource(m.img, m.fit, m.cols, m.rows, m.cellPixelW, m.cellPixelH, m.background)
+	rendered := prepareSource(m.img, m.fit, m.cols, m.rows, m.cellPixelW, m.cellPixelH, m.background, m.anchor)
 	if rendered == nil {
 		return tea.NewView("")
 	}
@@ -526,11 +566,12 @@ func (m *Model) renderCmd() tea.Cmd {
 	}
 	// Capture inputs by value; defer the heavy work (prepareSource's
 	// CatmullRom scale + bg compositing, plus buildKittyAPC's PNG encode)
-	// to the returned closure so SetImage/SetSize/SetFit/Update return
+	// to the returned closure so SetImage/SetSize/SetFit/SetAnchor/Update return
 	// immediately and bubbletea runs the render off the main loop.
 	img, bg := m.img, m.background
 	modelID, id, cols, rows, seq := m.modelID, m.kittyID, m.cols, m.rows, m.seq
 	fit := m.fit
+	anchor := m.anchor
 	// Apply kittyResolutionFactor to the cell-pixel dims used for the
 	// transmitted image. The placement rectangle (cols × rows cells) is
 	// unchanged, so the terminal upscales the smaller source image to
@@ -545,7 +586,7 @@ func (m *Model) renderCmd() tea.Cmd {
 	}
 	prevGeom := m.lastRenderedGeom
 	return func() tea.Msg {
-		prepared := prepareSource(img, fit, cols, rows, cpw, cph, bg)
+		prepared := prepareSource(img, fit, cols, rows, cpw, cph, bg, anchor)
 		if prepared == nil {
 			return nil
 		}
@@ -557,7 +598,7 @@ func (m *Model) renderCmd() tea.Cmd {
 		yieldToJS()
 		apc := buildKittyAPC(prepared, id, cols, rows)
 		yieldToJS()
-		currGeom := kittyGeom{cols: cols, rows: rows, cellPixelW: cpw, cellPixelH: cph, fit: fit}
+		currGeom := kittyGeom{cols: cols, rows: rows, cellPixelW: cpw, cellPixelH: cph, fit: fit, anchor: anchor}
 		if prevGeom != (kittyGeom{}) && prevGeom != currGeom {
 			apc = kittyDeleteImage(id) + apc
 		}

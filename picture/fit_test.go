@@ -19,7 +19,7 @@ func solidImage(w, h int, c color.RGBA) *image.RGBA {
 
 func TestPrepareSource_Fill_OutputDims(t *testing.T) {
 	src := solidImage(200, 100, color.RGBA{R: 200, G: 0, B: 0, A: 255})
-	out := prepareSource(src, FitFill, 10, 10, 8, 16, color.Transparent)
+	out := prepareSource(src, FitFill, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	got := out.Bounds()
 	want := image.Rect(0, 0, 80, 160)
 	if got != want {
@@ -31,7 +31,7 @@ func TestPrepareSource_Fill_NoLetterbox(t *testing.T) {
 	// Solid red source stretched into a non-matching AR target should fill
 	// every pixel red; no transparent bars.
 	src := solidImage(200, 100, color.RGBA{R: 200, G: 0, B: 0, A: 255})
-	out := prepareSource(src, FitFill, 10, 10, 8, 16, color.Transparent)
+	out := prepareSource(src, FitFill, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	rgba := out.(*image.RGBA)
 	for _, pt := range []image.Point{
 		{X: 0, Y: 0},
@@ -53,7 +53,7 @@ func TestPrepareSource_Fill_NoLetterbox(t *testing.T) {
 func TestPrepareSource_Fill_FastPath_AlreadyTargetSize(t *testing.T) {
 	// If src is already exactly target size, FitFill should return src unchanged.
 	src := solidImage(80, 160, color.RGBA{R: 50, G: 100, B: 150, A: 255})
-	out := prepareSource(src, FitFill, 10, 10, 8, 16, color.Transparent)
+	out := prepareSource(src, FitFill, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	if out != image.Image(src) {
 		t.Fatal("FitFill with src already at target size should return src unchanged (fast path)")
 	}
@@ -61,7 +61,7 @@ func TestPrepareSource_Fill_FastPath_AlreadyTargetSize(t *testing.T) {
 
 func TestPrepareSource_Contain_OutputDims(t *testing.T) {
 	src := solidImage(200, 100, color.RGBA{R: 0, G: 0, B: 200, A: 255})
-	out := prepareSource(src, FitContain, 10, 10, 8, 16, color.Transparent)
+	out := prepareSource(src, FitContain, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	got := out.Bounds()
 	want := image.Rect(0, 0, 80, 160)
 	if got != want {
@@ -73,7 +73,7 @@ func TestPrepareSource_Contain_LetterboxesTransparent(t *testing.T) {
 	// 200x100 source (AR 2.0) into 80x160 target (AR 0.5):
 	// AR-preserving inscribed rect = 80x40, centered vertically (rows 60..100 occupied).
 	src := solidImage(200, 100, color.RGBA{R: 0, G: 0, B: 200, A: 255})
-	out := prepareSource(src, FitContain, 10, 10, 8, 16, color.Transparent)
+	out := prepareSource(src, FitContain, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	rgba := out.(*image.RGBA)
 
 	// Letterbox bars (top and bottom) should be fully transparent.
@@ -94,7 +94,7 @@ func TestPrepareSource_Contain_LetterboxesTransparent(t *testing.T) {
 func TestPrepareSource_Contain_LetterboxesOpaqueRed(t *testing.T) {
 	src := solidImage(200, 100, color.RGBA{R: 0, G: 0, B: 200, A: 255})
 	red := color.RGBA{R: 255, G: 0, B: 0, A: 255}
-	out := prepareSource(src, FitContain, 10, 10, 8, 16, red)
+	out := prepareSource(src, FitContain, 10, 10, 8, 16, red, AnchorCenter)
 	rgba := out.(*image.RGBA)
 	c := rgba.RGBAAt(40, 0) // top letterbox bar
 	if c != red {
@@ -106,7 +106,7 @@ func TestPrepareSource_Contain_PortraitInWideTarget(t *testing.T) {
 	// 100x200 source (AR 0.5) into 160x80 target (AR 2.0):
 	// inscribed = 40x80, centered horizontally (cols 60..100 occupied).
 	src := solidImage(100, 200, color.RGBA{R: 0, G: 200, B: 0, A: 255})
-	out := prepareSource(src, FitContain, 20, 5, 8, 16, color.Transparent)
+	out := prepareSource(src, FitContain, 20, 5, 8, 16, color.Transparent, AnchorCenter)
 	rgba := out.(*image.RGBA)
 	// Left bar transparent.
 	if a := rgba.RGBAAt(10, 40).A; a != 0 {
@@ -121,7 +121,7 @@ func TestPrepareSource_Contain_PortraitInWideTarget(t *testing.T) {
 
 func TestPrepareSource_Cover_OutputDims(t *testing.T) {
 	src := solidImage(200, 100, color.RGBA{R: 200, G: 200, B: 0, A: 255})
-	out := prepareSource(src, FitCover, 10, 10, 8, 16, color.Transparent)
+	out := prepareSource(src, FitCover, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	got := out.Bounds()
 	want := image.Rect(0, 0, 80, 160)
 	if got != want {
@@ -134,7 +134,7 @@ func TestPrepareSource_Cover_FillsEdgeToEdge(t *testing.T) {
 	// FitCover crops the source horizontally; output should be opaque
 	// everywhere — no transparent bars.
 	src := solidImage(200, 100, color.RGBA{R: 200, G: 200, B: 0, A: 255})
-	out := prepareSource(src, FitCover, 10, 10, 8, 16, color.Transparent)
+	out := prepareSource(src, FitCover, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 	rgba := out.(*image.RGBA)
 	for _, pt := range []image.Point{
 		{X: 0, Y: 0}, {X: 79, Y: 0}, {X: 0, Y: 159}, {X: 79, Y: 159}, {X: 40, Y: 80},
@@ -151,10 +151,38 @@ func TestPrepareSource_Cover_CropsSourceWithMatchingARTarget(t *testing.T) {
 	// then scales to target.
 	src := solidImage(200, 100, color.RGBA{R: 0, G: 200, B: 200, A: 255})
 	// 5 cols × 10 rows, 16x8 cell pixels = 80x80 target (square).
-	out := prepareSource(src, FitCover, 5, 10, 16, 8, color.Transparent)
+	out := prepareSource(src, FitCover, 5, 10, 16, 8, color.Transparent, AnchorCenter)
 	if out.Bounds() != image.Rect(0, 0, 80, 80) {
 		t.Fatalf("FitCover bounds = %v, want 80x80", out.Bounds())
 	}
+}
+
+func TestCoverToAnchorTopPreservesTopRow(t *testing.T) {
+	src := solidImage(100, 200, color.RGBA{R: 0, G: 0, B: 255, A: 255})
+	topColor := color.RGBA{R: 255, G: 0, B: 0, A: 255}
+	for x := 0; x < 100; x++ {
+		src.SetRGBA(x, 0, topColor)
+	}
+
+	target := image.Rect(0, 0, 400, 100)
+	out := coverTo(src, src.Bounds(), target, color.Black, AnchorTop)
+
+	got := out.At(target.Dx()/2, 0)
+	assertColorNear(t, got, topColor, 2)
+}
+
+func TestCoverToAnchorCenterIsDefault(t *testing.T) {
+	src := solidImage(100, 200, color.RGBA{R: 0, G: 0, B: 255, A: 255})
+	topColor := color.RGBA{R: 255, G: 0, B: 0, A: 255}
+	for x := 0; x < 100; x++ {
+		src.SetRGBA(x, 0, topColor)
+	}
+
+	target := image.Rect(0, 0, 400, 100)
+	out := coverTo(src, src.Bounds(), target, color.Black, AnchorCenter)
+
+	got := out.At(target.Dx()/2, 0)
+	assertColorNear(t, got, color.RGBA{R: 0, G: 0, B: 255, A: 255}, 2)
 }
 
 func TestPrepareSource_DegenerateDims_ReturnsNil(t *testing.T) {
@@ -170,7 +198,7 @@ func TestPrepareSource_DegenerateDims_ReturnsNil(t *testing.T) {
 		{"negative", -1, 10, 8, 16},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := prepareSource(src, FitContain, tc.cols, tc.rows, tc.cellW, tc.cellH, color.Transparent); got != nil {
+			if got := prepareSource(src, FitContain, tc.cols, tc.rows, tc.cellW, tc.cellH, color.Transparent, AnchorCenter); got != nil {
 				t.Fatalf("expected nil for degenerate dims, got bounds %v", got.Bounds())
 			}
 		})
@@ -180,7 +208,7 @@ func TestPrepareSource_DegenerateDims_ReturnsNil(t *testing.T) {
 func TestPrepareSource_EmptySource_ReturnsBgFilled(t *testing.T) {
 	src := image.NewRGBA(image.Rect(0, 0, 0, 0))
 	red := color.RGBA{R: 255, A: 255}
-	out := prepareSource(src, FitContain, 4, 4, 8, 16, red)
+	out := prepareSource(src, FitContain, 4, 4, 8, 16, red, AnchorCenter)
 	if out == nil {
 		t.Fatal("empty source should return a bg-filled image, got nil")
 	}
@@ -200,7 +228,7 @@ func TestPrepareSource_EqualAR_AllFitsAreFullBleed(t *testing.T) {
 	src := solidImage(80, 160, color.RGBA{R: 100, G: 200, B: 50, A: 255})
 	for _, fit := range []FitMode{FitContain, FitFill, FitCover} {
 		t.Run(fitTestName(fit), func(t *testing.T) {
-			out := prepareSource(src, fit, 10, 10, 8, 16, color.Transparent)
+			out := prepareSource(src, fit, 10, 10, 8, 16, color.Transparent, AnchorCenter)
 			if got, want := out.Bounds(), (image.Rect(0, 0, 80, 160)); got != want {
 				t.Fatalf("bounds = %v, want %v", got, want)
 			}
@@ -214,6 +242,28 @@ func TestPrepareSource_EqualAR_AllFitsAreFullBleed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func assertColorNear(t *testing.T, got color.Color, want color.RGBA, tolerance uint32) {
+	t.Helper()
+
+	r, g, b, a := got.RGBA()
+	wantR := uint32(want.R) * 0x101
+	wantG := uint32(want.G) * 0x101
+	wantB := uint32(want.B) * 0x101
+	wantA := uint32(want.A) * 0x101
+	tol := tolerance * 0x101
+
+	if absDiff(r, wantR) > tol || absDiff(g, wantG) > tol || absDiff(b, wantB) > tol || absDiff(a, wantA) > tol {
+		t.Fatalf("color = rgba16(%d,%d,%d,%d), want near rgba16(%d,%d,%d,%d) within %d", r, g, b, a, wantR, wantG, wantB, wantA, tol)
+	}
+}
+
+func absDiff(a, b uint32) uint32 {
+	if a > b {
+		return a - b
+	}
+	return b - a
 }
 
 func fitTestName(f FitMode) string {
@@ -240,7 +290,7 @@ func TestPrepareSource_AllFits_OpaqueBg_CompositesTransparentSrc(t *testing.T) {
 
 	for _, fit := range []FitMode{FitContain, FitFill, FitCover} {
 		t.Run(fitTestName(fit), func(t *testing.T) {
-			out := prepareSource(src, fit, 10, 10, 8, 16, red)
+			out := prepareSource(src, fit, 10, 10, 8, 16, red, AnchorCenter)
 			rgba := out.(*image.RGBA)
 			for _, pt := range []image.Point{
 				{X: 0, Y: 0}, {X: 79, Y: 0}, {X: 0, Y: 159}, {X: 79, Y: 159}, {X: 40, Y: 80},
@@ -262,7 +312,7 @@ func TestPrepareSource_Fill_FastPath_OpaqueBgComposites(t *testing.T) {
 	// Fully transparent source already at target dims (80x160).
 	src := solidImage(80, 160, color.RGBA{R: 0, G: 0, B: 0, A: 0})
 	red := color.RGBA{R: 255, G: 0, B: 0, A: 255}
-	out := prepareSource(src, FitFill, 10, 10, 8, 16, red)
+	out := prepareSource(src, FitFill, 10, 10, 8, 16, red, AnchorCenter)
 	if out == image.Image(src) {
 		t.Fatal("FitFill must not return src unchanged when bg is opaque (compositing was skipped)")
 	}

@@ -20,7 +20,7 @@ import (
 // Returns nil for non-positive dims (defensive — callers should already
 // short-circuit on cols/rows <= 0). Returns a bg-filled target when src
 // has empty bounds.
-func prepareSource(src image.Image, fit FitMode, cols, rows, cellW, cellH int, bg color.Color) image.Image {
+func prepareSource(src image.Image, fit FitMode, cols, rows, cellW, cellH int, bg color.Color, anchor FitAnchor) image.Image {
 	if cols <= 0 || rows <= 0 || cellW <= 0 || cellH <= 0 {
 		return nil
 	}
@@ -39,7 +39,7 @@ func prepareSource(src image.Image, fit FitMode, cols, rows, cellW, cellH int, b
 	case FitFill:
 		return fillTo(src, sb, target, bg)
 	case FitCover:
-		return coverTo(src, sb, target, bg)
+		return coverTo(src, sb, target, bg, anchor)
 	default: // FitContain and any out-of-range value
 		return containTo(src, sb, target, bg)
 	}
@@ -106,7 +106,7 @@ func containTo(src image.Image, sb, target image.Rectangle, bg color.Color) imag
 // target, the other overflows), fills target with bg, then draws src into
 // the circumscribed rect with draw.Over. Target-bound clipping crops the
 // overflow; bg shows through translucent source pixels.
-func coverTo(src image.Image, sb, target image.Rectangle, bg color.Color) image.Image {
+func coverTo(src image.Image, sb, target image.Rectangle, bg color.Color, anchor FitAnchor) image.Image {
 	tw, th := target.Dx(), target.Dy()
 	sw, sh := sb.Dx(), sb.Dy()
 
@@ -128,8 +128,24 @@ func coverTo(src image.Image, sb, target image.Rectangle, bg color.Color) image.
 	if ch < 1 {
 		ch = 1
 	}
-	ox := (tw - cw) / 2
-	oy := (th - ch) / 2
+	var ox, oy int
+	switch anchor {
+	case AnchorTop:
+		ox = (tw - cw) / 2
+		oy = 0
+	case AnchorBottom:
+		ox = (tw - cw) / 2
+		oy = th - ch
+	case AnchorLeft:
+		ox = 0
+		oy = (th - ch) / 2
+	case AnchorRight:
+		ox = tw - cw
+		oy = (th - ch) / 2
+	default: // AnchorCenter
+		ox = (tw - cw) / 2
+		oy = (th - ch) / 2
+	}
 	dst := image.Rect(ox, oy, ox+cw, oy+ch)
 	out := image.NewRGBA(target)
 	draw.Draw(out, target, &image.Uniform{C: bg}, image.Point{}, draw.Src)

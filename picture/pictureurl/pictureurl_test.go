@@ -13,6 +13,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/NimbleMarkets/ntcharts/v2/picture"
 )
 
 // TestInit_DispatchesCellSizeRequest verifies the pictureurl wrapper's Init
@@ -27,6 +28,24 @@ func TestInit_DispatchesCellSizeRequest(t *testing.T) {
 	}
 	if !batchContainsCSI16t(cmd) {
 		t.Error("expected Init to include a CSI 16 t request (possibly batched with the Kitty support probe)")
+	}
+}
+
+func TestModel_Anchor_FromConfig(t *testing.T) {
+	m := NewWithConfig(Config{Anchor: picture.AnchorTop})
+	if got := m.Anchor(); got != picture.AnchorTop {
+		t.Fatalf("Anchor from Config not honored: got %v want AnchorTop", got)
+	}
+}
+
+func TestModel_SetAnchor_Forwards(t *testing.T) {
+	m := New()
+	m.SetSize(20, 10)
+	if cmd := m.SetAnchor(picture.AnchorTop); cmd != nil {
+		t.Fatalf("SetAnchor in Glyph mode should return nil, got %v", cmd)
+	}
+	if got := m.Anchor(); got != picture.AnchorTop {
+		t.Fatalf("SetAnchor didn't take: got %v want AnchorTop", got)
 	}
 }
 

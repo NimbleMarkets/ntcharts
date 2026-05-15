@@ -30,6 +30,11 @@ type Config struct {
 	// pixel dimensions, so all three modes look identical here — the
 	// field exists for API parity with picture.Model.
 	Fit picture.FitMode
+
+	// Anchor controls which edge or center is preserved when FitCover must
+	// crop overflow in the embedded picture.Model. Zero value is
+	// picture.AnchorCenter.
+	Anchor picture.FitAnchor
 }
 
 // Model wraps picture.Model with go-analyze/charts as the image source.
@@ -73,6 +78,7 @@ func NewWithConfig(cfg Config) Model {
 			KittyID:    cfg.KittyID,
 			Background: cfg.Background,
 			Fit:        cfg.Fit,
+			Anchor:     cfg.Anchor,
 		}),
 		cellW: cfg.CellWidthPx,
 		cellH: cfg.CellHeightPx,
@@ -105,6 +111,12 @@ func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
 
 // SetFit forwards to the embedded picture.Model.
 func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
+
+// Anchor forwards to the embedded picture.Model.
+func (m *Model) Anchor() picture.FitAnchor { return m.pic.Anchor() }
+
+// SetAnchor forwards to the embedded picture.Model.
+func (m *Model) SetAnchor(anchor picture.FitAnchor) tea.Cmd { return m.pic.SetAnchor(anchor) }
 
 // KittySupported forwards to the embedded picture.Model — Kitty
 // capability is process-wide.

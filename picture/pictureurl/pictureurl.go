@@ -34,6 +34,7 @@ type Config struct {
 	KittyID    int
 	Background color.Color
 	Fit        picture.FitMode
+	Anchor     picture.FitAnchor
 
 	// URL-specific.
 	MaxSize    int64         // default 15 MiB
@@ -104,6 +105,7 @@ func NewWithConfig(cfg Config) Model {
 			KittyID:    cfg.KittyID,
 			Background: cfg.Background,
 			Fit:        cfg.Fit,
+			Anchor:     cfg.Anchor,
 		}),
 		cache:      make(map[string]image.Image),
 		errs:       make(map[string]error),
@@ -241,6 +243,12 @@ func (m *Model) Fit() picture.FitMode { return m.pic.Fit() }
 
 // SetFit forwards to the embedded picture.Model.
 func (m *Model) SetFit(fit picture.FitMode) tea.Cmd { return m.pic.SetFit(fit) }
+
+// Anchor forwards to the embedded picture.Model.
+func (m *Model) Anchor() picture.FitAnchor { return m.pic.Anchor() }
+
+// SetAnchor forwards to the embedded picture.Model.
+func (m *Model) SetAnchor(anchor picture.FitAnchor) tea.Cmd { return m.pic.SetAnchor(anchor) }
 
 // KittySupported forwards to the embedded picture.Model — Kitty
 // capability is process-wide.
