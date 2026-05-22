@@ -169,7 +169,9 @@ func (m model) View() tea.View {
 		errBar := lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render(err.Error())
 		parts = []string{title, pane, errBar, footer}
 	}
-	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, parts...))
+	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left, parts...))
+	v.AltScreen = true
+	return v
 }
 
 func main() {

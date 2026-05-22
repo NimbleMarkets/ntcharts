@@ -201,13 +201,15 @@ func (m *model) applyLayout() []tea.Cmd {
 func (m model) View() tea.View {
 	d := m.layout()
 	if d.tooSmall {
-		return tea.NewView(lipgloss.NewStyle().
+		v := tea.NewView(lipgloss.NewStyle().
 			Width(m.width).
 			Height(m.height).
 			Align(lipgloss.Center, lipgloss.Center).
 			Foreground(lipgloss.Color("9")).
 			Render(fmt.Sprintf("Terminal too small (%d × %d)\nneed at least %d × %d",
 				m.width, m.height, minWidth, minHeight)))
+		v.AltScreen = true
+		return v
 	}
 
 	title := lipgloss.NewStyle().
@@ -294,7 +296,9 @@ func (m model) View() tea.View {
 	}
 	parts = append(parts, footer)
 
-	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, parts...))
+	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left, parts...))
+	v.AltScreen = true
+	return v
 }
 
 // buildPane composes a pane's content: a top label row, picture content in

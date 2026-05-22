@@ -548,13 +548,15 @@ func (m model) View() tea.View {
 
 	d := m.layout()
 	if d.tooSmall {
-		return tea.NewView(lipgloss.NewStyle().
+		v := tea.NewView(lipgloss.NewStyle().
 			Width(m.width).
 			Height(m.height).
 			Align(lipgloss.Center, lipgloss.Center).
 			Foreground(lipgloss.Color("9")).
 			Render(fmt.Sprintf("Terminal too small (%d × %d)\nneed at least %d × %d",
 				m.width, m.height, minWidth, minHeight)))
+		v.AltScreen = true
+		return v
 	}
 
 	title := lipgloss.NewStyle().
@@ -614,13 +616,15 @@ func (m model) View() tea.View {
 		Foreground(lipgloss.Color("242")).
 		Render("←/→ prev·next   c catalog   g jump   r reload   q quit")
 
-	return tea.NewView(
+	v := tea.NewView(
 		title + "\n" +
 			badge + "\n\n" +
 			panes + "\n\n" +
 			details + "\n\n" +
 			footer,
 	)
+	v.AltScreen = true
+	return v
 }
 
 // statusBadge formats the Kitty probe state and the current render mode of
@@ -666,13 +670,15 @@ func modeBadge(mode picture.PictureMode) string {
 
 func (m model) catalogView() tea.View {
 	if m.width < catalogMinWidth || m.height < catalogMinHeight {
-		return tea.NewView(lipgloss.NewStyle().
+		v := tea.NewView(lipgloss.NewStyle().
 			Width(m.width).
 			Height(m.height).
 			Align(lipgloss.Center, lipgloss.Center).
 			Foreground(lipgloss.Color("9")).
 			Render(fmt.Sprintf("Terminal too small (%d × %d)\nneed at least %d × %d",
 				m.width, m.height, catalogMinWidth, catalogMinHeight)))
+		v.AltScreen = true
+		return v
 	}
 
 	title := lipgloss.NewStyle().
@@ -701,12 +707,14 @@ func (m model) catalogView() tea.View {
 		Foreground(lipgloss.Color("242")).
 		Render("↑/↓ move   s sort   / author filter   enter select   esc image   q quit")
 
-	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left,
+	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		meta,
 		m.catalogTable.View(),
 		footer,
 	))
+	v.AltScreen = true
+	return v
 }
 
 func main() {
