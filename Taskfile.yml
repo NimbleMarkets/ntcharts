@@ -312,7 +312,7 @@ tasks:
       - rm -f web/_assets/wasm_exec.js web/_assets/index.html
       - rm -f web/index.html
       - rm -f web/demos/*/app.wasm
-      - find web/demos -name 'index.html' -delete
+      - find web/demos -name 'index.html' -delete 2>/dev/null || true
 
 ###############################################################################
 # GIF Generation from VHS Cassettes
