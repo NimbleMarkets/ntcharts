@@ -2,6 +2,8 @@
 
 When you run `task`, all of the examples are built into the the `bin` directory of `ntcharts`.  So run any example below like so: `./bin/ntcharts-quickstart`.
 
+These [examples are live](https://nimblemarkets.github.io/) at https://nimblemarkets.github.io/ntcharts/.  They were compiled to WASM and embedded in HTML using [`NimbleMarkets/go-booba`](https://github.com/NimbleMarkets/go-booba).
+
 ## Quickstart
 
 This [tutorial](quickstart/README.md) creates a simple [Time Series Chart](#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.

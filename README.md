@@ -11,6 +11,9 @@
 
 We supply many chart types within the glory of your terminal!  
 
+[Explore our **NTCharts Live Demos**](https://nimblemarkets.github.io/ntcharts/).  They are our [example code](./examples/README.md)  compiled to WASM and embedded in HTML using [`NimbleMarkets/go-booba`](https://github.com/NimbleMarkets/go-booba).
+
+
 | Type | Description |
 | :-------- | :----- |
 | [Canvas](./examples/README.md#canvas) | A 2D grid to plot arbitrary runes, with [LipGloss](https://github.com/charmbracelet/lipgloss) for styling and [BubbleZone](https://github.com/lrstanley/bubblezone) for mousing.  It is the foundation for all the following charts. |
