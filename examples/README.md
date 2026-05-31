@@ -151,6 +151,8 @@ The example's source image is a hand-made 1-bit recreation of Hokusai's waves:
 `ntcharts-picture-grid` [(source)](./picture/grid/main.go)<br>
 Composes sprites into a `picture.GridImage`, then renders that single bitmap with `FitFill` so logical board coordinates stay aligned with Kitty terminal cells.
 
+`ntcharts-picture-simple` is a minimal example [(source)](./picture/simple/main.go)
+
 ## Chart Picture
 
 `chartpicture` displays a [github.com/go-analyze/charts](https://github.com/go-analyze/charts) chart via an embedded `picture.Model`.  In the example, you may toggle between a random line chart and bar chart.  You can toggle between `glyph` mode and Kitty Graphics mode.
