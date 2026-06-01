@@ -4,6 +4,12 @@
 // FitMode controls whether images contain, fill, or cover the target cell
 // rectangle.
 //
+// picture.Model renders an image.Image and never decodes bytes itself, so it
+// registers no image-format decoders — importing it stays lightweight.
+// Callers that decode their own sources register the formats they use
+// (e.g. import _ "image/png"). The picture/pictureurl layer, which decodes
+// fetched bytes, registers a broad set of formats; see that package.
+//
 // Use picture/pictureurl for URL-driven fetching on top of this base.
 
 package picture
@@ -12,9 +18,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	_ "image/gif"  // decoder registration
-	_ "image/jpeg" // decoder registration
-	_ "image/png"  // decoder registration
 	"strings"
 	"sync/atomic"
 

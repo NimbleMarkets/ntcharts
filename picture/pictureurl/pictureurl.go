@@ -1,6 +1,16 @@
 // Package pictureurl is a URL-driven layer on top of picture.Model. It owns
 // HTTP fetching, per-URL image and error caches, and loading-state UI; the
 // embedded picture.Model handles all rendering.
+//
+// This package is decoder-agnostic: it decodes fetched bytes with image.Decode
+// but registers no image formats itself. Pick the decoders you want. For
+// batteries-included support of PNG, JPEG, GIF, WebP, BMP, and TIFF, blank-
+// import the helper package:
+//
+//	import _ "github.com/NimbleMarkets/ntcharts/v2/picture/decoders"
+//
+// Or register a narrower set yourself (e.g. import _ "image/png"). Without any
+// decoder registered, fetches fail to decode.
 package pictureurl
 
 import (

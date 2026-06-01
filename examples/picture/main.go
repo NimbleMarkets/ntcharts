@@ -23,6 +23,11 @@ import (
 	booba "github.com/NimbleMarkets/go-booba"
 	"github.com/NimbleMarkets/ntcharts/v2/picture"
 	"github.com/NimbleMarkets/ntcharts/v2/picture/pictureurl"
+
+	// pictureurl is decoder-agnostic, so register the formats we want to
+	// decode. The batteries-included helper covers the embedded PNG and any
+	// PNG/JPEG/GIF/WebP/BMP/TIFF fetched from a URL.
+	_ "github.com/NimbleMarkets/ntcharts/v2/picture/decoders"
 )
 
 const (

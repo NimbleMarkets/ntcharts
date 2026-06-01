@@ -3,6 +3,16 @@
 // The minimal picture demo: a single embedded image rendered with
 // picture.Model, sized to fill the terminal. Press 'q' or ctrl+c to quit.
 //
+// The core picture package renders an image.Image and registers no decoders,
+// so the program decodes its own source. This file imports just image/png for
+// the embedded PNG below (the minimal "bring your own decoder" path). For all
+// common formats in one line instead, blank-import the helper:
+//
+//	import _ "github.com/NimbleMarkets/ntcharts/v2/picture/decoders"
+//
+// which registers PNG, JPEG, GIF, WebP, BMP, and TIFF. examples/picture/main.go
+// uses that helper.
+//
 // For the fuller demo (HTTP fetching, fit cycling, Glyph/Kitty toggle, and
 // a Kitty-capability badge) see examples/picture/main.go.
 package main
@@ -12,6 +22,7 @@ import (
 	_ "embed"
 	"fmt"
 	"image"
+	_ "image/png" // decode the embedded PNG asset
 	"os"
 
 	tea "charm.land/bubbletea/v2"

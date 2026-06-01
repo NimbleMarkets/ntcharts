@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.3.0 (unreleased)
+
+ * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pulled these in automatically, even if one didn't need it. **BREAKING**
+
 ## v2.2.0 (2026-05-28)
 
   * feat(picture): detect Kitty graphics support and gate Toggle on capability.  In other words, don't blast the terminal with characters when it doesn't support Kitty graphics. `QueryKittySupport` gates the probe based on environment variables; `ForceKittyCapability` can override detection.
