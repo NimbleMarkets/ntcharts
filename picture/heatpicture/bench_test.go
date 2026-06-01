@@ -2,10 +2,10 @@ package heatpicture
 
 import (
 	"image/color"
+	"math"
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/aquilax/go-perlin"
 )
 
 // BenchmarkSampleField_TerminalSize measures the cost of one frame at a
@@ -20,8 +20,10 @@ func BenchmarkSampleField_TerminalSize(b *testing.B) {
 		lipgloss.Color("#FF7216"),
 		lipgloss.Color("#660000"),
 	})
-	p := perlin.NewPerlin(1, 2, 4, 100)
-	sampler := func(x, y float64) float64 { return p.Noise2D(x*20, y*20) }
+	// Deterministic value field in ~[-1,1]; replaces a Perlin sampler so the
+	// library carries no go-perlin dependency. The benchmark measures
+	// sampleField cost, not noise quality.
+	sampler := func(x, y float64) float64 { return math.Sin(x*20) * math.Cos(y*20) }
 
 	for _, sz := range []struct {
 		name         string

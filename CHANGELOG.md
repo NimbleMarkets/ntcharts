@@ -2,6 +2,7 @@
 
 ## v2.3.0 (unreleased)
 
+ * feat(ci): Restructure `go.mod` into subdirectories, to shield users from unnecessary dependencies.
  * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pulled these in automatically, even if one didn't need it. **BREAKING**
 
 ## v2.2.0 (2026-05-28)

@@ -22,21 +22,32 @@ tasks:
 ###############################################################################
 
   go-tidy:
-    desc: 'Go tidy all the things'
+    desc: 'Go tidy all modules (root, examples, cmd, picture/chartpicture)'
     run: once
     cmds:
       - go mod tidy
+      - cd examples && go mod tidy
+      - cd cmd && go mod tidy
+      - cd picture/chartpicture && go mod tidy
+      - go work sync
 
   go-update:
-    desc: 'Go update all the dependencies'
+    desc: 'Go update dependencies in all modules'
     run: once
     cmds:
       - go get -u ./...
+      - cd examples && go get -u ./...
+      - cd cmd && go get -u ./...
+      - cd picture/chartpicture && go get -u ./...
+      - go work sync
 
   test:
-    desc: 'Run all Go tests'
+    desc: 'Run all Go tests across modules'
     cmds:
       - go test ./...
+      - cd examples && go test ./...
+      - cd cmd && go test ./...
+      - cd picture/chartpicture && go test ./...
 
   build:
     desc: 'Build all the things'
@@ -84,7 +95,7 @@ tasks:
     desc: 'Build ntcharts-ohlc command'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-lorem-picsum cmd/ntcharts-lorem-picsum/*.go
+      - go build -o bin/ntcharts-lorem-picsum ./cmd/ntcharts-lorem-picsum
     sources:
       - cmd/ntcharts-lorem-picsum/*.go
       - picture/**/*.go
@@ -96,7 +107,7 @@ tasks:
     desc: 'Build ntcharts-ohlc command'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-ohlc cmd/ntcharts-ohlc/*.go
+      - go build -o bin/ntcharts-ohlc ./cmd/ntcharts-ohlc
     sources:
       - cmd/ntcharts-ohlc/*.go
       - canvas/**/*.go
@@ -108,7 +119,7 @@ tasks:
     desc: 'Build ntcharts-yomamma command'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-yomamma cmd/ntcharts-yomamma/*.go
+      - go build -o bin/ntcharts-yomamma ./cmd/ntcharts-yomamma
     sources:
       - cmd/ntcharts-yomamma/*.go
       - canvas/**/*.go
@@ -142,8 +153,8 @@ tasks:
     desc: 'Build barchart examples'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-barchart-horizontal examples/barchart/horizontal/*.go
-      - go build -o bin/ntcharts-barchart-vertical examples/barchart/vertical/*.go
+      - go build -o bin/ntcharts-barchart-horizontal ./examples/barchart/horizontal
+      - go build -o bin/ntcharts-barchart-vertical ./examples/barchart/vertical
     sources:
       - barchart/**/*.go
       - canvas/**/*.go
@@ -156,7 +167,7 @@ tasks:
     desc: 'Build canvas example'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-canvas-logo examples/canvas/logo/*.go
+      - go build -o bin/ntcharts-canvas-logo ./examples/canvas/logo
     sources:
       - examples/canvas/logo/*.go
       - canvas/**/*.go
@@ -167,12 +178,12 @@ tasks:
     desc: 'Build graph examples'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-graph-braille examples/graph/braille/*.go
-      - go build -o bin/ntcharts-graph-candlesticks examples/graph/candlesticks/*.go
-      - go build -o bin/ntcharts-graph-circles examples/graph/circles/*.go
-      - go build -o bin/ntcharts-graph-columns examples/graph/columns/*.go
-      - go build -o bin/ntcharts-graph-lines examples/graph/lines/*.go
-      - go build -o bin/ntcharts-graph-rows examples/graph/rows/*.go
+      - go build -o bin/ntcharts-graph-braille ./examples/graph/braille
+      - go build -o bin/ntcharts-graph-candlesticks ./examples/graph/candlesticks
+      - go build -o bin/ntcharts-graph-circles ./examples/graph/circles
+      - go build -o bin/ntcharts-graph-columns ./examples/graph/columns
+      - go build -o bin/ntcharts-graph-lines ./examples/graph/lines
+      - go build -o bin/ntcharts-graph-rows ./examples/graph/rows
     sources:
       - canvas/**/*.go
       - examples/graph/**/*.go
@@ -188,11 +199,11 @@ tasks:
     desc: 'Build heatmap examples'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-heatmap-aoc2024 examples/heatmap/aoc2024/*.go
-      - go build -o bin/ntcharts-heatmap-functor examples/heatmap/functor/*.go
+      - go build -o bin/ntcharts-heatmap-aoc2024 ./examples/heatmap/aoc2024
+      - go build -o bin/ntcharts-heatmap-functor ./examples/heatmap/functor
       - go build -o bin/ntcharts-heatmap-perlin ./examples/heatmap/perlin
-      - go build -o bin/ntcharts-heatmap-simple examples/heatmap/simple/*.go
-      - go build -o bin/ntcharts-heatpicture-perlin examples/heatpicture/perlin/*.go
+      - go build -o bin/ntcharts-heatmap-simple ./examples/heatmap/simple
+      - go build -o bin/ntcharts-heatpicture-perlin ./examples/heatpicture/perlin
     sources:
       - canvas/**/*.go
       - heatmap/**/*.go
@@ -210,12 +221,12 @@ tasks:
     desc: 'Build linechart examples'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-linechart-circles examples/linechart/circles/*.go
-      - go build -o bin/ntcharts-linechart-lines examples/linechart/lines/*.go
-      - go build -o bin/ntcharts-linechart-scatter examples/linechart/scatter/*.go
-      - go build -o bin/ntcharts-linechart-streaming examples/linechart/streaming/*.go
-      - go build -o bin/ntcharts-linechart-timeseries examples/linechart/timeseries/*.go
-      - go build -o bin/ntcharts-linechart-wavelines examples/linechart/wavelines/*.go
+      - go build -o bin/ntcharts-linechart-circles ./examples/linechart/circles
+      - go build -o bin/ntcharts-linechart-lines ./examples/linechart/lines
+      - go build -o bin/ntcharts-linechart-scatter ./examples/linechart/scatter
+      - go build -o bin/ntcharts-linechart-streaming ./examples/linechart/streaming
+      - go build -o bin/ntcharts-linechart-timeseries ./examples/linechart/timeseries
+      - go build -o bin/ntcharts-linechart-wavelines ./examples/linechart/wavelines
     sources:
       - canvas/**/*.go
       - examples/linechart/**/*.go
@@ -232,11 +243,11 @@ tasks:
     desc: 'Build picture example'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-chartpicture examples/chartpicture/*.go
-      - go build -o bin/ntcharts-picture examples/picture/*.go
+      - go build -o bin/ntcharts-chartpicture ./examples/chartpicture
+      - go build -o bin/ntcharts-picture ./examples/picture
       - go build -o bin/ntcharts-picture-grid ./examples/picture/grid
       - go build -o bin/ntcharts-picture-simple ./examples/picture/simple
-      - go build -o bin/ntcharts-heatpicture-perlin examples/heatpicture/perlin/*.go
+      - go build -o bin/ntcharts-heatpicture-perlin ./examples/heatpicture/perlin
     sources:
       - picture/**/*.go
       - examples/chartpicture/*.go
@@ -255,7 +266,7 @@ tasks:
     desc: 'Build quickstart example'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-quickstart examples/quickstart/*.go
+      - go build -o bin/ntcharts-quickstart ./examples/quickstart
     sources:
       - canvas/**/*.go
       - examples/quickstart/*.go
@@ -267,7 +278,7 @@ tasks:
     desc: 'Build sparkline example'
     deps: [go-tidy]
     cmds:
-      - go build -o bin/ntcharts-sparkline examples/sparkline/*.go
+      - go build -o bin/ntcharts-sparkline ./examples/sparkline
     sources:
       - canvas/**/*.go
       - examples/sparkline/*.go
