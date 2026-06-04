@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -23,23 +21,12 @@ func main() {
 	fmt.Println("\n--- Probe Test ---")
 	// Make stdin raw so we can read terminal responses immediately
 	fd := int(os.Stdin.Fd())
-	termios, err := unix.IoctlGetTermios(fd, unix.TIOCGETA)
+	restore, err := setRawMode(fd)
 	if err != nil {
-		fmt.Printf("Error getting termios: %v (are you in a TTY?)\n", err)
+		fmt.Printf("Error setting raw mode: %v (are you in a TTY?)\n", err)
 		return
 	}
-	raw := *termios
-	// Disable echo and canonical mode
-	raw.Lflag &^= unix.ECHO | unix.ICANON
-	// Set minimum read to 0, timeout to 1 tenth of a second (100ms)
-	raw.Cc[unix.VMIN] = 0
-	raw.Cc[unix.VTIME] = 1
-
-	if err := unix.IoctlSetTermios(fd, unix.TIOCSETA, &raw); err != nil {
-		fmt.Printf("Error setting raw mode: %v\n", err)
-		return
-	}
-	defer unix.IoctlSetTermios(fd, unix.TIOCSETA, termios)
+	defer restore()
 
 	// Probe sequence: query image placement support
 	probeSeq := "\x1b_Ga=q,t=d,f=24,s=1,v=1,i=42069101;AAAA\x1b\\"
