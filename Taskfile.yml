@@ -90,6 +90,7 @@ tasks:
       - build-cmd-ntcharts-lorem-picsum
       - build-cmd-ntcharts-ohlc
       - build-cmd-ntcharts-yomomma
+      - build-cmd-kitty-probe
 
   build-cmd-ntcharts-lorem-picsum:
     desc: 'Build ntcharts-ohlc command'
@@ -127,12 +128,25 @@ tasks:
     generates:
       - bin/ntcharts-yomamma
 
+  build-cmd-kitty-probe:
+    desc: 'Build kitty-probe command'
+    deps: [go-tidy]
+    cmds:
+      - go build -o bin/kitty-probe ./cmd/kitty-probe
+    sources:
+      - cmd/kitty-probe/*.go
+      - picture/**/*.go
+      - go.mod
+    generates:
+      - bin/kitty-probe
+
   clean-cmds:
     desc: 'Cleans all commands'
     cmds:
       - rm -f bin/ntcharts-lorem-picsum
       - rm -f bin/ntcharts-ohlc
       - rm -f bin/ntcharts-yomamma
+      - rm -f bin/kitty-probe
     
 ###############################################################################
 # Examples
