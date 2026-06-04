@@ -130,7 +130,7 @@ func QueryKittySupport() tea.Cmd {
 		}
 		kittyEnvSignalled.Store(true)
 		cmd = tea.Batch(
-			tea.Raw(buildKittyQueryAPC(kittyProbeID)),
+			tea.Raw(tmuxWrap(buildKittyQueryAPC(kittyProbeID))),
 			tea.Tick(kittyProbeTimeout, func(time.Time) tea.Msg {
 				return kittyProbeTickMsg{}
 			}),
@@ -154,6 +154,9 @@ func QueryKittySupport() tea.Cmd {
 // Anything else returns false; consumers can override via
 // ForceKittyCapability if they have out-of-band knowledge.
 func kittyEnvSignal() bool {
+	if tmuxPassthroughEnabled.Load() {
+		return true
+	}
 	if os.Getenv("KITTY_WINDOW_ID") != "" || os.Getenv("KITTY_INSTALLATION_DIR") != "" {
 		return true
 	}

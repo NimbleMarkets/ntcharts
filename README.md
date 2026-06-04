@@ -31,7 +31,7 @@ We supply many chart types within the glory of your terminal!
 | [Sparkline](./examples/README.md#sparkline) | A small, simple visual of data chart for quick understanding. |
 
 For Kitty graphics in games, boards, tile maps, or other coordinate-aligned
-UIs, see [KITTY.md](./KITTY.md).
+UIs, see [KITTY.md](./KITTY.md) (which includes instructions for running inside tmux).
 
 ## Quickstart Tutorial
 

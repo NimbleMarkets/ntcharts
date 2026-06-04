@@ -4,10 +4,55 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"os"
 	"strings"
+	"sync/atomic"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/ansi/kitty"
 )
+
+var tmuxPassthroughEnabled atomic.Bool
+
+func init() {
+	parseEnvOverrides()
+}
+
+func parseEnvOverrides() {
+	// Parse tmux passthrough env override
+	switch os.Getenv("NTCHARTS_TMUX_PASSTHROUGH") {
+	case "1", "true", "on", "yes":
+		tmuxPassthroughEnabled.Store(true)
+	case "0", "false", "off", "no":
+		tmuxPassthroughEnabled.Store(false)
+	default:
+		tmuxPassthroughEnabled.Store(os.Getenv("TMUX") != "")
+	}
+
+	// Parse Kitty capability env override
+	switch os.Getenv("NTCHARTS_KITTY") {
+	case "supported", "true", "1", "on", "yes":
+		ForceKittyCapability(KittyCapabilitySupported)
+	case "unsupported", "false", "0", "off", "no":
+		ForceKittyCapability(KittyCapabilityUnsupported)
+	}
+}
+
+// SetTmuxPassthrough enables or disables tmux passthrough wrapping. When enabled,
+// Kitty graphics protocol sequences are wrapped in tmux's DCS passthrough sequence
+// to allow them to render correctly when running inside tmux (with `allow-passthrough on` enabled).
+//
+// This is auto-enabled by default if the TMUX environment variable is set.
+func SetTmuxPassthrough(enabled bool) {
+	tmuxPassthroughEnabled.Store(enabled)
+}
+
+func tmuxWrap(seq string) string {
+	if tmuxPassthroughEnabled.Load() {
+		return ansi.TmuxPassthrough(seq)
+	}
+	return seq
+}
 
 // buildKittyAPC encodes img as a Kitty graphics APC sequence at the given
 // (cols, rows) cell rectangle. The caller is responsible for sizing img to
@@ -30,7 +75,7 @@ func buildKittyAPC(img image.Image, id, cols, rows int) string {
 	if err := kitty.EncodeGraphics(&buf, img, opts); err != nil {
 		return ""
 	}
-	return buf.String()
+	return tmuxWrap(buf.String())
 }
 
 func buildKittyGrid(cols, rows, imageID int) string {
@@ -60,5 +105,6 @@ func buildKittyGrid(cols, rows, imageID int) string {
 }
 
 func kittyDeleteImage(id int) string {
-	return fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", id)
+	return tmuxWrap(fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", id))
 }
+

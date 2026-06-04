@@ -138,7 +138,7 @@ Heatmaps display (x,y) data over a grid with color mapping.
 
 ## Picture
 
-`picture` displays a Golang [`image.Image`](https://pkg.go.dev/image) via Glyph (colored block) or full Kitty terminal graphics.  `pictureurl` adds HTTP loading features.
+`picture` displays a Golang [`image.Image`](https://pkg.go.dev/image) via Glyph (colored block) or full Kitty terminal graphics.  `pictureurl` adds HTTP loading features. (For details on running Kitty graphics inside tmux, see [KITTY.md](../KITTY.md)).
 
 The example's source image is a hand-made 1-bit recreation of Hokusai's waves:
  [*01 of 36 views of Mt Fuji by hypertalking*](https://www.hypertalking.com/2023/05/08/1-bit-pixel-art-of-hokusais-the-great-wave-off-kanagawa/)

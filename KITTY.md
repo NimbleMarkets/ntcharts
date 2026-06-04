@@ -103,3 +103,50 @@ For debugging, Kitty virtual placement uses:
 
 If you need exact grid alignment, prefer `GridImage` plus `FitFill` over manual
 placeholder construction.
+
+## Running inside Tmux
+
+When running your TUI inside [`tmux`](https://github.com/tmux/tmux/wiki) Terminal Multiplexer, raw Kitty graphics protocol escape sequences are typically blocked or stripped by `tmux`.   To resolve this, [`picture`](./examples/README.md#picture) supports wrapping these sequences inside tmux's DCS passthrough sequences.
+
+### Tmux Configuration Requirement
+
+For passthrough to work, you must configure `tmux` to allow it. Add the following line to your `~/.tmux.conf` (requires tmux 3.3+):
+
+```tmux
+set -g allow-passthrough on
+```
+
+Remember to reload your tmux configuration or restart your tmux session after making this change.
+
+### Tmux Passthrough & Capability Overrides
+
+By default, tmux passthrough wrapping is automatically enabled if the `TMUX` environment variable is present at program startup. 
+
+For additional developer and user ergonomics, `ntcharts` supports overriding this behavior at runtime via environment variables without requiring any code changes:
+
+- **`NTCHARTS_TMUX_PASSTHROUGH`**: Manually controls the tmux DCS passthrough wrapping mechanism.
+  - `true`, `1`, `on`, `yes`: Manually forces tmux passthrough wrapping **on**.
+  - `false`, `0`, `off`, `no`: Manually forces tmux passthrough wrapping **off**.
+  - *Default*: Automatically enabled if `TMUX` is set.
+- **`NTCHARTS_KITTY`**: Manually controls the Kitty graphics capability detection result, which is useful when terminal queries are slow or blocked.
+  - `supported`, `true`, `1`, `on`, `yes`: Forces Kitty capability to `Supported`, bypassing terminal query probing entirely.
+  - `unsupported`, `false`, `0`, `off`, `no`: Forces Kitty capability to `Unsupported`.
+
+These variables can be prefixed when running your TUI binary:
+
+```bash
+# Force Kitty capability off (e.g., to fallback to Glyph mode)
+NTCHARTS_KITTY=unsupported ./your-tui-app
+
+# Force tmux passthrough on even if TMUX variable isn't visible
+NTCHARTS_TMUX_PASSTHROUGH=true ./your-tui-app
+```
+
+### Programmatic Control
+
+If you need to manually toggle or override tmux passthrough in your code:
+
+- Call `picture.SetTmuxPassthrough(true)` to enable wrapping.
+- Call `picture.ForceKittyCapability(picture.KittyCapabilitySupported)` to manually force Kitty graphics support.
+
+
