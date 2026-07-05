@@ -80,6 +80,13 @@ if err != nil { /* ... */ }
 For a time-series example see `ExampleBuild_timeSeries` in
 [`example_test.go`](./example_test.go).
 
+Time-series specs can also mix line and bar series by setting
+`spec.Series.Type` per series. In terminal rendering, bar series are drawn as
+line-chart data sets with a distinct line style because the terminal
+time-series model is line-based. In ECharts rendering, `Type: "bar"` series
+are overlaid as real bars on a secondary Y axis, while other series remain
+lines. See `examples/combo-timeseries-bar` for a complete example.
+
 ## Running the tests
 
 From the repository root:

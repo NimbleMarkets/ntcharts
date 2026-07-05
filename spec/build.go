@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 
 	"charm.land/lipgloss/v2"
@@ -137,6 +138,14 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 		}
 		m.SetDataSetStyle(name, seriesStyle(ser, i, s.Theme))
 
+		// Honour per-series Type: "bar" series on a time axis cannot be drawn
+		// as real bars in the terminal (timeserieslinechart is a line chart),
+		// so they are drawn as a line with a distinct line style as a visual
+		// hint. ECharts renders them as true bars on a secondary Y axis.
+		if ser.Type == "bar" {
+			m.SetDataSetLineStyle(name, runes.ThinLineStyle)
+		}
+
 		for _, p := range ser.Values {
 			t, ok := pointTime(p.X)
 			if !ok {
@@ -146,7 +155,7 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 		}
 	}
 
-	m.DrawBraille()
+	m.DrawBrailleAll()
 	return &m, nil
 }
 

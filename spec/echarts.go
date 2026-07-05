@@ -100,6 +100,17 @@ func (s Spec) toEChartsBar() (*charts.Bar, error) {
 func (s Spec) toEChartsTimeSeries() (*charts.Line, error) {
 	line := charts.NewLine()
 
+	// Combo support: if any series sets Type == "bar", overlay a Bar chart on
+	// top of the Line chart and give the bar series its own Y axis (index 1),
+	// so wildly different magnitudes (e.g. price vs volume) coexist cleanly.
+	hasBar := false
+	for _, ser := range s.Data.Series {
+		if ser.Type == "bar" {
+			hasBar = true
+			break
+		}
+	}
+
 	line.SetGlobalOptions(
 		s.titleOpt(),
 		s.initOpt(),
@@ -112,6 +123,9 @@ func (s Spec) toEChartsTimeSeries() (*charts.Line, error) {
 			AxisLabel: &opts.AxisLabel{Show: opts.Bool(true), Formatter: types.FuncStr(s.Options.TimeFormat)},
 		}),
 	)
+	if hasBar {
+		line.ExtendYAxis(opts.YAxis{Type: XAxisValue})
+	}
 
 	// ECharts requires an X axis to be set on a Line chart before adding series;
 	// for a time axis the values come from the series tuples, so an empty slice
@@ -119,6 +133,9 @@ func (s Spec) toEChartsTimeSeries() (*charts.Line, error) {
 	line.SetXAxis([]any{})
 
 	for _, ser := range s.Data.Series {
+		if ser.Type == "bar" {
+			continue // handled by the bar overlay below
+		}
 		items := make([]opts.LineData, 0, len(ser.Values))
 		for _, p := range ser.Values {
 			t, ok := pointTime(p.X)
@@ -129,13 +146,40 @@ func (s Spec) toEChartsTimeSeries() (*charts.Line, error) {
 			}
 			items = append(items, opts.LineData{Value: []any{t.Format(time.RFC3339Nano), p.Y}})
 		}
-		line.AddSeries(ser.Name, items)
+		seriesOpts := []charts.SeriesOpts{}
 		if ser.Color != "" {
-			line.SetSeriesOptions(
+			seriesOpts = append(seriesOpts,
 				charts.WithLineStyleOpts(opts.LineStyle{Color: ser.Color}),
 				charts.WithItemStyleOpts(opts.ItemStyle{Color: ser.Color}),
 			)
 		}
+		line.AddSeries(ser.Name, items, seriesOpts...)
+	}
+
+	if hasBar {
+		bar := charts.NewBar()
+		bar.SetXAxis([]any{})
+		for _, ser := range s.Data.Series {
+			if ser.Type != "bar" {
+				continue
+			}
+			items := make([]opts.BarData, 0, len(ser.Values))
+			for _, p := range ser.Values {
+				t, ok := pointTime(p.X)
+				if !ok {
+					continue
+				}
+				items = append(items, opts.BarData{Value: []any{t.Format(time.RFC3339Nano), p.Y}})
+			}
+			seriesOpts := []charts.SeriesOpts{
+				charts.WithBarChartOpts(opts.BarChart{YAxisIndex: 1}),
+			}
+			if ser.Color != "" {
+				seriesOpts = append(seriesOpts, charts.WithItemStyleOpts(opts.ItemStyle{Color: ser.Color}))
+			}
+			bar.AddSeries(ser.Name, items, seriesOpts...)
+		}
+		line.Overlap(bar)
 	}
 
 	return line, nil
