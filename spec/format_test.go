@@ -43,3 +43,33 @@ func TestLabelFormatterNilWhenZero(t *testing.T) {
 		t.Fatalf("formatter(2000) = %q, want 2.0k", got)
 	}
 }
+
+func TestMakeTimeAxisFormatterUsesSecondsUTC(t *testing.T) {
+	lf := makeTimeAxisFormatter("2006-01-02")
+	// 1767225600 seconds = 2026-01-01T00:00:00Z; a v*1e3-vs-v/1e3 regression
+	// or a truncation change would break this assertion.
+	if got := lf(0, 1767225600); got != "2026-01-01" {
+		t.Fatalf("makeTimeAxisFormatter(1767225600s) = %q, want 2026-01-01", got)
+	}
+	// 1767225599.9996s rounds up across the millisecond boundary to
+	// 1767225600000 ms -> "2026-01-01"; truncation via int64(v*1e3) would
+	// give 1767225599999 ms -> "2025-12-31", catching a truncation regression.
+	if got := lf(0, 1767225599.9996); got != "2026-01-01" {
+		t.Fatalf("rounding mismatch: got %q, want 2026-01-01 (native formatter rounds)", got)
+	}
+}
+
+func TestBuildTimeSeriesWithFormatsSmoke(t *testing.T) {
+	s := Spec{
+		Type: ChartTypeTimeSeries, Width: 40, Height: 10,
+		XAxis: XAxis{Format: Format{Kind: "time", Layout: "2006-01"}},
+		YAxis: YAxis{Format: Format{Kind: "si"}},
+		Data: Data{Series: []Series{{Name: "a", Values: []DataPoint{
+			{X: "2026-01-01T00:00:00Z", Y: 1500},
+			{X: "2026-02-01T00:00:00Z", Y: 2500},
+		}}}},
+	}
+	if _, err := Build(s); err != nil {
+		t.Fatalf("Build(timeseries with formats): %v", err)
+	}
+}
