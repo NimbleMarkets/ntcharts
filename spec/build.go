@@ -4,10 +4,12 @@ package spec
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 
 	"charm.land/lipgloss/v2"
@@ -106,10 +108,10 @@ func buildBar(s Spec) (*barchart.Model, error) {
 //     helper pointTime() converts all three.
 //  3. YAxis.Min / YAxis.Max pin the Y axis via WithYRange. When both are nil
 //     the chart auto-scales based on the pushed points.
-//  4. XAxis.Format.Layout is reserved for future use: threading a custom
-//     XLabelFormatter through requires using linechart.WithXLabelFormatter
-//     at construction time; currently the default DateTimeLabelFormatter is
-//     used.
+//  4. YAxis.Format / XAxis.Format (when Kind == "time") thread custom
+//     LabelFormatters through WithYLabelFormatter / WithXLabelFormatter at
+//     construction time; when unset, the chart's own defaults (including
+//     DateTimeLabelFormatter for X) are used.
 //  5. Per-series Color is applied via SetDataSetStyle using a lipgloss
 //     foreground. Background / gridlines come from Theme.
 //
@@ -127,6 +129,22 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	}
 	if s.YAxis.Min != nil && s.YAxis.Max != nil {
 		opts = append(opts, timeserieslinechart.WithYRange(*s.YAxis.Min, *s.YAxis.Max))
+	}
+	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
+		opts = append(opts, timeserieslinechart.WithYLabelFormatter(yf))
+	}
+	if xf := s.XAxis.Format.labelFormatter(); xf != nil && s.XAxis.Format.Kind == "time" {
+		// timeserieslinechart's default DateTimeLabelFormatter (see
+		// linechart/timeserieslinechart/timeserieslinechart.go) receives X
+		// label values as seconds-since-epoch (it does
+		// time.UnixMilli(int64(math.Round(v*1e3)))); mirror that conversion
+		// exactly here, only swapping in the custom layout.
+		layout := s.XAxis.Format.Layout
+		if layout == "" {
+			layout = "2006-01-02"
+		}
+		opts = append(opts, timeserieslinechart.WithXLabelFormatter(
+			makeTimeAxisFormatter(layout)))
 	}
 
 	m := timeserieslinechart.New(s.Width, s.Height, opts...)
@@ -157,6 +175,21 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 
 	m.DrawBrailleAll()
 	return &m, nil
+}
+
+// makeTimeAxisFormatter returns a linechart.LabelFormatter for the X axis of
+// a timeserieslinechart that renders the given Go time layout instead of the
+// package default DateTimeLabelFormatter's "MM/DD" / "'YY MM/DD" scheme.
+//
+// timeserieslinechart passes X label values as seconds-since-epoch (see
+// DateTimeLabelFormatter in linechart/timeserieslinechart/timeserieslinechart.go,
+// which computes time.UnixMilli(int64(math.Round(v * 1e3)))); this mirrors
+// that value->time conversion exactly, only swapping in a custom layout.
+func makeTimeAxisFormatter(layout string) linechart.LabelFormatter {
+	return func(_ int, v float64) string {
+		t := time.UnixMilli(int64(math.Round(v * 1e3))).UTC()
+		return t.Format(layout)
+	}
 }
 
 // deriveBarLabels falls back to the first series' DataPoint.X values
