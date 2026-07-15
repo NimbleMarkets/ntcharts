@@ -62,7 +62,7 @@ func ExampleBuild_line() {
 		Height: 10,
 		Data: spec.Data{
 			Series: []spec.Series{
-				{Name: "a", Color: "#ff0000", Values: []spec.DataPoint{
+				{Name: "a", Values: []spec.DataPoint{
 					{X: 0.0, Y: 1}, {X: 1.0, Y: 3}, {X: 2.0, Y: 2}, {X: 3.0, Y: 5},
 				}},
 				{Name: "b", Values: []spec.DataPoint{
@@ -80,16 +80,16 @@ func ExampleBuild_line() {
 	m := term.(*wavelinechart.Model)
 	fmt.Println(m.View())
 	// Output:
-	// 5│                                     [38;2;255;0;0m╭[m
-	//  │                                     [38;2;255;0;0m│[m
-	// 4├╮                       ╭╮           [38;2;255;0;0m│[m
-	//  ││           [38;2;255;0;0m╭[m[38;2;255;0;0m╮[m          ││           [38;2;255;0;0m│[m
-	// 2││           [38;2;255;0;0m│[m[38;2;255;0;0m│[m          ││           [38;2;255;0;0m│[m
-	//  ││           ├┤          ├┤           [38;2;255;0;0m│[m
-	// 1[38;2;255;0;0m├[m┤           ││          ││           ├
+	// 5│                                     ╭
+	//  │                                     │
+	// 4├╮                       ╭╮           │
+	//  ││           ╭╮          ││           │
+	// 2││           ││          ││           │
+	//  ││           ├┤          ├┤           │
+	// 1├┤           ││          ││           ├
 	//  ││           ││          ││           │
 	// 0└┴───────────┴┴──────────┴┴───────────┴
-	//  0       1           2           3      
+	//  0       1           2           3
 }
 
 // ExampleBuild_timeSeries shows describing a time-indexed line chart.
