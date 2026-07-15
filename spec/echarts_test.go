@@ -23,8 +23,8 @@ func TestToEChartsTimeSeriesComboLineBar(t *testing.T) {
 		Title:  "Combo",
 		Width:  80,
 		Height: 24,
+		XAxis:  spec.XAxis{Type: spec.XAxisTime},
 		Data: spec.Data{
-			XAxisType: spec.XAxisTime,
 			Series: []spec.Series{
 				{Name: "Close", Type: "line", Color: "#ff0000", Values: points},
 				{Name: "Average", Color: "#0000ff", Values: points},
@@ -89,8 +89,8 @@ func TestToEChartsTimeSeriesDoesNotAddSecondaryAxisWithoutBars(t *testing.T) {
 		Title:  "Lines",
 		Width:  80,
 		Height: 24,
+		XAxis:  spec.XAxis{Type: spec.XAxisTime},
 		Data: spec.Data{
-			XAxisType: spec.XAxisTime,
 			Series: []spec.Series{{
 				Name:   "Close",
 				Type:   "line",

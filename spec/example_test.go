@@ -19,9 +19,11 @@ func ExampleBuild_bar() {
 		Title:  "Quarterly Revenue",
 		Width:  60,
 		Height: 20,
+		XAxis: spec.XAxis{
+			Type:   spec.XAxisCategory,
+			Labels: []string{"Q1", "Q2", "Q3", "Q4"},
+		},
 		Data: spec.Data{
-			XAxisType:   spec.XAxisCategory,
-			XAxisLabels: []string{"Q1", "Q2", "Q3", "Q4"},
 			Series: []spec.Series{{
 				Name:  "Revenue",
 				Color: "#22aadd",
@@ -65,8 +67,8 @@ func ExampleBuild_timeSeries() {
 		Title:  "Daily Active Users",
 		Width:  80,
 		Height: 24,
+		XAxis:  spec.XAxis{Type: spec.XAxisTime},
 		Data: spec.Data{
-			XAxisType: spec.XAxisTime,
 			Series: []spec.Series{{
 				Name:   "DAU",
 				Values: points,

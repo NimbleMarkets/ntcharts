@@ -55,12 +55,12 @@ func (s Spec) toEChartsBar() (*charts.Bar, error) {
 		s.gridOpt(),
 		s.yAxisOpt(),
 		charts.WithXAxisOpts(opts.XAxis{
-			Type: defaultStr(s.Data.XAxisType, XAxisCategory),
-			Data: toAnySlice(s.Data.XAxisLabels),
+			Type: defaultStr(s.XAxis.Type, XAxisCategory),
+			Data: toAnySlice(s.XAxis.Labels),
 		}),
 	)
 
-	labels := s.Data.XAxisLabels
+	labels := s.XAxis.Labels
 	if len(labels) == 0 {
 		labels = deriveBarLabels(s.Data.Series)
 	}
@@ -90,13 +90,13 @@ func (s Spec) toEChartsBar() (*charts.Bar, error) {
 //  1. Every DataPoint is emitted as an []any of [time.Time, float64] which
 //     go-echarts serialises as a two-element tuple understood by the ECharts
 //     frontend when xAxis.type == "time".
-//  2. Spec.Options.TimeFormat is surfaced via AxisLabel.Formatter. ECharts
+//  2. Spec.XAxis.Format.Layout is surfaced via AxisLabel.Formatter. ECharts
 //     uses its own format tokens (e.g. "{yyyy}-{MM}-{dd}"); passing a Go
 //     layout through unchanged is best-effort — callers wanting strict
-//     control should set TimeFormat to an ECharts-compatible string.
+//     control should set Layout to an ECharts-compatible string.
 //  3. Series Color is passed through via LineStyleOpts. Theme.Palette is
 //     wired into the chart's Colors global option.
-//  4. YAxisMin / YAxisMax pin the Y axis. Nil leaves auto-ranging in place.
+//  4. YAxis.Min / YAxis.Max pin the Y axis. Nil leaves auto-ranging in place.
 func (s Spec) toEChartsTimeSeries() (*charts.Line, error) {
 	line := charts.NewLine()
 
@@ -120,7 +120,7 @@ func (s Spec) toEChartsTimeSeries() (*charts.Line, error) {
 		charts.WithColorsOpts(s.Theme.Palette),
 		charts.WithXAxisOpts(opts.XAxis{
 			Type:      XAxisTime,
-			AxisLabel: &opts.AxisLabel{Show: opts.Bool(true), Formatter: types.FuncStr(s.Options.TimeFormat)},
+			AxisLabel: &opts.AxisLabel{Show: opts.Bool(true), Formatter: types.FuncStr(s.XAxis.Format.Layout)},
 		}),
 	)
 	if hasBar {
@@ -221,14 +221,14 @@ func (s Spec) gridOpt() charts.GlobalOpts {
 	return charts.WithGridOpts(opts.Grid{Show: opts.Bool(s.Options.ShowGrid)})
 }
 
-// yAxisOpt pins the Y axis if YAxisMin / YAxisMax are non-nil.
+// yAxisOpt pins the Y axis if YAxis.Min / YAxis.Max are non-nil.
 func (s Spec) yAxisOpt() charts.GlobalOpts {
 	y := opts.YAxis{Type: XAxisValue}
-	if s.Options.YAxisMin != nil {
-		y.Min = *s.Options.YAxisMin
+	if s.YAxis.Min != nil {
+		y.Min = *s.YAxis.Min
 	}
-	if s.Options.YAxisMax != nil {
-		y.Max = *s.Options.YAxisMax
+	if s.YAxis.Max != nil {
+		y.Max = *s.YAxis.Max
 	}
 	return charts.WithYAxisOpts(y)
 }

@@ -52,16 +52,16 @@ func Build(s Spec) (any, error) {
 // The bar chart is built along the following mapping:
 //
 //	spec.Series              -> stacked BarValue segments within each bar
-//	spec.Data.XAxisLabels    -> per-bar Label
-//	spec.Options.YAxisMax    -> WithMaxValue (if set; otherwise auto-max)
+//	spec.XAxis.Labels        -> per-bar Label
+//	spec.YAxis.Max           -> WithMaxValue (if set; otherwise auto-max)
 //	spec.Series[i].Color     -> BarValue.Style foreground
 //	spec.Theme.Palette       -> fallback colour for series without Color
 //
 // Each X-axis label becomes a single bar whose stacked segments are the
-// Y value of every series at the matching index. When XAxisLabels is empty,
+// Y value of every series at the matching index. When XAxis.Labels is empty,
 // labels are derived from the first series' DataPoint.X values.
 func buildBar(s Spec) (*barchart.Model, error) {
-	labels := s.Data.XAxisLabels
+	labels := s.XAxis.Labels
 	if len(labels) == 0 {
 		labels = deriveBarLabels(s.Data.Series)
 	}
@@ -86,8 +86,8 @@ func buildBar(s Spec) (*barchart.Model, error) {
 	}
 
 	opts := []barchart.Option{barchart.WithDataSet(data)}
-	if s.Options.YAxisMax != nil {
-		opts = append(opts, barchart.WithMaxValue(*s.Options.YAxisMax))
+	if s.YAxis.Max != nil {
+		opts = append(opts, barchart.WithMaxValue(*s.YAxis.Max))
 	}
 
 	m := barchart.New(s.Width, s.Height, opts...)
@@ -104,9 +104,9 @@ func buildBar(s Spec) (*barchart.Model, error) {
 //     timeserieslinechart is reused for the first series when it has no name.
 //  2. DataPoint.X accepts time.Time or RFC3339 strings or numeric ms; the
 //     helper pointTime() converts all three.
-//  3. YAxisMin / YAxisMax pin the Y axis via WithYRange. When both are nil
+//  3. YAxis.Min / YAxis.Max pin the Y axis via WithYRange. When both are nil
 //     the chart auto-scales based on the pushed points.
-//  4. Options.TimeFormat is reserved for future use: threading a custom
+//  4. XAxis.Format.Layout is reserved for future use: threading a custom
 //     XLabelFormatter through requires using linechart.WithXLabelFormatter
 //     at construction time; currently the default DateTimeLabelFormatter is
 //     used.
@@ -125,8 +125,8 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	opts := []timeserieslinechart.Option{
 		timeserieslinechart.WithTimeRange(tMin, tMax),
 	}
-	if s.Options.YAxisMin != nil && s.Options.YAxisMax != nil {
-		opts = append(opts, timeserieslinechart.WithYRange(*s.Options.YAxisMin, *s.Options.YAxisMax))
+	if s.YAxis.Min != nil && s.YAxis.Max != nil {
+		opts = append(opts, timeserieslinechart.WithYRange(*s.YAxis.Min, *s.YAxis.Max))
 	}
 
 	m := timeserieslinechart.New(s.Width, s.Height, opts...)

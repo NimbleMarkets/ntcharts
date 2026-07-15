@@ -60,7 +60,7 @@ func (t ChartType) IsKnown() bool {
 	return false
 }
 
-// X-axis type constants used by Data.XAxisType.
+// X-axis type constants used by XAxis.Type.
 const (
 	// XAxisCategory indicates a discrete, ordered set of labels
 	// (e.g. bar chart categories).
@@ -70,6 +70,62 @@ const (
 	// XAxisValue indicates numeric (float64) X coordinates.
 	XAxisValue = "value"
 )
+
+// Orientation constants for Options.Orientation.
+const (
+	OrientationVertical   = "vertical"
+	OrientationHorizontal = "horizontal"
+)
+
+// Format describes how numeric or time values render as labels.
+//
+// Kind is one of:
+//   - "" or "number": plain numeric formatting
+//   - "percent": v*100 followed by a "%" suffix
+//   - "currency": Currency symbol prefix
+//   - "si": k/M/G/T suffix (SI-style magnitude abbreviation)
+//   - "time": ms-since-epoch rendered via Layout
+type Format struct {
+	// Kind selects the formatting family. See the Format doc comment.
+	Kind string `json:"kind,omitempty"`
+	// Precision is the number of decimals. nil means the kind's default.
+	Precision *int `json:"precision,omitempty"`
+	// Currency is the symbol used for kind "currency". Defaults to "$".
+	Currency string `json:"currency,omitempty"`
+	// Layout is the Go time layout string used for kind "time".
+	Layout string `json:"layout,omitempty"`
+}
+
+// IsZero reports whether f is the zero value (no formatting directive set).
+func (f Format) IsZero() bool {
+	return f.Kind == "" && f.Precision == nil && f.Currency == "" && f.Layout == ""
+}
+
+// XAxis describes the X axis of a chart.
+type XAxis struct {
+	// Title is the optional axis title.
+	Title string `json:"title,omitempty"`
+	// Type declares the kind of X axis: XAxisCategory, XAxisTime, or
+	// XAxisValue. If empty, a sensible default is inferred from the chart type.
+	Type string `json:"type,omitempty"`
+	// Labels is the optional list of category labels, used when
+	// Type == XAxisCategory.
+	Labels []string `json:"labels,omitempty"`
+	// Format describes how axis labels render.
+	Format Format `json:"format,omitempty"`
+}
+
+// YAxis describes the Y axis of a chart.
+type YAxis struct {
+	// Title is the optional axis title.
+	Title string `json:"title,omitempty"`
+	// Min pins the Y axis minimum. If nil, auto-scale.
+	Min *float64 `json:"min,omitempty"`
+	// Max pins the Y axis maximum. If nil, auto-scale.
+	Max *float64 `json:"max,omitempty"`
+	// Format describes how axis labels render.
+	Format Format `json:"format,omitempty"`
+}
 
 // Spec is the top-level neutral description of a chart.
 //
@@ -89,25 +145,27 @@ type Spec struct {
 	// Height is the suggested height. Columns/rows on terminal, pixels on web.
 	Height int `json:"height"`
 
-	// Data holds the series and axis data for the chart.
+	// XAxis describes the X axis (title, type, labels, format).
+	XAxis XAxis `json:"x_axis,omitempty"`
+	// YAxis describes the Y axis (title, min/max, format).
+	YAxis YAxis `json:"y_axis,omitempty"`
+
+	// Data holds the series data for the chart.
 	Data Data `json:"data"`
+	// Heat holds heatmap cell/matrix data. Required (non-nil, non-empty) for
+	// ChartTypeHeatmap.
+	Heat *HeatData `json:"heat,omitempty"`
 	// Options holds common, surface-agnostic rendering options.
 	Options Options `json:"options,omitempty"`
 	// Theme holds surface-agnostic colour theming.
 	Theme Theme `json:"theme,omitempty"`
 }
 
-// Data describes the axes and series of a chart.
+// Data describes the series of a chart.
 type Data struct {
 	// Series is the ordered collection of data series. At least one series is
 	// required for most chart types.
 	Series []Series `json:"series"`
-	// XAxisType declares the kind of X axis: "category", "time", or "value".
-	// If empty, a sensible default is inferred from the chart type.
-	XAxisType string `json:"x_axis_type,omitempty"`
-	// XAxisLabels is the optional list of category labels, used when
-	// XAxisType == "category".
-	XAxisLabels []string `json:"x_axis_labels,omitempty"`
 	// XAxisData is an optional shared X-axis value list (time.Time, float64,
 	// string, or int). If provided, per-series DataPoint.X may be omitted and
 	// points are zipped against this slice.
@@ -123,6 +181,9 @@ type Series struct {
 	Type string `json:"type,omitempty"`
 	// Values is the ordered list of points in the series.
 	Values []DataPoint `json:"values"`
+	// OHLC is the ordered list of open/high/low/close points in the series,
+	// used by ChartTypeOHLC. Rendering support lands in a later phase.
+	OHLC []OHLCPoint `json:"ohlc,omitempty"`
 	// Color is an optional per-series colour (hex, "#rrggbb", or a named
 	// colour). If empty, the Theme palette or surface default is used.
 	Color string `json:"color,omitempty"`
@@ -138,6 +199,42 @@ type DataPoint struct {
 	X any `json:"x,omitempty"`
 	// Y is the dependent-axis value.
 	Y float64 `json:"y"`
+	// Size is an optional scatter point weight. Surfaces that do not support
+	// variable point sizing may ignore it.
+	Size *float64 `json:"size,omitempty"`
+}
+
+// OHLCPoint is a single open/high/low/close datum, used by ChartTypeOHLC.
+type OHLCPoint struct {
+	// T is the point's time: time.Time, RFC3339 string, or ms-since-epoch.
+	T any `json:"t"`
+	// O is the opening value.
+	O float64 `json:"o"`
+	// H is the high value.
+	H float64 `json:"h"`
+	// L is the low value.
+	L float64 `json:"l"`
+	// C is the closing value.
+	C float64 `json:"c"`
+}
+
+// HeatCell is a single (x, y, z) datum in a HeatData.Cells list.
+type HeatCell struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+	Z float64 `json:"z"`
+}
+
+// HeatData holds heatmap cell/matrix data, used by ChartTypeHeatmap.
+type HeatData struct {
+	// Cells is a sparse list of (x, y, z) cells.
+	Cells []HeatCell `json:"cells,omitempty"`
+	// Matrix is a row-major dense alternative to Cells.
+	Matrix [][]float64 `json:"matrix,omitempty"`
+	// MinValue pins the colour-scale domain minimum. If nil, auto.
+	MinValue *float64 `json:"min_value,omitempty"`
+	// MaxValue pins the colour-scale domain maximum. If nil, auto.
+	MaxValue *float64 `json:"max_value,omitempty"`
 }
 
 // Options are common, surface-agnostic rendering options.
@@ -145,16 +242,14 @@ type DataPoint struct {
 // Surfaces are free to ignore options they do not support.
 type Options struct {
 	// ShowLegend toggles the legend.
-	ShowLegend bool `json:"show_legend"`
+	ShowLegend bool `json:"show_legend,omitempty"`
 	// ShowGrid toggles the background grid.
-	ShowGrid bool `json:"show_grid"`
-	// YAxisMin pins the Y axis minimum. If nil, auto-scale.
-	YAxisMin *float64 `json:"y_axis_min,omitempty"`
-	// YAxisMax pins the Y axis maximum. If nil, auto-scale.
-	YAxisMax *float64 `json:"y_axis_max,omitempty"`
-	// TimeFormat is a Go time layout string applied to time-axis labels.
-	// Ignored by non-time charts.
-	TimeFormat string `json:"time_format,omitempty"`
+	ShowGrid bool `json:"show_grid,omitempty"`
+	// Orientation controls bar chart orientation: "" or OrientationVertical
+	// for vertical bars, OrientationHorizontal for horizontal bars.
+	Orientation string `json:"orientation,omitempty"`
+	// Stacked stacks bar chart series instead of grouping them.
+	Stacked bool `json:"stacked,omitempty"`
 }
 
 // Theme describes surface-agnostic colours. Individual surfaces map these
@@ -167,6 +262,23 @@ type Theme struct {
 	// Palette is an ordered list of colours used for series that do not
 	// supply their own Color.
 	Palette []string `json:"palette,omitempty"`
+	// Gradient is an ordered list of hex stops ("#rrggbb") used for
+	// sequential colormaps (heatmap).
+	Gradient []string `json:"gradient,omitempty"`
+}
+
+// validFormatKinds enumerates the recognized Format.Kind values.
+var validFormatKinds = map[string]bool{
+	"": true, "number": true, "percent": true, "currency": true, "si": true, "time": true,
+}
+
+// validateFormat reports an error if f.Kind is not one of the recognized
+// Format kinds. name identifies the axis in the error message (e.g. "x_axis").
+func validateFormat(name string, f Format) error {
+	if !validFormatKinds[f.Kind] {
+		return fmt.Errorf("spec: %s format kind %q is not one of number|percent|currency|si|time", name, f.Kind)
+	}
+	return nil
 }
 
 // Validate reports the first structural error in the Spec, if any.
@@ -184,14 +296,50 @@ func (s Spec) Validate() error {
 	if s.Width <= 0 || s.Height <= 0 {
 		return fmt.Errorf("spec: Width and Height must be positive (got %d x %d)", s.Width, s.Height)
 	}
-	if len(s.Data.Series) == 0 {
-		return fmt.Errorf("spec: at least one Series is required")
+
+	switch s.Type {
+	case ChartTypeHeatmap:
+		if s.Heat == nil || (len(s.Heat.Cells) == 0 && len(s.Heat.Matrix) == 0) {
+			return fmt.Errorf("spec: heatmap requires Heat data (cells or matrix)")
+		}
+	default:
+		if len(s.Data.Series) == 0 {
+			return fmt.Errorf("spec: at least one Series is required")
+		}
 	}
+
 	for i, ser := range s.Data.Series {
 		if ser.Name == "" {
 			return fmt.Errorf("spec: series[%d] Name is required", i)
 		}
 	}
+
+	if s.Type == ChartTypeOHLC {
+		hasOHLC := false
+		for _, ser := range s.Data.Series {
+			if len(ser.OHLC) > 0 {
+				hasOHLC = true
+				break
+			}
+		}
+		if !hasOHLC {
+			return fmt.Errorf("spec: ohlc requires Series.OHLC points")
+		}
+	}
+
+	switch s.Options.Orientation {
+	case "", OrientationVertical, OrientationHorizontal:
+	default:
+		return fmt.Errorf("spec: orientation %q must be vertical or horizontal", s.Options.Orientation)
+	}
+
+	if err := validateFormat("x_axis", s.XAxis.Format); err != nil {
+		return err
+	}
+	if err := validateFormat("y_axis", s.YAxis.Format); err != nil {
+		return err
+	}
+
 	return nil
 }
 
