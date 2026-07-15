@@ -8,6 +8,7 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/spec"
 )
 
@@ -49,6 +50,46 @@ func ExampleBuild_bar() {
 	}
 	fmt.Printf("terminal: %T, web: %T\n", term, web)
 	// Output: terminal: *barchart.Model, web: *charts.Bar
+}
+
+// ExampleBuild_line shows describing a numeric-X line chart and rendering it
+// via Build to a *wavelinechart.Model.
+func ExampleBuild_line() {
+	s := spec.Spec{
+		Type:   spec.ChartTypeLine,
+		Title:  "Two Series",
+		Width:  40,
+		Height: 10,
+		Data: spec.Data{
+			Series: []spec.Series{
+				{Name: "a", Color: "#ff0000", Values: []spec.DataPoint{
+					{X: 0.0, Y: 1}, {X: 1.0, Y: 3}, {X: 2.0, Y: 2}, {X: 3.0, Y: 5},
+				}},
+				{Name: "b", Values: []spec.DataPoint{
+					{X: 0.0, Y: 4}, {X: 1.0, Y: 2}, {X: 2.0, Y: 4}, {X: 3.0, Y: 1},
+				}},
+			},
+		},
+	}
+
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*wavelinechart.Model)
+	fmt.Println(m.View())
+	// Output:
+	// 5│                                     [38;2;255;0;0m╭[m
+	//  │                                     [38;2;255;0;0m│[m
+	// 4├╮                       ╭╮           [38;2;255;0;0m│[m
+	//  ││           [38;2;255;0;0m╭[m[38;2;255;0;0m╮[m          ││           [38;2;255;0;0m│[m
+	// 2││           [38;2;255;0;0m│[m[38;2;255;0;0m│[m          ││           [38;2;255;0;0m│[m
+	//  ││           ├┤          ├┤           [38;2;255;0;0m│[m
+	// 1[38;2;255;0;0m├[m┤           ││          ││           ├
+	//  ││           ││          ││           │
+	// 0└┴───────────┴┴──────────┴┴───────────┴
+	//  0       1           2           3      
 }
 
 // ExampleBuild_timeSeries shows describing a time-indexed line chart.

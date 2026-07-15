@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
 
 	"charm.land/lipgloss/v2"
 )
@@ -20,6 +22,7 @@ import (
 // The concrete return type depends on Spec.Type:
 //
 //   - ChartTypeBar         -> *barchart.Model
+//   - ChartTypeLine        -> *wavelinechart.Model
 //   - ChartTypeTimeSeries  -> *timeserieslinechart.Model
 //
 // Callers should type-assert the result. Unsupported chart types return an
@@ -36,8 +39,9 @@ func Build(s Spec) (any, error) {
 		return buildBar(s)
 	case ChartTypeTimeSeries:
 		return buildTimeSeries(s)
-	case ChartTypeLine,
-		ChartTypeStreamline,
+	case ChartTypeLine:
+		return buildLine(s)
+	case ChartTypeStreamline,
 		ChartTypeSparkline,
 		ChartTypeHeatmap,
 		ChartTypeOHLC,
@@ -94,6 +98,61 @@ func buildBar(s Spec) (*barchart.Model, error) {
 
 	m := barchart.New(s.Width, s.Height, opts...)
 	m.Draw()
+	return &m, nil
+}
+
+// resolveXFloat resolves a point's numeric X: the point's own X, else the
+// shared Data.XAxisData at idx, else the index itself. Shared with buildScatter.
+func resolveXFloat(s Spec, p DataPoint, idx int) float64 {
+	if p.X != nil {
+		if x, ok := pointFloat(p.X); ok {
+			return x
+		}
+	}
+	if idx < len(s.Data.XAxisData) {
+		if x, ok := pointFloat(s.Data.XAxisData[idx]); ok {
+			return x
+		}
+	}
+	return float64(idx)
+}
+
+// buildLine constructs a *wavelinechart.Model from s.
+//
+// Each spec.Series becomes a named data set (see PlotDataSet /
+// SetDataSetStyles). DataPoint.X is resolved via resolveXFloat: the point's
+// own numeric X, else the shared Data.XAxisData at that index, else the
+// point's index — so callers may omit X entirely and rely on index-as-X.
+// YAxis.Min / YAxis.Max pin the Y axis via WithYRange when both are set;
+// otherwise the chart auto-scales.
+//
+// wavelinechart.Model embeds linechart.Model, which exposes the
+// XLabelFormatter / YLabelFormatter fields publicly; when XAxis.Format /
+// YAxis.Format carry a formatting directive, they are wired in before
+// DrawAll so terminal axis labels match the same Format used elsewhere
+// (e.g. ToECharts).
+func buildLine(s Spec) (*wavelinechart.Model, error) {
+	var opts []wavelinechart.Option
+	if s.YAxis.Min != nil && s.YAxis.Max != nil {
+		opts = append(opts, wavelinechart.WithYRange(*s.YAxis.Min, *s.YAxis.Max))
+	}
+	m := wavelinechart.New(s.Width, s.Height, opts...)
+
+	if xf := s.XAxis.Format.labelFormatter(); xf != nil {
+		m.XLabelFormatter = xf
+	}
+	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
+		m.YLabelFormatter = yf
+	}
+
+	for i, ser := range s.Data.Series {
+		name := ser.Name
+		m.SetDataSetStyles(name, runes.ArcLineStyle, seriesStyle(ser, i, s.Theme))
+		for j, p := range ser.Values {
+			m.PlotDataSet(name, canvas.Float64Point{X: resolveXFloat(s, p, j), Y: p.Y})
+		}
+	}
+	m.DrawAll()
 	return &m, nil
 }
 
