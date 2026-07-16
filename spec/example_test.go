@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
@@ -179,4 +180,40 @@ func ExampleBuild_timeSeries() {
 	}
 	fmt.Printf("terminal: %T, web: %T\n", term, web)
 	// Output: terminal: *timeserieslinechart.Model, web: *charts.Line
+}
+
+// ExampleBuild_heatmap shows describing a heatmap with a custom gradient
+// color scale (Theme.Gradient) and rendering it via Build to a
+// *heatmap.Model.
+//
+// heatmap cells are colored by setting each cell's background style (see
+// heatmap.Model.DrawPoint), so View() always embeds ANSI escape sequences —
+// even with the package's grayscale default scale. Because go/doc Example
+// goldens must be escape-free, this Example cannot print View() output as
+// other Example functions in this file do. Instead it follows this
+// package's established non-View Example pattern: assert the concrete
+// return type and confirm the rendered view is non-empty.
+func ExampleBuild_heatmap() {
+	s := spec.Spec{
+		Type:   spec.ChartTypeHeatmap,
+		Title:  "Correlation Matrix",
+		Width:  30,
+		Height: 10,
+		Heat: &spec.HeatData{
+			Cells: []spec.HeatCell{
+				{X: 0, Y: 0, Z: 1}, {X: 1, Y: 0, Z: 5}, {X: 2, Y: 0, Z: 9},
+				{X: 0, Y: 1, Z: 3}, {X: 1, Y: 1, Z: 7}, {X: 2, Y: 1, Z: 2},
+			},
+		},
+		Theme: spec.Theme{Gradient: []string{"#000044", "#ff4400"}},
+	}
+
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*heatmap.Model)
+	fmt.Printf("terminal: %T, non-empty view: %v\n", term, strings.TrimSpace(m.View()) != "")
+	// Output: terminal: *heatmap.Model, non-empty view: true
 }

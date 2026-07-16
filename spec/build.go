@@ -10,6 +10,7 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
+	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
@@ -25,6 +26,7 @@ import (
 //   - ChartTypeLine        -> *wavelinechart.Model
 //   - ChartTypeTimeSeries  -> *timeserieslinechart.Model
 //   - ChartTypeScatter     -> *linechart.Model
+//   - ChartTypeHeatmap     -> *heatmap.Model
 //
 // Callers should type-assert the result. Unsupported chart types return an
 // error rather than panicking, so future additions to ChartType do not break
@@ -44,9 +46,10 @@ func Build(s Spec) (any, error) {
 		return buildLine(s)
 	case ChartTypeScatter:
 		return buildScatter(s)
+	case ChartTypeHeatmap:
+		return buildHeatmap(s)
 	case ChartTypeStreamline,
 		ChartTypeSparkline,
-		ChartTypeHeatmap,
 		ChartTypeOHLC,
 		ChartTypeCanvas:
 		return nil, fmt.Errorf("spec: Build for chart type %q is not yet implemented", s.Type)
@@ -349,6 +352,38 @@ func timeBounds(series []Series) (time.Time, time.Time, bool) {
 		}
 	}
 	return min, max, found
+}
+
+// buildHeatmap renders Heat data onto a heatmap model. Theme.Gradient (hex
+// stops) becomes an interpolated color scale; absent, the package default
+// grayscale applies.
+func buildHeatmap(s Spec) (any, error) {
+	if s.Heat == nil || (len(s.Heat.Cells) == 0 && len(s.Heat.Matrix) == 0) {
+		return nil, fmt.Errorf("spec: heatmap requires Heat data (cells or matrix)")
+	}
+	var opts []heatmap.Option
+	cs, err := gradientScale(s.Theme.Gradient)
+	if err != nil {
+		return nil, err
+	}
+	if cs != nil {
+		opts = append(opts, heatmap.WithColorScale(cs))
+	}
+	if s.Heat.MinValue != nil && s.Heat.MaxValue != nil {
+		opts = append(opts, heatmap.WithValueRange(*s.Heat.MinValue, *s.Heat.MaxValue))
+	} else {
+		opts = append(opts, heatmap.WithAutoValueRange())
+	}
+	m := heatmap.New(s.Width, s.Height, opts...)
+	if len(s.Heat.Matrix) > 0 {
+		m.PushAllMatrixRow(s.Heat.Matrix)
+	} else {
+		for _, c := range s.Heat.Cells {
+			m.Push(heatmap.NewHeatPoint(c.X, c.Y, c.Z))
+		}
+	}
+	m.Draw()
+	return &m, nil
 }
 
 // seriesStyle returns the lipgloss.Style for a Series, preferring the
