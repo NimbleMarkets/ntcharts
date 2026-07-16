@@ -131,7 +131,13 @@ spec/
   support (`Build`/`ToECharts`) lands in a later phase.
 - **`Heat`** (`*HeatData`) holds heatmap data as either a sparse `Cells`
   list (`{X, Y, Z}` triples) or a dense row-major `Matrix`; `MinValue`/
-  `MaxValue` pin the colour-scale domain (auto-ranged when nil).
+  `MaxValue` pin the colour-scale domain (auto-ranged when nil). Y-index
+  convention: `Y=0` is the **first row** per the producer's `labels` order
+  (row `i` in that order maps to `Y=i`); note the terminal heatmap canvas
+  itself draws data bottom-to-top (`heatmap.Model.Draw`'s doc comment), so
+  `Y=0` renders at the **bottom** row of the terminal viewport — renderers
+  that add row-label support must reconcile the label-order `Y=0` with the
+  canvas's bottom-row `Y=0`.
 - **`Theme.Gradient`** is an ordered list of `"#rrggbb"` hex stops
   interpolated into a colour scale for heatmap rendering; empty falls back to
   the package's default grayscale scale.
