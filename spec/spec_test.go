@@ -65,6 +65,9 @@ func TestSpecJSONRoundTrip(t *testing.T) {
 		Type: ChartTypeHeatmap, Title: "t", Width: 30, Height: 8,
 		XAxis: XAxis{Title: "hour", Type: XAxisValue, Format: Format{Kind: "number", Precision: f64i(0)}},
 		YAxis: YAxis{Title: "day", Min: f64(0), Max: f64(6)},
+		Data: Data{Series: []Series{{Name: "s", Values: []DataPoint{
+			{X: 1.0, Y: 2.5, Size: f64(4.5)},
+		}}}},
 		Heat: &HeatData{
 			Cells:    []HeatCell{{X: 0, Y: 1, Z: 3.5}},
 			MinValue: f64(0), MaxValue: f64(10),
@@ -81,8 +84,31 @@ func TestSpecJSONRoundTrip(t *testing.T) {
 	}
 	if out.XAxis.Title != "hour" || out.YAxis.Max == nil || *out.YAxis.Max != 6 ||
 		out.Heat == nil || len(out.Heat.Cells) != 1 || out.Heat.Cells[0].Z != 3.5 ||
-		len(out.Theme.Gradient) != 2 {
+		len(out.Theme.Gradient) != 2 ||
+		len(out.Data.Series) != 1 || len(out.Data.Series[0].Values) != 1 ||
+		out.Data.Series[0].Values[0].Size == nil || *out.Data.Series[0].Values[0].Size != 4.5 {
 		t.Fatalf("round-trip mismatch: %+v", out)
+	}
+}
+
+// TestSpecJSONMinimalOmitsZeroStructs verifies the omitzero tags on
+// Spec.XAxis / Spec.YAxis / Spec.Options / Spec.Theme (and Format on each
+// axis) actually suppress emitting empty "{}" objects for a minimal Spec,
+// unlike the no-op omitempty tags they replaced.
+func TestSpecJSONMinimalOmitsZeroStructs(t *testing.T) {
+	in := Spec{
+		Type: ChartTypeBar, Width: 10, Height: 5,
+		Data: Data{Series: []Series{{Name: "a", Values: []DataPoint{{Y: 1}}}}},
+	}
+	b, err := json.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(b)
+	for _, key := range []string{`"x_axis"`, `"y_axis"`, `"options"`, `"theme"`} {
+		if strings.Contains(got, key) {
+			t.Fatalf("minimal Spec JSON unexpectedly contains %s: %s", key, got)
+		}
 	}
 }
 

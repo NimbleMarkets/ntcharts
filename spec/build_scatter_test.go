@@ -57,3 +57,30 @@ func TestBuildScatterPinnedY(t *testing.T) {
 		t.Fatalf("Build(scatter, pinned Y): %v", err)
 	}
 }
+
+// TestBuildScatterInvertedYPinErrors pins Min above the series' actual data
+// max (33.1): previously this silently built an inverted linechart range
+// (min > max); Build must now reject it.
+func TestBuildScatterInvertedYPinErrors(t *testing.T) {
+	s := scatterSpec()
+	s.YAxis.Min = f64(50)
+	_, err := Build(s)
+	if err == nil || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected inverted y_axis range error, got %v", err)
+	}
+}
+
+// TestBuildScatterIgnoresSize confirms DataPoint.Size is accepted by the
+// schema but does not prevent scatter Build from succeeding — the terminal
+// surface draws fixed-size markers and ignores it.
+func TestBuildScatterIgnoresSize(t *testing.T) {
+	s := scatterSpec()
+	for i := range s.Data.Series {
+		for j := range s.Data.Series[i].Values {
+			s.Data.Series[i].Values[j].Size = f64(3.0)
+		}
+	}
+	if _, err := Build(s); err != nil {
+		t.Fatalf("Build(scatter, with Size): %v", err)
+	}
+}

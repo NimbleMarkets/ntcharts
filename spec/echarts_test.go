@@ -81,6 +81,45 @@ func TestToEChartsTimeSeriesComboLineBar(t *testing.T) {
 	}
 }
 
+func TestToEChartsTimeSeriesXAxisLabelFormatter(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	points := []spec.DataPoint{{X: start, Y: 10}}
+
+	t.Run("Go layout translated into formatter", func(t *testing.T) {
+		chart, err := spec.Spec{
+			Type: spec.ChartTypeTimeSeries, Width: 80, Height: 24,
+			XAxis: spec.XAxis{Type: spec.XAxisTime, Format: spec.Format{Kind: "time", Layout: "2006-01"}},
+			Data:  spec.Data{Series: []spec.Series{{Name: "a", Values: points}}},
+		}.ToECharts()
+		if err != nil {
+			t.Fatalf("ToECharts() error = %v", err)
+		}
+		line := chart.(*charts.Line)
+		lbl := line.XAxisList[0].AxisLabel
+		if lbl == nil || lbl.Formatter == "" {
+			t.Fatalf("expected an AxisLabel formatter for a Go layout, got %#v", lbl)
+		}
+		if got, want := string(lbl.Formatter), "{yyyy}-{MM}"; got != want {
+			t.Fatalf("formatter = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("no layout omits formatter", func(t *testing.T) {
+		chart, err := spec.Spec{
+			Type: spec.ChartTypeTimeSeries, Width: 80, Height: 24,
+			XAxis: spec.XAxis{Type: spec.XAxisTime},
+			Data:  spec.Data{Series: []spec.Series{{Name: "a", Values: points}}},
+		}.ToECharts()
+		if err != nil {
+			t.Fatalf("ToECharts() error = %v", err)
+		}
+		line := chart.(*charts.Line)
+		if lbl := line.XAxisList[0].AxisLabel; lbl != nil && lbl.Formatter != "" {
+			t.Fatalf("expected no AxisLabel formatter when Layout is unset, got %#v", lbl.Formatter)
+		}
+	})
+}
+
 func TestToEChartsTimeSeriesDoesNotAddSecondaryAxisWithoutBars(t *testing.T) {
 	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
