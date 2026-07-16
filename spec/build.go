@@ -67,17 +67,28 @@ func Build(s Spec) (any, error) {
 //	spec.YAxis.Max           -> WithMaxValue (if set; otherwise auto-max)
 //	spec.Series[i].Color     -> BarValue.Style foreground
 //	spec.Theme.Palette       -> fallback colour for series without Color
+//	spec.Options.Orientation -> WithHorizontalBars() when OrientationHorizontal
 //
 // Each X-axis label becomes a single bar whose stacked segments are the
 // Y value of every series at the matching index. When XAxis.Labels is empty,
 // labels are derived from the first series' DataPoint.X values.
+//
+// ntcharts' barchart.Model only supports stacked segments within a bar — it
+// has no grouped/side-by-side rendering mode. So a Spec with more than one
+// Series must set Options.Stacked to true; otherwise Build returns an error
+// rather than silently stacking series the caller may have expected to be
+// grouped.
 func buildBar(s Spec) (*barchart.Model, error) {
+	if len(s.Data.Series) > 1 && !s.Options.Stacked {
+		return nil, fmt.Errorf("spec: terminal bar charts cannot render grouped bars; set options.stacked=true or use a single series")
+	}
+
 	labels := s.XAxis.Labels
 	if len(labels) == 0 {
 		labels = deriveBarLabels(s.Data.Series)
 	}
 	if len(labels) == 0 {
-		return nil, fmt.Errorf("spec: bar chart requires XAxisLabels or per-series X values")
+		return nil, fmt.Errorf("spec: bar chart requires x_axis labels or per-series X values")
 	}
 
 	data := make([]barchart.BarData, len(labels))
@@ -99,6 +110,9 @@ func buildBar(s Spec) (*barchart.Model, error) {
 	opts := []barchart.Option{barchart.WithDataSet(data)}
 	if s.YAxis.Max != nil {
 		opts = append(opts, barchart.WithMaxValue(*s.YAxis.Max))
+	}
+	if s.Options.Orientation == OrientationHorizontal {
+		opts = append(opts, barchart.WithHorizontalBars())
 	}
 
 	m := barchart.New(s.Width, s.Height, opts...)

@@ -1,11 +1,13 @@
 # ntcharts/spec
 
 Package `spec` defines a **neutral, surface-agnostic chart specification** for
-ntcharts. A single `Spec` value describes a chart (type, data, options, theme)
-and can be rendered to multiple surfaces from the same source of truth:
+ntcharts. A single `Spec` value describes a chart (type, axes, data, options,
+theme) and can be rendered to multiple surfaces from the same source of
+truth:
 
 - **Terminal** — via `spec.Build(s)` → an ntcharts model (`*barchart.Model`,
-  `*timeserieslinechart.Model`, …)
+  `*wavelinechart.Model`, `*linechart.Model`, `*timeserieslinechart.Model`,
+  `*heatmap.Model`, …)
 - **Web** — via `s.ToECharts()` → a go-echarts/v2 chart (`*charts.Bar`,
   `*charts.Line`, …)
 
@@ -14,31 +16,71 @@ wire, or authored in configuration files.
 
 ## Status
 
-| Chart type                 | `Build()` (terminal) | `ToECharts()` (web) |
-| -------------------------- | :------------------: | :-----------------: |
-| `ChartTypeBar`             | full                 | full                |
-| `ChartTypeTimeSeries`      | full                 | full                |
-| `ChartTypeLine`            | scaffold             | scaffold            |
-| `ChartTypeStreamline`      | scaffold             | scaffold            |
-| `ChartTypeSparkline`       | scaffold             | scaffold            |
-| `ChartTypeHeatmap`         | scaffold             | scaffold            |
-| `ChartTypeOHLC`            | scaffold             | scaffold            |
-| `ChartTypeScatter`         | scaffold             | scaffold            |
-| `ChartTypeCanvas`          | scaffold             | scaffold            |
+| Chart type            | `Build()` (terminal)                                              | `ToECharts()` (web) |
+| ---------------------- | ------------------------------------------------------------------ | :------------------: |
+| `ChartTypeBar`         | full — stacked + horizontal; grouped (side-by-side) bars are **not** supported by the terminal surface | full |
+| `ChartTypeTimeSeries`  | full                                                                | full |
+| `ChartTypeLine`        | full                                                                | scaffold |
+| `ChartTypeScatter`     | full                                                                | scaffold |
+| `ChartTypeHeatmap`     | full                                                                | scaffold |
+| `ChartTypeStreamline`  | scaffold                                                            | scaffold |
+| `ChartTypeSparkline`   | scaffold                                                            | scaffold |
+| `ChartTypeOHLC`        | scaffold                                                            | scaffold |
+| `ChartTypeCanvas`      | scaffold                                                            | scaffold |
 
 Scaffolded chart types return a clear `not yet implemented` error today.
+
+`ChartTypeBar` is stacked-only in the terminal because `barchart.Model` has no
+grouped/side-by-side rendering mode: a `Spec` with more than one `Series` must
+set `Options.Stacked = true`, or `Build` returns an error instead of silently
+stacking series a caller may have expected to be grouped side by side.
+`Options.Orientation = OrientationHorizontal` renders horizontal bars via
+`barchart.WithHorizontalBars()`; ECharts renders both orientations, plus true
+grouped bars, without this restriction.
 
 ## Layout
 
 ```
 spec/
-├── spec.go          Spec, Data, Series, DataPoint, Options, Theme, Validate
-├── helpers.go       internal X-value coercion (pointTime / pointFloat / pointString)
-├── build.go         Build(s) -> ntcharts terminal model
-├── echarts.go       Spec.ToECharts() -> go-echarts/v2 chart
-├── example_test.go  runnable examples (bar + timeseries)
-└── README.md        this file
+├── spec.go              Spec, XAxis, YAxis, Format, Data, Series, DataPoint,
+│                         HeatData, OHLCPoint, Options, Theme, Validate
+├── helpers.go            internal X-value coercion (pointTime / pointFloat / pointString)
+├── format.go              FormatValue + Format.labelFormatter (number/percent/currency/si/time)
+├── gradient.go            Theme.Gradient hex-stop interpolation for heatmap colour scales
+├── build.go               Build(s) -> ntcharts terminal model
+├── echarts.go             Spec.ToECharts() -> go-echarts/v2 chart
+├── example_test.go        runnable examples (bar, line, scatter, timeseries, heatmap)
+└── README.md              this file
 ```
+
+## Schema v1 overview
+
+- **`XAxis` / `YAxis`** describe each axis: `Title`, `Type` (`XAxisCategory`,
+  `XAxisTime`, or `XAxisValue`; inferred from chart type when empty),
+  `Labels` (category ticks), and `Format` (label formatting). `YAxis` adds
+  `Min`/`Max` to pin the range; when both are nil the chart auto-scales.
+- **`Format`** describes how axis labels (and `FormatValue`) render a
+  `float64`. `Kind` selects the family:
+  - `""` / `"number"` — plain numeric formatting, `Precision` decimals.
+  - `"percent"` — multiplies the value by 100 and appends `"%"`.
+  - `"currency"` — prefixes `Currency` (default `"$"`).
+  - `"si"` — abbreviates magnitude with a k/M/G/T suffix.
+  - `"time"` — treats the value as **milliseconds since the Unix epoch** and
+    renders it with the Go time layout in `Layout` (default `"2006-01-02"`).
+- **`Data.Series`** is the ordered list of named series; `Data.XAxisData` is
+  an optional shared X value list so per-point `DataPoint.X` can be omitted.
+- **`DataPoint.Size`** is accepted in the schema (a scatter point weight) but
+  ignored by every current surface — terminal and ECharts both draw
+  fixed-size markers today.
+- **`Series.OHLC`** ([]OHLCPoint) is reserved for `ChartTypeOHLC`; the schema
+  and `Validate()` already require it for that chart type, but rendering
+  support (`Build`/`ToECharts`) lands in a later phase.
+- **`Heat`** (`*HeatData`) holds heatmap data as either a sparse `Cells`
+  list (`{X, Y, Z}` triples) or a dense row-major `Matrix`; `MinValue`/
+  `MaxValue` pin the colour-scale domain (auto-ranged when nil).
+- **`Theme.Gradient`** is an ordered list of `"#rrggbb"` hex stops
+  interpolated into a colour scale for heatmap rendering; empty falls back to
+  the package's default grayscale scale.
 
 ## Quick start
 
@@ -53,9 +95,11 @@ s := spec.Spec{
     Title:  "Quarterly Revenue",
     Width:  60,
     Height: 20,
+    XAxis: spec.XAxis{
+        Type:   spec.XAxisCategory,
+        Labels: []string{"Q1", "Q2", "Q3", "Q4"},
+    },
     Data: spec.Data{
-        XAxisType:   spec.XAxisCategory,
-        XAxisLabels: []string{"Q1", "Q2", "Q3", "Q4"},
         Series: []spec.Series{{
             Name:   "Revenue",
             Color:  "#22aadd",
@@ -77,8 +121,13 @@ if err != nil { /* ... */ }
 // web is *charts.Bar — call web.Render(w) to produce HTML
 ```
 
-For a time-series example see `ExampleBuild_timeSeries` in
-[`example_test.go`](./example_test.go).
+Multi-series bar charts must set `Options.Stacked = true` (see Status above);
+without it, `Build` returns an error rather than silently stacking series.
+
+For line, scatter, and heatmap examples see `ExampleBuild_line`,
+`ExampleBuild_scatter`, and `ExampleBuild_heatmap` in
+[`example_test.go`](./example_test.go). For a time-series example see
+`ExampleBuild_timeSeries`.
 
 Time-series specs can also mix line and bar series by setting
 `spec.Series.Type` per series. In terminal rendering, bar series are drawn as
@@ -95,7 +144,8 @@ From the repository root:
 # Build just this package
 go build ./spec/
 
-# Vet + run the runnable examples (ExampleBuild_bar, ExampleBuild_timeSeries)
+# Vet + run the runnable examples (ExampleBuild_bar, ExampleBuild_line,
+# ExampleBuild_scatter, ExampleBuild_timeSeries, ExampleBuild_heatmap)
 go vet ./spec/
 go test ./spec/
 
@@ -106,9 +156,11 @@ go test -v ./spec/
 go test -v -run ExampleBuild_bar ./spec/
 ```
 
-The examples use `// Output:` doc-test assertions and therefore verify that
-`Build(s)` returns a `*barchart.Model` / `*timeserieslinechart.Model` and
-that `ToECharts()` returns `*charts.Bar` / `*charts.Line`.
+The examples use `// Output:` doc-test assertions and therefore verify both
+the concrete `Build(s)` model type and, where applicable, the `ToECharts()`
+chart type. `ExampleBuild_heatmap` cannot assert `View()` output directly
+(heatmap cells are always ANSI-styled), so it asserts the concrete type and a
+non-empty rendered view instead.
 
 ## Dependencies
 
@@ -121,9 +173,11 @@ This package adds a new module dependency to ntcharts:
 ## Design notes
 
 - **`Spec.Validate()`** catches the obvious mistakes (missing `Type`, zero
-  dimensions, empty `Series`). Both `Build` and `ToECharts` call it first.
+  dimensions, empty `Series`, invalid `Options.Orientation` or `Format.Kind`,
+  missing `Heat`/`OHLC` data for the chart types that require it). Both
+  `Build` and `ToECharts` call it first.
 - **Time values** in `DataPoint.X` accept `time.Time`, RFC 3339 strings, or
-  numeric milliseconds since epoch — see `pointTime` in `spec.go`.
+  numeric milliseconds since epoch — see `pointTime` in `helpers.go`.
 - **Colours** prefer `Series.Color`, fall back to `Theme.Palette[i]`, then the
   surface default.
 - **Terminal sizes are tiny for a browser**: `ToECharts()` scales sub-200

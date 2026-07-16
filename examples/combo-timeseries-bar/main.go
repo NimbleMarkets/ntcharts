@@ -209,8 +209,11 @@ func buildSpec(monthly []monthlyPoint) spec.Spec {
 		Subtitle: "Source: plotly datasets · combo line + bar, rendered from one spec",
 		Width:    100,
 		Height:   24,
+		XAxis: spec.XAxis{
+			Type:   spec.XAxisTime,
+			Format: spec.Format{Kind: "time", Layout: "{yyyy}-{MM}"},
+		},
 		Data: spec.Data{
-			XAxisType: spec.XAxisTime,
 			Series: []spec.Series{
 				{
 					Name:   "Close (USD)",
@@ -229,7 +232,6 @@ func buildSpec(monthly []monthlyPoint) spec.Spec {
 		Options: spec.Options{
 			ShowLegend: true,
 			ShowGrid:   true,
-			TimeFormat: "{yyyy}-{MM}",
 		},
 		Theme: Theme(),
 	}
