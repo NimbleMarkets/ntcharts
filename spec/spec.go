@@ -129,6 +129,9 @@ type YAxis struct {
 	Min *float64 `json:"min,omitempty"`
 	// Max pins the Y axis maximum. If nil, auto-scale.
 	Max *float64 `json:"max,omitempty"`
+	// Labels is the optional list of row labels for grid-style charts (e.g.
+	// heatmap rows). Terminal surfaces currently ignore this field.
+	Labels []string `json:"labels,omitempty"`
 	// Format describes how axis labels render.
 	Format Format `json:"format,omitzero"`
 }

@@ -64,7 +64,7 @@ func TestSpecJSONRoundTrip(t *testing.T) {
 	in := Spec{
 		Type: ChartTypeHeatmap, Title: "t", Width: 30, Height: 8,
 		XAxis: XAxis{Title: "hour", Type: XAxisValue, Format: Format{Kind: "number", Precision: f64i(0)}},
-		YAxis: YAxis{Title: "day", Min: f64(0), Max: f64(6)},
+		YAxis: YAxis{Title: "day", Min: f64(0), Max: f64(6), Labels: []string{"Mon", "Tue"}},
 		Data: Data{Series: []Series{{Name: "s", Values: []DataPoint{
 			{X: 1.0, Y: 2.5, Size: f64(4.5)},
 		}}}},
@@ -86,7 +86,8 @@ func TestSpecJSONRoundTrip(t *testing.T) {
 		out.Heat == nil || len(out.Heat.Cells) != 1 || out.Heat.Cells[0].Z != 3.5 ||
 		len(out.Theme.Gradient) != 2 ||
 		len(out.Data.Series) != 1 || len(out.Data.Series[0].Values) != 1 ||
-		out.Data.Series[0].Values[0].Size == nil || *out.Data.Series[0].Values[0].Size != 4.5 {
+		out.Data.Series[0].Values[0].Size == nil || *out.Data.Series[0].Values[0].Size != 4.5 ||
+		len(out.YAxis.Labels) != 2 || out.YAxis.Labels[0] != "Mon" || out.YAxis.Labels[1] != "Tue" {
 		t.Fatalf("round-trip mismatch: %+v", out)
 	}
 }

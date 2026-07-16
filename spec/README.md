@@ -59,6 +59,7 @@ both:
 | `Theme.Gradient` (heatmap) | honoured — interpolated colour scale | **ignored** — heatmap is `ToECharts()`-scaffold only |
 | `DataPoint.Size` | **ignored** everywhere — accepted by the schema, drawn as fixed-size markers on every surface | **ignored** everywhere |
 | `XAxis.Title` / `YAxis.Title` | **ignored** — no current ntcharts terminal model surfaces an axis title | **ignored** — not wired into `ToECharts()` |
+| `YAxis.Labels` (grid charts, e.g. heatmap rows) | **ignored** — terminal heatmap currently has no row-label rendering | **ignored** — not wired into `ToECharts()`; reserved for future grid-chart row labels |
 
 #### One-sided Y-axis pins
 
@@ -102,7 +103,9 @@ spec/
   `Min`/`Max` to pin the range: a lone `Min` or `Max` pins that bound while
   the other is data-derived, both pin an explicit range, and neither leaves
   the chart fully auto-scaled — see "One-sided Y-axis pins" above for the
-  full rule and its edge cases.
+  full rule and its edge cases. `YAxis.Labels` is reserved for row labels on
+  grid-style charts (e.g. heatmap rows); see the fidelity matrix above — it
+  is currently ignored by both surfaces.
 - **`Format`** describes how axis labels (and `FormatValue`) render a
   `float64`. `Kind` selects the family:
   - `""` / `"number"` — plain numeric formatting, `Precision` decimals.
