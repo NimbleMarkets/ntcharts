@@ -4,9 +4,11 @@ package spec_test
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/spec"
@@ -90,6 +92,51 @@ func ExampleBuild_line() {
 	//  ││           ││          ││           │
 	// 0└┴───────────┴┴──────────┴┴───────────┴
 	//  0       1           2           3
+}
+
+// ExampleBuild_scatter shows describing a scatter chart and rendering it via
+// Build to a *linechart.Model; ntcharts has no dedicated scatter model, so
+// points are drawn directly onto a base linechart canvas.
+func ExampleBuild_scatter() {
+	s := spec.Spec{
+		Type:   spec.ChartTypeScatter,
+		Title:  "Fuel Efficiency",
+		Width:  40,
+		Height: 12,
+		Data: spec.Data{
+			Series: []spec.Series{
+				{Name: "japan", Values: []spec.DataPoint{
+					{X: 2100.0, Y: 31.5}, {X: 1980.0, Y: 33.1},
+				}},
+				{Name: "usa", Values: []spec.DataPoint{
+					{X: 2875.0, Y: 24.0}, {X: 3200.0, Y: 19.2}, {X: 3600.0, Y: 16.5},
+				}},
+			},
+		},
+	}
+
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*linechart.Model)
+	for _, line := range strings.Split(m.View(), "\n") {
+		fmt.Println(strings.TrimRight(line, " "))
+	}
+	// Output:
+	// 33│•
+	//   │   •
+	// 30│
+	//   │
+	// 26│
+	//   │                    •
+	// 23│
+	//   │
+	// 20│                           •
+	//   │                                    •
+	// 16└─────────────────────────────────────
+	//   1980  2243  2505  2768  3031  3294
 }
 
 // ExampleBuild_timeSeries shows describing a time-indexed line chart.

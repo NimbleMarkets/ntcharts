@@ -24,6 +24,7 @@ import (
 //   - ChartTypeBar         -> *barchart.Model
 //   - ChartTypeLine        -> *wavelinechart.Model
 //   - ChartTypeTimeSeries  -> *timeserieslinechart.Model
+//   - ChartTypeScatter     -> *linechart.Model
 //
 // Callers should type-assert the result. Unsupported chart types return an
 // error rather than panicking, so future additions to ChartType do not break
@@ -41,11 +42,12 @@ func Build(s Spec) (any, error) {
 		return buildTimeSeries(s)
 	case ChartTypeLine:
 		return buildLine(s)
+	case ChartTypeScatter:
+		return buildScatter(s)
 	case ChartTypeStreamline,
 		ChartTypeSparkline,
 		ChartTypeHeatmap,
 		ChartTypeOHLC,
-		ChartTypeScatter,
 		ChartTypeCanvas:
 		return nil, fmt.Errorf("spec: Build for chart type %q is not yet implemented", s.Type)
 	default:
@@ -153,6 +155,56 @@ func buildLine(s Spec) (*wavelinechart.Model, error) {
 		}
 	}
 	m.DrawAll()
+	return &m, nil
+}
+
+// buildScatter renders points onto a base linechart canvas. ntcharts has no
+// scatter model; the spec surface owns range computation and point drawing.
+// DataPoint.Size is accepted in the schema but ignored by this surface.
+func buildScatter(s Spec) (any, error) {
+	type styledPoint struct {
+		x, y  float64
+		style lipgloss.Style
+	}
+	var pts []styledPoint
+	minX, maxX := math.Inf(1), math.Inf(-1)
+	minY, maxY := math.Inf(1), math.Inf(-1)
+	for i, ser := range s.Data.Series {
+		st := seriesStyle(ser, i, s.Theme)
+		for j, p := range ser.Values {
+			x := resolveXFloat(s, p, j)
+			pts = append(pts, styledPoint{x: x, y: p.Y, style: st})
+			minX, maxX = math.Min(minX, x), math.Max(maxX, x)
+			minY, maxY = math.Min(minY, p.Y), math.Max(maxY, p.Y)
+		}
+	}
+	if len(pts) == 0 {
+		return nil, fmt.Errorf("spec: scatter requires at least one data point")
+	}
+	if s.YAxis.Min != nil {
+		minY = *s.YAxis.Min
+	}
+	if s.YAxis.Max != nil {
+		maxY = *s.YAxis.Max
+	}
+	if minX == maxX {
+		minX, maxX = minX-1, maxX+1
+	}
+	if minY == maxY {
+		minY, maxY = minY-1, maxY+1
+	}
+	var opts []linechart.Option
+	if xf := s.XAxis.Format.labelFormatter(); xf != nil {
+		opts = append(opts, linechart.WithXLabelFormatter(xf))
+	}
+	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
+		opts = append(opts, linechart.WithYLabelFormatter(yf))
+	}
+	m := linechart.New(s.Width, s.Height, minX, maxX, minY, maxY, opts...)
+	m.DrawXYAxisAndLabel()
+	for _, p := range pts {
+		m.DrawRuneWithStyle(canvas.Float64Point{X: p.x, Y: p.y}, '•', p.style)
+	}
 	return &m, nil
 }
 
