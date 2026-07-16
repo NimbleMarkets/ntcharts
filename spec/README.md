@@ -35,8 +35,49 @@ grouped/side-by-side rendering mode: a `Spec` with more than one `Series` must
 set `Options.Stacked = true`, or `Build` returns an error instead of silently
 stacking series a caller may have expected to be grouped side by side.
 `Options.Orientation = OrientationHorizontal` renders horizontal bars via
-`barchart.WithHorizontalBars()`; ECharts renders both orientations, plus true
-grouped bars, without this restriction.
+`barchart.WithHorizontalBars()` in the terminal. **`ToECharts()` does not yet
+honour `Options.Stacked` or `Options.Orientation` for bar charts** — every
+web bar chart renders as ungrouped, vertical bars regardless of these
+options; web stacking/orientation support is planned but not implemented.
+
+### Surface fidelity matrix
+
+Not every `Spec` option is honoured identically (or at all) by both surfaces.
+This table reflects the current, real behaviour of `Build()` (terminal) and
+`ToECharts()` (web) — consult it before assuming an option "just works" on
+both:
+
+| Spec option | Terminal (`Build`) | Web (`ToECharts`) |
+| --- | --- | --- |
+| `Options.Stacked` (bar) | honoured — required (else error) when a bar `Spec` has more than one `Series` | **ignored** — web stacking planned, not implemented |
+| `Options.Orientation` (bar) | honoured via `barchart.WithHorizontalBars()` | **ignored** — always renders vertical bars |
+| `YAxis.Min` / `YAxis.Max`, one-sided (line, scatter, timeseries) | honoured — see "One-sided Y-axis pins" below | honoured — ECharts auto-scales the unset bound natively |
+| `YAxis.Min` (bar) | **ignored** — `barchart.Model` has no Y-minimum option, only `WithMaxValue` | honoured (set directly on the ECharts Y axis) |
+| `XAxis.Format` / `YAxis.Format` (line, scatter) | honoured via `XLabelFormatter` / `YLabelFormatter` | **ignored** — not wired into `ToECharts()` |
+| `XAxis.Format` (timeseries) | honoured only when `Kind == "time"`; other kinds are intentionally ignored (the X axis is time-valued) | `Layout` is translated and applied unconditionally as the ECharts time-axis label template (`Kind` is not checked) |
+| `YAxis.Format` (timeseries) | honoured via `YLabelFormatter` | **ignored** — not wired into `ToECharts()` |
+| `Theme.Gradient` (heatmap) | honoured — interpolated colour scale | **ignored** — heatmap is `ToECharts()`-scaffold only |
+| `DataPoint.Size` | **ignored** everywhere — accepted by the schema, drawn as fixed-size markers on every surface | **ignored** everywhere |
+| `XAxis.Title` / `YAxis.Title` | **ignored** — no current ntcharts terminal model surfaces an axis title | **ignored** — not wired into `ToECharts()` |
+
+#### One-sided Y-axis pins
+
+`YAxis.Min` and `YAxis.Max` can be set independently. The rule, enforced the
+same way by `buildLine`, `buildTimeSeries`, and `buildScatter`: **a lone
+`Min` or `Max` pins that bound; the other, unset bound is derived from the
+series' actual Y data.** Setting both pins both bounds explicitly, and
+setting neither leaves the chart fully auto-scaled. If the resulting
+(effective) minimum exceeds the (effective) maximum — e.g. pinning `Min`
+above the data's actual maximum — `Build` returns an error
+(`spec: y_axis min %v exceeds max %v`) instead of silently constructing an
+inverted range. `ToECharts()` achieves the equivalent one-sided behaviour
+natively: an unset `opts.YAxis.Min`/`Max` (an `interface{}`, `omitempty`) is
+left out of the JSON entirely, so ECharts auto-scales that side itself;
+`ToECharts()` does not currently validate an inverted pin.
+
+`ChartTypeBar` has no such rule: `barchart.Model` has no Y-minimum concept at
+all (see the fidelity matrix above), so `YAxis.Min` is always ignored for bar
+charts on the terminal surface.
 
 ## Layout
 
@@ -58,7 +99,10 @@ spec/
 - **`XAxis` / `YAxis`** describe each axis: `Title`, `Type` (`XAxisCategory`,
   `XAxisTime`, or `XAxisValue`; inferred from chart type when empty),
   `Labels` (category ticks), and `Format` (label formatting). `YAxis` adds
-  `Min`/`Max` to pin the range; when both are nil the chart auto-scales.
+  `Min`/`Max` to pin the range: a lone `Min` or `Max` pins that bound while
+  the other is data-derived, both pin an explicit range, and neither leaves
+  the chart fully auto-scaled — see "One-sided Y-axis pins" above for the
+  full rule and its edge cases.
 - **`Format`** describes how axis labels (and `FormatValue`) render a
   `float64`. `Kind` selects the family:
   - `""` / `"number"` — plain numeric formatting, `Precision` decimals.
@@ -67,6 +111,13 @@ spec/
   - `"si"` — abbreviates magnitude with a k/M/G/T suffix.
   - `"time"` — treats the value as **milliseconds since the Unix epoch** and
     renders it with the Go time layout in `Layout` (default `"2006-01-02"`).
+    Note: chart-internal axis values for timeseries charts are
+    **seconds**-since-epoch, not milliseconds; the timeseries axis
+    formatters convert between the two internally, so `FormatValue` callers
+    always pass milliseconds.
+  - `line` and `scatter` charts with a `Kind: "time"` X-axis `Format` expect
+    `DataPoint.X` (or the resolved numeric X) to be **milliseconds since the
+    Unix epoch** — the same convention `FormatValue` uses for `"time"`.
 - **`Data.Series`** is the ordered list of named series; `Data.XAxisData` is
   an optional shared X value list so per-point `DataPoint.X` can be omitted.
 - **`DataPoint.Size`** is accepted in the schema (a scatter point weight) but
@@ -169,6 +220,12 @@ This package adds a new module dependency to ntcharts:
 - `github.com/go-echarts/go-echarts/v2` — used by `echarts.go`
 
 `go get` has already added it to `go.mod` / `go.sum`.
+
+`go.mod`/`go.sum` (both the module root and `examples/`) are deliberately
+left **uncommitted** pending a module-wide dependency decision (e.g. whether
+`go-echarts/v2` becomes a required or optional/build-tagged dependency of the
+root module). Do not commit those four files as part of `spec/` work; they
+carry unrelated, in-progress changes.
 
 ## Design notes
 
