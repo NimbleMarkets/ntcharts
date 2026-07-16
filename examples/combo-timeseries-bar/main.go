@@ -211,7 +211,7 @@ func buildSpec(monthly []monthlyPoint) spec.Spec {
 		Height:   24,
 		XAxis: spec.XAxis{
 			Type:   spec.XAxisTime,
-			Format: spec.Format{Kind: "time", Layout: "{yyyy}-{MM}"},
+			Format: spec.Format{Kind: "time", Layout: "2006-01"},
 		},
 		Data: spec.Data{
 			Series: []spec.Series{
