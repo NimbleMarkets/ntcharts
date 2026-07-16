@@ -136,14 +136,53 @@ func resolveXFloat(s Spec, p DataPoint, idx int) float64 {
 	return float64(idx)
 }
 
+// yBounds scans every DataPoint.Y across series and returns the observed
+// minimum and maximum. ok is false when no series contained any points.
+func yBounds(series []Series) (min, max float64, ok bool) {
+	min, max = math.Inf(1), math.Inf(-1)
+	for _, ser := range series {
+		for _, p := range ser.Values {
+			min = math.Min(min, p.Y)
+			max = math.Max(max, p.Y)
+		}
+	}
+	return min, max, !math.IsInf(min, 1)
+}
+
+// resolveYRange implements the spec-level one-sided Y-axis pin rule: a lone
+// YAxis.Min or YAxis.Max pins that bound; the missing bound falls back to
+// the data-derived extreme (via yBounds), or 0 when there is no data to
+// derive it from. It is an error for the resulting min to exceed the
+// resulting max — e.g. a Min pin above the data's actual max would silently
+// build an inverted range without this guard.
+func resolveYRange(s Spec) (min, max float64, err error) {
+	min, max, ok := yBounds(s.Data.Series)
+	if !ok {
+		min, max = 0, 0
+	}
+	if s.YAxis.Min != nil {
+		min = *s.YAxis.Min
+	}
+	if s.YAxis.Max != nil {
+		max = *s.YAxis.Max
+	}
+	if min > max {
+		return 0, 0, fmt.Errorf("spec: y_axis min %v exceeds max %v", min, max)
+	}
+	return min, max, nil
+}
+
 // buildLine constructs a *wavelinechart.Model from s.
 //
 // Each spec.Series becomes a named data set (see PlotDataSet /
 // SetDataSetStyles). DataPoint.X is resolved via resolveXFloat: the point's
 // own numeric X, else the shared Data.XAxisData at that index, else the
 // point's index — so callers may omit X entirely and rely on index-as-X.
-// YAxis.Min / YAxis.Max pin the Y axis via WithYRange when both are set;
-// otherwise the chart auto-scales.
+// YAxis.Min / YAxis.Max pin the Y axis via WithYRange following the
+// one-sided pin rule: a lone Min or Max pins that bound while the missing
+// bound is derived from the series' Y values (see yBounds); when neither is
+// set the chart auto-scales. It is an error for the resulting min to exceed
+// the resulting max.
 //
 // wavelinechart.Model embeds linechart.Model, which exposes the
 // XLabelFormatter / YLabelFormatter fields publicly; when XAxis.Format /
@@ -152,8 +191,12 @@ func resolveXFloat(s Spec, p DataPoint, idx int) float64 {
 // (e.g. ToECharts).
 func buildLine(s Spec) (*wavelinechart.Model, error) {
 	var opts []wavelinechart.Option
-	if s.YAxis.Min != nil && s.YAxis.Max != nil {
-		opts = append(opts, wavelinechart.WithYRange(*s.YAxis.Min, *s.YAxis.Max))
+	if s.YAxis.Min != nil || s.YAxis.Max != nil {
+		minY, maxY, err := resolveYRange(s)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, wavelinechart.WithYRange(minY, maxY))
 	}
 	m := wavelinechart.New(s.Width, s.Height, opts...)
 
@@ -178,6 +221,9 @@ func buildLine(s Spec) (*wavelinechart.Model, error) {
 // buildScatter renders points onto a base linechart canvas. ntcharts has no
 // scatter model; the spec surface owns range computation and point drawing.
 // DataPoint.Size is accepted in the schema but ignored by this surface.
+// YAxis.Min / YAxis.Max follow the one-sided pin rule (a lone bound pins;
+// the other is data-derived); it is an error for the resulting min to
+// exceed the resulting max.
 func buildScatter(s Spec) (any, error) {
 	type styledPoint struct {
 		x, y  float64
@@ -203,6 +249,9 @@ func buildScatter(s Spec) (any, error) {
 	}
 	if s.YAxis.Max != nil {
 		maxY = *s.YAxis.Max
+	}
+	if minY > maxY {
+		return nil, fmt.Errorf("spec: y_axis min %v exceeds max %v", minY, maxY)
 	}
 	if minX == maxX {
 		minX, maxX = minX-1, maxX+1
@@ -234,8 +283,10 @@ func buildScatter(s Spec) (any, error) {
 //     timeserieslinechart is reused for the first series when it has no name.
 //  2. DataPoint.X accepts time.Time or RFC3339 strings or numeric ms; the
 //     helper pointTime() converts all three.
-//  3. YAxis.Min / YAxis.Max pin the Y axis via WithYRange. When both are nil
-//     the chart auto-scales based on the pushed points.
+//  3. YAxis.Min / YAxis.Max pin the Y axis via WithYRange following the
+//     one-sided pin rule: a lone Min or Max pins that bound and the missing
+//     bound is derived from the pushed points; when both are nil the chart
+//     auto-scales.
 //  4. YAxis.Format / XAxis.Format (when Kind == "time") thread custom
 //     LabelFormatters through WithYLabelFormatter / WithXLabelFormatter at
 //     construction time; when unset, the chart's own defaults (including
@@ -255,13 +306,20 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	opts := []timeserieslinechart.Option{
 		timeserieslinechart.WithTimeRange(tMin, tMax),
 	}
-	if s.YAxis.Min != nil && s.YAxis.Max != nil {
-		opts = append(opts, timeserieslinechart.WithYRange(*s.YAxis.Min, *s.YAxis.Max))
+	if s.YAxis.Min != nil || s.YAxis.Max != nil {
+		minY, maxY, err := resolveYRange(s)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, timeserieslinechart.WithYRange(minY, maxY))
 	}
 	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
 		opts = append(opts, timeserieslinechart.WithYLabelFormatter(yf))
 	}
-	if xf := s.XAxis.Format.labelFormatter(); xf != nil && s.XAxis.Format.Kind == "time" {
+	// Only kind == "time" X formats apply to a timeseries X axis; other
+	// kinds (number/percent/currency/si) are intentionally ignored here
+	// since the X axis values are time, not the quantity those kinds format.
+	if !s.XAxis.Format.IsZero() && s.XAxis.Format.Kind == "time" {
 		// timeserieslinechart's default DateTimeLabelFormatter (see
 		// linechart/timeserieslinechart/timeserieslinechart.go) receives X
 		// label values as seconds-since-epoch (it does

@@ -85,6 +85,12 @@ const (
 //   - "currency": Currency symbol prefix
 //   - "si": k/M/G/T suffix (SI-style magnitude abbreviation)
 //   - "time": ms-since-epoch rendered via Layout
+//
+// Note: chart-internal axis values for timeseries charts are
+// seconds-since-epoch (not milliseconds); FormatValue and the timeseries
+// axis formatters convert between the two internally, so callers of
+// FormatValue always pass milliseconds regardless of which surface renders
+// the chart.
 type Format struct {
 	// Kind selects the formatting family. See the Format doc comment.
 	Kind string `json:"kind,omitempty"`
@@ -112,7 +118,7 @@ type XAxis struct {
 	// Type == XAxisCategory.
 	Labels []string `json:"labels,omitempty"`
 	// Format describes how axis labels render.
-	Format Format `json:"format,omitempty"`
+	Format Format `json:"format,omitzero"`
 }
 
 // YAxis describes the Y axis of a chart.
@@ -124,7 +130,7 @@ type YAxis struct {
 	// Max pins the Y axis maximum. If nil, auto-scale.
 	Max *float64 `json:"max,omitempty"`
 	// Format describes how axis labels render.
-	Format Format `json:"format,omitempty"`
+	Format Format `json:"format,omitzero"`
 }
 
 // Spec is the top-level neutral description of a chart.
@@ -146,9 +152,9 @@ type Spec struct {
 	Height int `json:"height"`
 
 	// XAxis describes the X axis (title, type, labels, format).
-	XAxis XAxis `json:"x_axis,omitempty"`
+	XAxis XAxis `json:"x_axis,omitzero"`
 	// YAxis describes the Y axis (title, min/max, format).
-	YAxis YAxis `json:"y_axis,omitempty"`
+	YAxis YAxis `json:"y_axis,omitzero"`
 
 	// Data holds the series data for the chart.
 	Data Data `json:"data"`
@@ -156,9 +162,9 @@ type Spec struct {
 	// ChartTypeHeatmap.
 	Heat *HeatData `json:"heat,omitempty"`
 	// Options holds common, surface-agnostic rendering options.
-	Options Options `json:"options,omitempty"`
+	Options Options `json:"options,omitzero"`
 	// Theme holds surface-agnostic colour theming.
-	Theme Theme `json:"theme,omitempty"`
+	Theme Theme `json:"theme,omitzero"`
 }
 
 // Data describes the series of a chart.

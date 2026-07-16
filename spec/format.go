@@ -39,7 +39,7 @@ func FormatValue(f Format, v float64) string {
 		if layout == "" {
 			layout = "2006-01-02"
 		}
-		return time.UnixMilli(int64(v)).UTC().Format(layout)
+		return time.UnixMilli(int64(math.Round(v))).UTC().Format(layout)
 	default: // "" or "number"
 		return strconv.FormatFloat(v, 'f', prec, 64)
 	}

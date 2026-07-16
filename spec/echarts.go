@@ -4,6 +4,7 @@ package spec
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -90,10 +91,12 @@ func (s Spec) toEChartsBar() (*charts.Bar, error) {
 //  1. Every DataPoint is emitted as an []any of [time.Time, float64] which
 //     go-echarts serialises as a two-element tuple understood by the ECharts
 //     frontend when xAxis.type == "time".
-//  2. Spec.XAxis.Format.Layout is surfaced via AxisLabel.Formatter. ECharts
-//     uses its own format tokens (e.g. "{yyyy}-{MM}-{dd}"); passing a Go
-//     layout through unchanged is best-effort — callers wanting strict
-//     control should set Layout to an ECharts-compatible string.
+//  2. Spec.XAxis.Format.Layout is translated by goLayoutToECharts from a Go
+//     time layout (e.g. "2006-01") into an ECharts axis-label template
+//     (e.g. "{yyyy}-{MM}") and surfaced via AxisLabel.Formatter. Layouts
+//     that already look like ECharts templates (containing "{") pass
+//     through verbatim; when nothing is translated, no formatter is set and
+//     ECharts uses its own default time-axis labels.
 //  3. Series Color is passed through via LineStyleOpts. Theme.Palette is
 //     wired into the chart's Colors global option.
 //  4. YAxis.Min / YAxis.Max pin the Y axis. Nil leaves auto-ranging in place.
@@ -120,7 +123,7 @@ func (s Spec) toEChartsTimeSeries() (*charts.Line, error) {
 		charts.WithColorsOpts(s.Theme.Palette),
 		charts.WithXAxisOpts(opts.XAxis{
 			Type:      XAxisTime,
-			AxisLabel: &opts.AxisLabel{Show: opts.Bool(true), Formatter: types.FuncStr(s.XAxis.Format.Layout)},
+			AxisLabel: xAxisTimeLabelOpt(s.XAxis.Format.Layout),
 		}),
 	)
 	if hasBar {
@@ -231,6 +234,36 @@ func (s Spec) yAxisOpt() charts.GlobalOpts {
 		y.Max = *s.YAxis.Max
 	}
 	return charts.WithYAxisOpts(y)
+}
+
+// goLayoutReplacer best-effort-translates the common Go time-layout tokens
+// into their ECharts axis-label template equivalents.
+var goLayoutReplacer = strings.NewReplacer(
+	"2006", "{yyyy}", "01", "{MM}", "02", "{dd}",
+	"15", "{HH}", "04", "{mm}", "05", "{ss}",
+)
+
+// goLayoutToECharts best-effort-translates a Go time layout into an ECharts
+// axis-label template ({yyyy}-{MM} style). Layouts already containing "{"
+// are assumed to be ECharts templates and pass through verbatim.
+func goLayoutToECharts(layout string) string {
+	if strings.Contains(layout, "{") {
+		return layout
+	}
+	return goLayoutReplacer.Replace(layout)
+}
+
+// xAxisTimeLabelOpt builds the AxisLabel formatter for a time-type X axis
+// from a Go time layout (or an already-ECharts-style template). When the
+// layout is empty or nothing recognizable was translated, nil is returned so
+// ECharts falls back to its own default time-axis labels instead of
+// rendering the raw, untranslated layout string as literal text.
+func xAxisTimeLabelOpt(layout string) *opts.AxisLabel {
+	translated := goLayoutToECharts(layout)
+	if translated == layout && !strings.Contains(translated, "{") {
+		return nil
+	}
+	return &opts.AxisLabel{Show: opts.Bool(true), Formatter: types.FuncStr(translated)}
 }
 
 // defaultStr returns v unless it is empty, in which case fallback is returned.
