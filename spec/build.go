@@ -14,6 +14,7 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
+	"github.com/NimbleMarkets/ntcharts/v2/sparkline"
 
 	"charm.land/lipgloss/v2"
 )
@@ -48,8 +49,9 @@ func Build(s Spec) (any, error) {
 		return buildScatter(s)
 	case ChartTypeHeatmap:
 		return buildHeatmap(s)
+	case ChartTypeSparkline:
+		return buildSparkline(s)
 	case ChartTypeStreamline,
-		ChartTypeSparkline,
 		ChartTypeOHLC,
 		ChartTypeCanvas:
 		return nil, fmt.Errorf("spec: Build for chart type %q is not yet implemented", s.Type)
@@ -453,6 +455,27 @@ func buildHeatmap(s Spec) (any, error) {
 		for _, c := range s.Heat.Cells {
 			m.Push(heatmap.NewHeatPoint(c.X, c.Y, c.Z))
 		}
+	}
+	m.Draw()
+	return &m, nil
+}
+
+// buildSparkline renders a single series onto a sparkline model. The
+// sparkline package is single-series and has no Y-minimum: multiple series
+// error (like grouped bars), YAxis.Min is documented-ignored, YAxis.Max maps
+// to WithMaxValue.
+func buildSparkline(s Spec) (any, error) {
+	if len(s.Data.Series) != 1 {
+		return nil, fmt.Errorf("spec: sparkline supports exactly one series; got %d", len(s.Data.Series))
+	}
+	ser := s.Data.Series[0]
+	opts := []sparkline.Option{sparkline.WithStyle(seriesStyle(ser, 0, s.Theme))}
+	if s.YAxis.Max != nil {
+		opts = append(opts, sparkline.WithMaxValue(*s.YAxis.Max))
+	}
+	m := sparkline.New(s.Width, s.Height, opts...)
+	for _, p := range ser.Values {
+		m.Push(p.Y)
 	}
 	m.Draw()
 	return &m, nil

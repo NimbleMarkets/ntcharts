@@ -24,7 +24,7 @@ wire, or authored in configuration files.
 | `ChartTypeScatter`     | full                                                                | scaffold |
 | `ChartTypeHeatmap`     | full                                                                | scaffold |
 | `ChartTypeStreamline`  | scaffold                                                            | scaffold |
-| `ChartTypeSparkline`   | scaffold                                                            | scaffold |
+| `ChartTypeSparkline`   | full                                                                | scaffold |
 | `ChartTypeOHLC`        | scaffold                                                            | scaffold |
 | `ChartTypeCanvas`      | scaffold                                                            | scaffold |
 
@@ -53,6 +53,9 @@ both:
 | `Options.Orientation` (bar) | honoured via `barchart.WithHorizontalBars()` | **ignored** — always renders vertical bars |
 | `YAxis.Min` / `YAxis.Max`, one-sided (line, scatter, timeseries) | honoured — see "One-sided Y-axis pins" below | honoured — ECharts auto-scales the unset bound natively |
 | `YAxis.Min` (bar) | **ignored** — `barchart.Model` has no Y-minimum option, only `WithMaxValue` | honoured (set directly on the ECharts Y axis) |
+| `YAxis.Min` (sparkline) | **ignored** — `sparkline.Model` has no Y-minimum concept, only `WithMaxValue` | N/A — `ToECharts()` is scaffold-only |
+| `YAxis.Max` (sparkline) | honoured via `sparkline.WithMaxValue()` when set; otherwise auto-scales | N/A — `ToECharts()` is scaffold-only |
+| `Data.Series` (sparkline) | **requires exactly one** — multiple series error (like grouped bars) | N/A — `ToECharts()` is scaffold-only |
 | `XAxis.Format` / `YAxis.Format` (line, scatter) | honoured via `XLabelFormatter` / `YLabelFormatter` | **ignored** — not wired into `ToECharts()` |
 | `XAxis.Format` (timeseries) | honoured only when `Kind == "time"`; other kinds are intentionally ignored (the X axis is time-valued) | `Layout` is translated and applied unconditionally as the ECharts time-axis label template (`Kind` is not checked) |
 | `YAxis.Format` (timeseries) | honoured via `YLabelFormatter` | **ignored** — not wired into `ToECharts()` |

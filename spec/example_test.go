@@ -12,6 +12,7 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
+	"github.com/NimbleMarkets/ntcharts/v2/sparkline"
 	"github.com/NimbleMarkets/ntcharts/v2/spec"
 )
 
@@ -180,6 +181,42 @@ func ExampleBuild_timeSeries() {
 	}
 	fmt.Printf("terminal: %T, web: %T\n", term, web)
 	// Output: terminal: *timeserieslinechart.Model, web: *charts.Line
+}
+
+// ExampleBuild_sparkline shows describing a sparkline chart (single series)
+// and rendering it via Build to a *sparkline.Model. The sparkline is rendered
+// using plain runes with no color styling applied to keep the Example golden
+// escape-free.
+func ExampleBuild_sparkline() {
+	s := spec.Spec{
+		Type:   spec.ChartTypeSparkline,
+		Title:  "CPU Usage",
+		Width:  30,
+		Height: 4,
+		Data: spec.Data{
+			Series: []spec.Series{{
+				Name: "cpu",
+				Values: []spec.DataPoint{
+					{Y: 1}, {Y: 4}, {Y: 2}, {Y: 7}, {Y: 5}, {Y: 9}, {Y: 3},
+				},
+			}},
+		},
+	}
+
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*sparkline.Model)
+	for _, line := range strings.Split(m.View(), "\n") {
+		fmt.Println(strings.TrimRight(line, " "))
+	}
+	// Output:
+	//                           ▁ █
+	//                           █▂█
+	//                         ▆ ███▃
+	//                        ▄█▇████
 }
 
 // ExampleBuild_heatmap shows describing a heatmap with a custom gradient
