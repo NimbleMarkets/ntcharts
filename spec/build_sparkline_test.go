@@ -41,7 +41,15 @@ func TestBuildSparklineSingleSeriesOnly(t *testing.T) {
 func TestBuildSparklineMaxPin(t *testing.T) {
 	s := sparkSpec()
 	s.YAxis.Max = f64(20)
-	if _, err := Build(s); err != nil {
+	got, err := Build(s)
+	if err != nil {
 		t.Fatalf("Build(sparkline, max pin): %v", err)
+	}
+	m, ok := got.(*sparkline.Model)
+	if !ok {
+		t.Fatalf("Build(sparkline) returned %T, want *sparkline.Model", got)
+	}
+	if m.MaxValue() != 20 {
+		t.Fatalf("MaxValue() = %v, want 20", m.MaxValue())
 	}
 }

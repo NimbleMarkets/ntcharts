@@ -28,6 +28,7 @@ import (
 //   - ChartTypeTimeSeries  -> *timeserieslinechart.Model
 //   - ChartTypeScatter     -> *linechart.Model
 //   - ChartTypeHeatmap     -> *heatmap.Model
+//   - ChartTypeSparkline   -> *sparkline.Model
 //
 // Callers should type-assert the result. Unsupported chart types return an
 // error rather than panicking, so future additions to ChartType do not break
