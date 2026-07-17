@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
@@ -253,4 +254,44 @@ func ExampleBuild_heatmap() {
 	m := term.(*heatmap.Model)
 	fmt.Printf("terminal: %T, non-empty view: %v\n", term, strings.TrimSpace(m.View()) != "")
 	// Output: terminal: *heatmap.Model, non-empty view: true
+}
+
+// ExampleBuild_ohlc shows describing an open/high/low/close chart and
+// rendering it via Build to a *canvas.Model. ntcharts has no dedicated OHLC
+// model; this surface owns price scaling and draws candlesticks directly
+// onto a raw canvas via canvas/graph.DrawCandlestickBottomToTop.
+//
+// Candles are always foreground-styled (Theme.Palette[0] for up candles,
+// Theme.Palette[1] for down, defaulting to teal/red), so View() always
+// embeds ANSI escape sequences — even with no Theme set. Because go/doc
+// Example goldens must be escape-free, this Example follows the same
+// non-View pattern as ExampleBuild_heatmap: assert the concrete return type
+// and confirm the rendered view is non-empty.
+func ExampleBuild_ohlc() {
+	s := spec.Spec{
+		Type:   spec.ChartTypeOHLC,
+		Title:  "Daily Close",
+		Width:  40,
+		Height: 12,
+		Data: spec.Data{
+			Series: []spec.Series{{
+				Name: "px",
+				OHLC: []spec.OHLCPoint{
+					{T: "2026-01-05", O: 100, H: 108, L: 97, C: 105},
+					{T: "2026-01-06", O: 105, H: 112, L: 103, C: 110},
+					{T: "2026-01-07", O: 110, H: 111, L: 98, C: 99},
+					{T: "2026-01-08", O: 99, H: 106, L: 96, C: 104},
+				},
+			}},
+		},
+	}
+
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*canvas.Model)
+	fmt.Printf("terminal: %T, non-empty view: %v\n", term, strings.TrimSpace(m.View()) != "")
+	// Output: terminal: *canvas.Model, non-empty view: true
 }

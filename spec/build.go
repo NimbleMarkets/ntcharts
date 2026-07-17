@@ -9,6 +9,7 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/graph"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
@@ -29,6 +30,7 @@ import (
 //   - ChartTypeScatter     -> *linechart.Model
 //   - ChartTypeHeatmap     -> *heatmap.Model
 //   - ChartTypeSparkline   -> *sparkline.Model
+//   - ChartTypeOHLC        -> *canvas.Model
 //
 // Callers should type-assert the result. Unsupported chart types return an
 // error rather than panicking, so future additions to ChartType do not break
@@ -52,8 +54,9 @@ func Build(s Spec) (any, error) {
 		return buildHeatmap(s)
 	case ChartTypeSparkline:
 		return buildSparkline(s)
+	case ChartTypeOHLC:
+		return buildOHLC(s)
 	case ChartTypeStreamline,
-		ChartTypeOHLC,
 		ChartTypeCanvas:
 		return nil, fmt.Errorf("spec: Build for chart type %q is not yet implemented", s.Type)
 	default:
@@ -480,6 +483,118 @@ func buildSparkline(s Spec) (any, error) {
 	}
 	m.Draw()
 	return &m, nil
+}
+
+// Default up/down candle colors (overridden by Theme.Palette slots 0/1).
+const (
+	defaultUpColor   = "#26a69a"
+	defaultDownColor = "#ef5350"
+)
+
+// buildOHLC renders candlesticks onto a raw canvas.Model. ntcharts has no
+// high-level OHLC model; this surface owns the price scaling and layout
+// (see canvas/graph.DrawCandlestickBottomToTop and
+// examples/graph/candlesticks for the underlying primitives).
+//
+// Palette convention: Theme.Palette[0] = up candles (close >= open),
+// Theme.Palette[1] = down candles (close < open); absent a palette entry,
+// defaultUpColor / defaultDownColor apply.
+//
+// YAxis.Min / YAxis.Max follow the one-sided pin rule used elsewhere in this
+// package: a lone bound pins that side of the price range while the other is
+// derived from the data's actual high/low; it is an error for the resulting
+// min to exceed the max. When the pinned range is tighter than the data
+// (e.g. a Max below some candle's high), scaled values are clamped to
+// [0, usableRows] so candles never draw outside the canvas.
+//
+// When there are more candles than usable columns, the most recent candles
+// are kept and older ones are dropped (documented, not configurable).
+func buildOHLC(s Spec) (any, error) {
+	var pts []OHLCPoint
+	for _, ser := range s.Data.Series {
+		if len(ser.OHLC) > 0 {
+			pts = ser.OHLC
+			break
+		}
+	}
+	if len(pts) == 0 {
+		return nil, fmt.Errorf("spec: ohlc requires Series.OHLC points")
+	}
+
+	minP, maxP := math.Inf(1), math.Inf(-1)
+	for _, p := range pts {
+		minP = math.Min(minP, p.L)
+		maxP = math.Max(maxP, p.H)
+	}
+	if s.YAxis.Min != nil {
+		minP = *s.YAxis.Min
+	}
+	if s.YAxis.Max != nil {
+		maxP = *s.YAxis.Max
+	}
+	if minP > maxP {
+		return nil, fmt.Errorf("spec: y_axis min %v exceeds max %v", minP, maxP)
+	}
+	if minP == maxP {
+		minP, maxP = minP-1, maxP+1
+	}
+
+	usableCols := s.Width - 2  // axis column + margin
+	usableRows := s.Height - 2 // axis row + headroom
+	if usableCols < 1 || usableRows < 1 {
+		return nil, fmt.Errorf("spec: ohlc needs at least 3x3 cells; got %dx%d", s.Width, s.Height)
+	}
+	if len(pts) > usableCols {
+		pts = pts[len(pts)-usableCols:] // most recent candles win (documented)
+	}
+
+	c := canvas.New(s.Width, s.Height)
+	origin := canvas.Point{X: 0, Y: s.Height - 1}
+	graph.DrawXYAxis(&c, origin, seriesAxisStyle(s.Theme))
+
+	up := candleStyle(s.Theme, 0, defaultUpColor)
+	down := candleStyle(s.Theme, 1, defaultDownColor)
+	scale := func(v float64) float64 {
+		r := (v - minP) / (maxP - minP) * float64(usableRows)
+		if r < 0 {
+			return 0
+		}
+		if r > float64(usableRows) {
+			return float64(usableRows)
+		}
+		return r
+	}
+	for i, p := range pts {
+		st := up
+		if p.C < p.O {
+			st = down
+		}
+		bl, bh := math.Min(p.O, p.C), math.Max(p.O, p.C)
+		graph.DrawCandlestickBottomToTop(&c,
+			canvas.Point{X: origin.X + 1 + i, Y: origin.Y - 1},
+			scale(p.L), scale(bl), scale(bh), scale(p.H), st)
+	}
+	return &c, nil
+}
+
+// candleStyle returns the lipgloss.Style for a candle, preferring
+// Theme.Palette[slot] and falling back to fallback (a hex colour) when the
+// palette does not have that slot set.
+func candleStyle(t Theme, slot int, fallback string) lipgloss.Style {
+	color := fallback
+	if slot < len(t.Palette) && t.Palette[slot] != "" {
+		color = t.Palette[slot]
+	}
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(color))
+}
+
+// seriesAxisStyle returns the lipgloss.Style used to draw chart axes,
+// preferring Theme.Foreground and falling back to the terminal default.
+func seriesAxisStyle(t Theme) lipgloss.Style {
+	if t.Foreground != "" {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(t.Foreground))
+	}
+	return lipgloss.NewStyle()
 }
 
 // seriesStyle returns the lipgloss.Style for a Series, preferring the

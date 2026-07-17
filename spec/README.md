@@ -25,7 +25,7 @@ wire, or authored in configuration files.
 | `ChartTypeHeatmap`     | full                                                                | scaffold |
 | `ChartTypeStreamline`  | scaffold                                                            | scaffold |
 | `ChartTypeSparkline`   | full                                                                | scaffold |
-| `ChartTypeOHLC`        | scaffold                                                            | scaffold |
+| `ChartTypeOHLC`        | full — candlesticks on raw `canvas.Model` primitives                | scaffold |
 | `ChartTypeCanvas`      | scaffold                                                            | scaffold |
 
 Scaffolded chart types return a clear `not yet implemented` error today.
@@ -40,6 +40,21 @@ honour `Options.Stacked` or `Options.Orientation` for bar charts** — every
 web bar chart renders as ungrouped, vertical bars regardless of these
 options; web stacking/orientation support is planned but not implemented.
 
+`ChartTypeOHLC` is the one terminal chart type with **no** high-level
+ntcharts model backing it: `buildOHLC` draws candlesticks directly onto a
+raw `canvas.Model` using `canvas/graph.DrawXYAxis` and
+`graph.DrawCandlestickBottomToTop`, so it owns price-to-row scaling and
+candle placement itself. Candles are coloured by `Theme.Palette[0]` (up,
+close >= open) / `Theme.Palette[1]` (down), defaulting to `#26a69a` /
+`#ef5350` when the palette does not set those slots. `YAxis.Min` / `YAxis.Max`
+follow the same one-sided pin rule as the line/scatter/timeseries surfaces
+(see "One-sided Y-axis pins" below); when the pinned range is tighter than
+the data's actual high/low, scaled values are clamped so candles never draw
+outside the canvas. When a `Spec` has more OHLC points than the chart has
+usable columns (`Width - 2`), the **most recent** candles are kept and older
+ones are silently dropped — there is no horizontal scrolling/zooming in this
+surface.
+
 ### Surface fidelity matrix
 
 Not every `Spec` option is honoured identically (or at all) by both surfaces.
@@ -51,7 +66,9 @@ both:
 | --- | --- | --- |
 | `Options.Stacked` (bar) | honoured — required (else error) when a bar `Spec` has more than one `Series` | **ignored** — web stacking planned, not implemented |
 | `Options.Orientation` (bar) | honoured via `barchart.WithHorizontalBars()` | **ignored** — always renders vertical bars |
-| `YAxis.Min` / `YAxis.Max`, one-sided (line, scatter, timeseries) | honoured — see "One-sided Y-axis pins" below | honoured — ECharts auto-scales the unset bound natively |
+| `YAxis.Min` / `YAxis.Max`, one-sided (line, scatter, timeseries, ohlc) | honoured — see "One-sided Y-axis pins" below | honoured — ECharts auto-scales the unset bound natively |
+| `Theme.Palette[0]` / `[1]` (ohlc) | honoured — slot 0 = up candles, slot 1 = down candles; defaults `#26a69a` / `#ef5350` when unset | N/A — `ToECharts()` is scaffold-only |
+| `Series.OHLC` count vs. chart width (ohlc) | when there are more points than usable columns (`Width - 2`), the **most recent** points are kept; older ones are dropped, not scrolled | N/A — `ToECharts()` is scaffold-only |
 | `YAxis.Min` (bar) | **ignored** — `barchart.Model` has no Y-minimum option, only `WithMaxValue` | honoured (set directly on the ECharts Y axis) |
 | `YAxis.Min` (sparkline) | **ignored** — `sparkline.Model` has no Y-minimum concept, only `WithMaxValue` | N/A — `ToECharts()` is scaffold-only |
 | `YAxis.Max` (sparkline) | honoured via `sparkline.WithMaxValue()` when set; otherwise auto-scales | N/A — `ToECharts()` is scaffold-only |
@@ -67,9 +84,10 @@ both:
 #### One-sided Y-axis pins
 
 `YAxis.Min` and `YAxis.Max` can be set independently. The rule, enforced the
-same way by `buildLine`, `buildTimeSeries`, and `buildScatter`: **a lone
-`Min` or `Max` pins that bound; the other, unset bound is derived from the
-series' actual Y data.** Setting both pins both bounds explicitly, and
+same way by `buildLine`, `buildTimeSeries`, `buildScatter`, and `buildOHLC`:
+**a lone `Min` or `Max` pins that bound; the other, unset bound is derived
+from the series' actual Y data** (for `buildOHLC`, the observed high/low
+across all `OHLCPoint`s). Setting both pins both bounds explicitly, and
 setting neither leaves the chart fully auto-scaled. If the resulting
 (effective) minimum exceeds the (effective) maximum — e.g. pinning `Min`
 above the data's actual maximum — `Build` returns an error
@@ -92,9 +110,9 @@ spec/
 ├── helpers.go            internal X-value coercion (pointTime / pointFloat / pointString)
 ├── format.go              FormatValue + Format.labelFormatter (number/percent/currency/si/time)
 ├── gradient.go            Theme.Gradient hex-stop interpolation for heatmap colour scales
-├── build.go               Build(s) -> ntcharts terminal model
+├── build.go               Build(s) -> ntcharts terminal model (includes buildOHLC, drawn on raw canvas.Model)
 ├── echarts.go             Spec.ToECharts() -> go-echarts/v2 chart
-├── example_test.go        runnable examples (bar, line, scatter, timeseries, heatmap)
+├── example_test.go        runnable examples (bar, line, scatter, timeseries, heatmap, ohlc)
 └── README.md              this file
 ```
 
@@ -129,9 +147,10 @@ spec/
 - **`DataPoint.Size`** is accepted in the schema (a scatter point weight) but
   ignored by every current surface — terminal and ECharts both draw
   fixed-size markers today.
-- **`Series.OHLC`** ([]OHLCPoint) is reserved for `ChartTypeOHLC`; the schema
-  and `Validate()` already require it for that chart type, but rendering
-  support (`Build`/`ToECharts`) lands in a later phase.
+- **`Series.OHLC`** ([]OHLCPoint) is required by `Validate()` for
+  `ChartTypeOHLC`. `Build()` renders it as candlesticks directly on a raw
+  `canvas.Model` (see `buildOHLC` in `build.go`); `ToECharts()` support is not
+  yet implemented (scaffold error).
 - **`Heat`** (`*HeatData`) holds heatmap data as either a sparse `Cells`
   list (`{X, Y, Z}` triples) or a dense row-major `Matrix`; `MinValue`/
   `MaxValue` pin the colour-scale domain (auto-ranged when nil). Y-index
@@ -190,7 +209,7 @@ without it, `Build` returns an error rather than silently stacking series.
 For line, scatter, and heatmap examples see `ExampleBuild_line`,
 `ExampleBuild_scatter`, and `ExampleBuild_heatmap` in
 [`example_test.go`](./example_test.go). For a time-series example see
-`ExampleBuild_timeSeries`.
+`ExampleBuild_timeSeries`. For candlesticks see `ExampleBuild_ohlc`.
 
 Time-series specs can also mix line and bar series by setting
 `spec.Series.Type` per series. In terminal rendering, bar series are drawn as
@@ -208,7 +227,8 @@ From the repository root:
 go build ./spec/
 
 # Vet + run the runnable examples (ExampleBuild_bar, ExampleBuild_line,
-# ExampleBuild_scatter, ExampleBuild_timeSeries, ExampleBuild_heatmap)
+# ExampleBuild_scatter, ExampleBuild_timeSeries, ExampleBuild_heatmap,
+# ExampleBuild_ohlc)
 go vet ./spec/
 go test ./spec/
 
@@ -221,9 +241,10 @@ go test -v -run ExampleBuild_bar ./spec/
 
 The examples use `// Output:` doc-test assertions and therefore verify both
 the concrete `Build(s)` model type and, where applicable, the `ToECharts()`
-chart type. `ExampleBuild_heatmap` cannot assert `View()` output directly
-(heatmap cells are always ANSI-styled), so it asserts the concrete type and a
-non-empty rendered view instead.
+chart type. `ExampleBuild_heatmap` and `ExampleBuild_ohlc` cannot assert
+`View()` output directly (heatmap cells and candlesticks are always
+ANSI-styled), so they assert the concrete type and a non-empty rendered view
+instead.
 
 ## Dependencies
 
