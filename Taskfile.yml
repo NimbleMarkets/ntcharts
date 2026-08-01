@@ -49,6 +49,16 @@ tasks:
       - cd cmd && go test ./...
       - cd picture/chartpicture && go test ./...
 
+  test-spec:
+    desc: 'Run just the spec package tests (fast inner loop)'
+    cmds:
+      - go test ./spec/ -count=1
+
+  vet:
+    desc: 'Vet the root module'
+    cmds:
+      - go vet ./...
+
   build:
     desc: 'Build all the things'
     deps:
