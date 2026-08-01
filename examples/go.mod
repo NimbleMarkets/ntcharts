@@ -12,6 +12,7 @@ require (
 	github.com/aquilax/go-perlin v1.1.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260601155805-6cf7526a1b3f
 	github.com/go-analyze/charts v0.5.27
+	github.com/go-echarts/go-echarts/v2 v2.7.2
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	github.com/spf13/pflag v1.0.10
 )
