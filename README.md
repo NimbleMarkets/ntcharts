@@ -33,6 +33,16 @@ We supply many chart types within the glory of your terminal!
 For Kitty graphics in games, boards, tile maps, or other coordinate-aligned
 UIs, see [KITTY.md](./KITTY.md) (which includes instructions for running inside tmux).
 
+## Companion Widgets
+
+These sibling Bubble Tea widgets build on `ntcharts/v2/picture` — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them:
+
+| Widget | Description |
+| :-------- | :----- |
+| [`ntcharts-pdf`](https://github.com/NimbleMarkets/ntcharts-pdf) | Terminal PDF viewer — pure-Go text extraction plus PDFium-via-WASM page rasterization.  [Live WASM demo](https://nimblemarkets.github.io/ntcharts-pdf). |
+| [`ntcharts-svg`](https://github.com/NimbleMarkets/ntcharts-svg) | Terminal SVG viewer and vector canvas — pure-Go rasterization, immediate-mode drawing, and SVG/PNG export.  [Live WASM demo](https://nimblemarkets.github.io/ntcharts-svg). |
+| [`ntcharts-osm`](https://github.com/NimbleMarkets/ntcharts-osm) | Terminal OpenStreetMap widget — renders map tiles with markers and paths. |
+
 ## Quickstart Tutorial
 
 This [tutorial](./examples/quickstart/README.md) creates a simple [Time Series Chart](./examples/README.md#time-series) with two data sets utilizing the Bubble Tea framework, Lip Gloss for styling and BubbleZone for mouse support.
