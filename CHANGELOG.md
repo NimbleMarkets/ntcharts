@@ -2,6 +2,9 @@
 
 ## v2.3.0 (unreleased)
 
+ * fix(picture): fix animation flicker when `KittyResolutionFactor` is below 1. Geometry bookkeeping now uses the same scaled cell-pixel dimensions as encoding, so unchanged animation frames no longer emit a Kitty image delete.
+ * chore(deps): update Go dependencies (bubbles v2.2.1, bubbletea v2.0.9, lipgloss v2.0.6, go-analyze/charts v0.6.1, and others) and GitHub Actions. **ntcharts now requires Go 1.26+.**
+ * chore(build): scope the bubbletea WASM fork to a dedicated `wasm.work` workspace used only by the WASM showcase build. Normal builds and tests now use upstream `charm.land/bubbletea/v2`, matching what library consumers resolve.
  * feat(picture): add automatic tmux passthrough wrapping for Kitty graphics. Added `NTCHARTS_TMUX_PASSTHROUGH` and `NTCHARTS_KITTY` environment variables for easy runtime overrides.
  * feat(kitty): add `kitty-probe` test program
  * feat(ci): Restructure `go.mod` into subdirectories, to shield users from unnecessary dependencies.
