@@ -6,5 +6,3 @@ use (
 	./examples
 	./picture/chartpicture
 )
-
-replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20260506185856-6506c47fa2f3

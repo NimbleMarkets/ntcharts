@@ -11,6 +11,15 @@ import (
 // compileAll builds GOOS=js GOARCH=wasm binaries for every demo, in parallel.
 // Output: <outDir>/demos/<demo.Name>/app.wasm
 func compileAll(m *Manifest, outDir string) error {
+	// wasm demos build against the bubbletea wasm fork, selected via the
+	// wasm.work workspace at the repo root (see comments in that file).
+	workFile, err := filepath.Abs("wasm.work")
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(workFile); err != nil {
+		return fmt.Errorf("wasm.work not found (run from the repo root): %w", err)
+	}
 	demos := m.AllDemos()
 	errs := make([]error, len(demos))
 	var wg sync.WaitGroup
@@ -18,7 +27,7 @@ func compileAll(m *Manifest, outDir string) error {
 		wg.Add(1)
 		go func(i int, d Demo) {
 			defer wg.Done()
-			errs[i] = compileOne(d, outDir)
+			errs[i] = compileOne(d, outDir, workFile)
 		}(i, d)
 	}
 	wg.Wait()
@@ -30,13 +39,13 @@ func compileAll(m *Manifest, outDir string) error {
 	return nil
 }
 
-func compileOne(d Demo, outDir string) error {
+func compileOne(d Demo, outDir string, workFile string) error {
 	dst := filepath.Join(outDir, "demos", d.Name, "app.wasm")
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
 	cmd := exec.Command("go", "build", "-o", dst, d.Source)
-	cmd.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+	cmd.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm", "GOWORK="+workFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	fmt.Printf("[wasm-build] compiling %s -> %s\n", d.Source, dst)

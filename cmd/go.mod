@@ -39,6 +39,4 @@ require (
 
 tool github.com/NimbleMarkets/go-booba/cmd/booba-assets
 
-replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20260506185856-6506c47fa2f3
-
 replace github.com/NimbleMarkets/ntcharts/v2 => ..

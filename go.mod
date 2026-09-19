@@ -2,9 +2,6 @@ module github.com/NimbleMarkets/ntcharts/v2
 
 go 1.25.0
 
-// Awaiting upstream merges
-replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20260506185856-6506c47fa2f3
-
 require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7

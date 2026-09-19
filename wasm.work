@@ -1,0 +1,15 @@
+// Workspace used only by cmd/wasm-build to compile the showcase demos
+// for GOOS=js/GOARCH=wasm. The bubbletea fork adds js/wasm and wasip1
+// build stubs; drop this file's replace and use go.work everywhere once
+// https://github.com/charmbracelet/bubbletea/pull/1693 merges upstream.
+
+go 1.25.0
+
+use (
+	.
+	./cmd
+	./examples
+	./picture/chartpicture
+)
+
+replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20260506185856-6506c47fa2f3

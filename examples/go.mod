@@ -39,8 +39,6 @@ require (
 	golang.org/x/sys v0.45.0 // indirect
 )
 
-replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20260506185856-6506c47fa2f3
-
 replace github.com/NimbleMarkets/ntcharts/v2 => ..
 
 replace github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture => ../picture/chartpicture
