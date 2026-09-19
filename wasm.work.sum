@@ -23,6 +23,8 @@ github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/neomantra/bubbletea/v2 v2.0.0-20260506185856-6506c47fa2f3 h1:5subwIfbb+x7xxKTGiAVCEfYDA7Ynn8Db+InRbS/rHU=
 github.com/neomantra/bubbletea/v2 v2.0.0-20260506185856-6506c47fa2f3/go.mod h1:MH/D8ZLlN3op37vQvijKuU29g3rqTp+aQapURFonF9g=
+github.com/neomantra/bubbletea/v2 v2.0.0-20260919202727-2e42b8d8438a h1:YKeNibCCOeoMfJGU781MIQ4HugSzVYPM5QIVitKxNRY=
+github.com/neomantra/bubbletea/v2 v2.0.0-20260919202727-2e42b8d8438a/go.mod h1:QOatcnhOjYIfxzUSTz6raF7Ex4R/rIuHa3SnBdCCpMc=
 github.com/prometheus/client_golang v1.23.2/go.mod h1:Tb1a6LWHB3/SPIzCoaDXI4I8UHKeFTEQ1YCr+0Gyqmg=
 github.com/prometheus/client_model v0.6.2/go.mod h1:y3m2F6Gdpfy6Ut/GBsUqTWZqCUvMVzSfMLjcu6wAwpE=
 github.com/prometheus/common v0.67.5/go.mod h1:SjE/0MzDEEAyrdr5Gqc6G+sXI67maCxzaT3A2+HqjUw=
