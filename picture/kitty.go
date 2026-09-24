@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/png"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -61,7 +62,15 @@ func tmuxWrap(seq string) string {
 // a no-op when source AR matches cell-rect AR.
 func buildKittyAPC(img image.Image, id, cols, rows int) string {
 	var buf bytes.Buffer
-	opts := &kitty.Options{
+	encoder := png.Encoder{CompressionLevel: png.BestSpeed}
+	if err := encoder.Encode(&buf, img); err != nil {
+		return ""
+	}
+	return tmuxWrap(buildKittyPNGAPC(buf.Bytes(), id, cols, rows))
+}
+
+func kittyPNGOptions(id, cols, rows int) *kitty.Options {
+	return &kitty.Options{
 		Action:           kitty.TransmitAndPut,
 		Transmission:     kitty.Direct,
 		Format:           kitty.PNG,
@@ -69,13 +78,18 @@ func buildKittyAPC(img image.Image, id, cols, rows int) string {
 		Columns:          cols,
 		Rows:             rows,
 		VirtualPlacement: true,
-		Quite:            2,
+		Quiet:            2,
 		Chunk:            true,
 	}
-	if err := kitty.EncodeGraphics(&buf, img, opts); err != nil {
+}
+
+// buildKittyPNGAPC is also used by framing regression tests and benchmarks.
+func buildKittyPNGAPC(data []byte, id, cols, rows int) string {
+	var buf bytes.Buffer
+	if err := encodeKittyGraphicsData(&buf, data, kittyPNGOptions(id, cols, rows)); err != nil {
 		return ""
 	}
-	return tmuxWrap(buf.String())
+	return buf.String()
 }
 
 func buildKittyGrid(cols, rows, imageID int) string {
@@ -107,4 +121,3 @@ func buildKittyGrid(cols, rows, imageID int) string {
 func kittyDeleteImage(id int) string {
 	return tmuxWrap(fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", id))
 }
-

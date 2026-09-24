@@ -149,4 +149,21 @@ If you need to manually toggle or override tmux passthrough in your code:
 - Call `picture.SetTmuxPassthrough(true)` to enable wrapping.
 - Call `picture.ForceKittyCapability(picture.KittyCapabilitySupported)` to manually force Kitty graphics support.
 
+## PNG compression
+
+Kitty images use Go's `png.BestSpeed` compression to reduce encoding time.
+Decoded pixels and placement behavior are unchanged; compressed frames may be
+larger, so terminal output and decoding can still limit animation speed.
+
+PNG encoding uses the standard library. A private helper frames the encoded
+bytes using upstream Charm Kitty options and APC serialization; no fork or
+module replacement is required. The same path is used in native and WASM builds.
+
+To compare compression levels, including base64 and APC construction:
+
+```sh
+go test ./picture -run '^$' -bench '^BenchmarkKittyPNG$' -benchtime=5x
+```
+
+This benchmark measures CPU encoding and payload size, not terminal display FPS.
 
