@@ -161,6 +161,7 @@ tasks:
       - build-ex-linechart
       - build-ex-picture
       - build-ex-quickstart
+      - build-ex-shaders
       - build-ex-sparkline
 
   build-ex-barchart:
@@ -300,6 +301,22 @@ tasks:
     generates:
       - bin/ntcharts-sparkline
 
+  build-ex-shaders:
+    desc: 'Build the GPU shader example'
+    cmds:
+      - cd examples/shaders && GOWORK=off go build -o ../../bin/ntcharts-shaders .
+    sources:
+      - go.mod
+      - go.sum
+      - canvas/**/*.go
+      - examples/shaders/**/*.go
+      - examples/shaders/shaders/*.wgsl
+      - examples/shaders/go.mod
+      - examples/shaders/go.sum
+      - picture/**/*.go
+    generates:
+      - bin/ntcharts-shaders
+
   clean-examples:
     desc: 'Removes all examples from bin'
     cmds:
@@ -311,6 +328,7 @@ tasks:
       - rm -f bin/ntcharts-chartpicture bin/ntcharts-picture bin/ntcharts-picture-grid bin/ntcharts-picture-simple
       - rm -f bin/ntcharts-quickstart
       - rm -f bin/ntcharts-sparkline
+      - rm -f bin/ntcharts-shaders
 
 ###############################################################################
 # WASM showcase site
