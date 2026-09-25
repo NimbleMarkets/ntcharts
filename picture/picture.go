@@ -7,8 +7,9 @@
 // picture.Model renders an image.Image and never decodes bytes itself, so it
 // registers no image-format decoders — importing it stays lightweight.
 // Callers that decode their own sources register the formats they use
-// (e.g. import _ "image/png"). The picture/pictureurl layer, which decodes
-// fetched bytes, registers a broad set of formats; see that package.
+// (e.g. import _ "image/png"), or blank-import picture/decoders for PNG,
+// JPEG, GIF, WebP, BMP, and TIFF at once. The picture/pictureurl layer
+// decodes fetched bytes but also registers nothing itself; see that package.
 //
 // Use picture/pictureurl for URL-driven fetching on top of this base.
 
