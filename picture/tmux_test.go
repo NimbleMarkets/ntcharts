@@ -13,12 +13,9 @@ func TestTmuxPassthrough(t *testing.T) {
 	// Ensure we restore state after test
 	defer SetTmuxPassthrough(false)
 
-	// 1. Test default value corresponds to TMUX environment presence
-	expectedDefault := os.Getenv("TMUX") != ""
-	if tmuxPassthroughEnabled.Load() != expectedDefault {
-		t.Errorf("expected tmux passthrough to be %v by default; got %v", expectedDefault, tmuxPassthroughEnabled.Load())
-	}
-
+	// 1. Test disabled is a no-op (TestMain pins passthrough off so the
+	// suite does not depend on whether it runs inside tmux)
+	SetTmuxPassthrough(false)
 	testSeq := "\x1b_Ga=d,d=I,i=123,q=2\x1b\\"
 	if got := tmuxWrap(testSeq); got != testSeq {
 		t.Errorf("expected no-op when disabled; got %q, want %q", got, testSeq)
@@ -95,16 +92,18 @@ func TestEnvironmentOverrides(t *testing.T) {
 	}()
 
 	tests := []struct {
-		envName             string
-		envVal              string
-		expectPassthrough   bool
-		expectKittyCap      KittyCapability
-		checkKittyCap       bool
+		envName           string
+		envVal            string
+		expectPassthrough bool
+		expectKittyCap    KittyCapability
+		checkKittyCap     bool
 	}{
 		{"NTCHARTS_TMUX_PASSTHROUGH", "true", true, KittyCapabilityUnknown, false},
 		{"NTCHARTS_TMUX_PASSTHROUGH", "1", true, KittyCapabilityUnknown, false},
 		{"NTCHARTS_TMUX_PASSTHROUGH", "false", false, KittyCapabilityUnknown, false},
 		{"NTCHARTS_TMUX_PASSTHROUGH", "0", false, KittyCapabilityUnknown, false},
+		{"TMUX", "/tmp/tmux-501/default,1,0", true, KittyCapabilityUnknown, false},
+		{"TMUX", "", false, KittyCapabilityUnknown, false},
 		{"NTCHARTS_KITTY", "supported", false, KittyCapabilitySupported, true},
 		{"NTCHARTS_KITTY", "unsupported", false, KittyCapabilityUnsupported, true},
 	}
@@ -132,4 +131,3 @@ func TestEnvironmentOverrides(t *testing.T) {
 		})
 	}
 }
-

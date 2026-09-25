@@ -15,6 +15,9 @@ import (
 // tests reset to Unknown via resetKittyCapability(t) for isolation.
 func TestMain(m *testing.M) {
 	ForceKittyCapability(KittyCapabilitySupported)
+	// Package init enables passthrough when TMUX is set; pin it off so the
+	// suite behaves the same inside and outside a tmux session.
+	SetTmuxPassthrough(false)
 	os.Exit(m.Run())
 }
 
