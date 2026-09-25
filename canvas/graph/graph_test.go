@@ -91,3 +91,55 @@ func TestDrawRowRightToLeftStackedBoundary(t *testing.T) {
 	expectCell(t, &m, canvas.Point{X: 3, Y: 0}, runes.LeftBlockFour, red.GetForeground(), blue.GetForeground(), false)
 	expectCell(t, &m, canvas.Point{X: 2, Y: 0}, runes.FullBlock, red.GetForeground(), nil, false)
 }
+
+func TestInverseStackSharedFractionalCell(t *testing.T) {
+	for _, direction := range []struct {
+		name        string
+		draw        func(*canvas.Model, canvas.Point, float64, lipgloss.Style)
+		origin, end canvas.Point
+		outerRune   rune
+	}{
+		{"down", DrawColumnTopToBottom, canvas.Point{}, canvas.Point{Y: 1}, runes.LowerBlockTwo},
+		{"left", DrawRowRightToLeft, canvas.Point{X: 2}, canvas.Point{X: 1}, runes.LeftBlockTwo},
+	} {
+		for _, tc := range []struct {
+			name  string
+			inner float64
+			want  lipgloss.Style
+		}{
+			{"outer dominates", 1.25, red},
+			{"inner dominates", 1.5, blue},
+			{"tie", 1.375, blue},
+			{"same extent", 1.75, blue},
+		} {
+			t.Run(direction.name+"/"+tc.name, func(t *testing.T) {
+				m := canvas.New(3, 3)
+				direction.draw(&m, direction.origin, 1.75, red)
+				direction.draw(&m, direction.origin, tc.inner, blue)
+				expectCell(t, &m, direction.end, direction.outerRune, tc.want.GetForeground(), nil, true)
+				expectCell(t, &m, direction.origin, runes.FullBlock, blue.GetForeground(), nil, false)
+			})
+		}
+	}
+}
+
+func TestInverseStackThreeSegmentsInFullCell(t *testing.T) {
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	for _, tc := range []struct {
+		name        string
+		draw        func(*canvas.Model, canvas.Point, float64, lipgloss.Style)
+		origin, end canvas.Point
+		want        rune
+	}{
+		{"down", DrawColumnTopToBottom, canvas.Point{}, canvas.Point{Y: 1}, runes.LowerBlockSix},
+		{"left", DrawRowRightToLeft, canvas.Point{X: 2}, canvas.Point{X: 1}, runes.LeftBlockSix},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := canvas.New(3, 3)
+			tc.draw(&m, tc.origin, 3, red)
+			tc.draw(&m, tc.origin, 1.75, green)
+			tc.draw(&m, tc.origin, 1.25, blue)
+			expectCell(t, &m, tc.end, tc.want, red.GetForeground(), blue.GetForeground(), false)
+		})
+	}
+}

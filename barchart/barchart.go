@@ -146,6 +146,8 @@ func (m *Model) axisOffset() int {
 // recomputes the scale factor so both extremes fit, places the origin
 // (the axis cell, or the first positive cell when no axis is shown), and
 // rescales all existing data sets.
+// With only one drawable cell, the larger side receives it (positive wins
+// ties); the other side is clipped without reducing the shared scale to zero.
 func (m *Model) resetScale() {
 	length := m.graphLength()
 	m.posCells, m.negCells = length, 0
@@ -161,12 +163,14 @@ func (m *Model) resetScale() {
 		}
 	}
 	switch {
-	case m.min < 0 && m.max > 0:
+	case m.min < 0 && m.max > 0 && m.posCells > 0 && m.negCells > 0:
 		m.sf = math.Min(float64(m.posCells)/m.max, float64(m.negCells)/-m.min)
-	case m.min < 0:
+	case m.min < 0 && m.negCells > 0:
 		m.sf = float64(m.negCells) / -m.min
-	default:
+	case m.max > 0:
 		m.sf = float64(m.posCells) / m.max
+	default:
+		m.sf = 0
 	}
 	if m.horizontal {
 		m.origin = canvas.Point{X: m.labelWidth + m.negCells, Y: 0}
@@ -357,6 +361,9 @@ func (m *Model) Horizontal() bool {
 // match positive segments; points on the negative side match
 // negative segments.
 func (m *Model) BarDataFromPoint(p canvas.Point) (r BarData) {
+	if p.X < 0 || p.X >= m.Canvas.Width() || p.Y < 0 || p.Y >= m.Canvas.Height() {
+		return
+	}
 	var bIdx, posIdx, negIdx int // which bar; distance into the positive / negative stack
 	if m.horizontal {
 		bIdx = p.Y
@@ -371,16 +378,18 @@ func (m *Model) BarDataFromPoint(p canvas.Point) (r BarData) {
 		return
 	}
 	idx := m.barIndices[bIdx]
-	if idx == -1 {
+	if idx < 0 || idx >= len(m.data) {
 		return
 	}
 	r.Label = m.data[idx].bd.Label
 	negative := posIdx < 0
 	want := posIdx
+	limit := m.posCells
 	if negative {
 		want = negIdx
+		limit = m.negCells
 	}
-	if want < 0 { // the axis cell itself
+	if want < 0 || want >= limit { // axis, labels, or outside the drawable region
 		return
 	}
 	// walk the scaled values on the selected side of the axis and
@@ -388,18 +397,19 @@ func (m *Model) BarDataFromPoint(p canvas.Point) (r BarData) {
 	v := m.data[idx].bd.Values
 	sv := m.data[idx].buf.ReadAll()
 	var sum float64
-	var oLen int
 	for i, f := range sv {
 		if (f < 0) != negative {
 			continue
 		}
 		newSum := sum + math.Abs(f)
-		nLen := int(math.Floor(newSum))
-		if oLen <= want && want <= nLen {
+		// Match the drawers' nearest-eighth rounding and exclude the cell
+		// immediately beyond an exact integer endpoint.
+		start := math.Round(sum*8) / 8
+		end := math.Round(newSum*8) / 8
+		if start < end && start < float64(want+1) && float64(want) < end {
 			r.Values = append(r.Values, v[i])
 		}
 		sum = newSum
-		oLen = nLen
 	}
 	return
 }

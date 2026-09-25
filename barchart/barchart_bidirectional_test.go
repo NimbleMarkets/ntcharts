@@ -188,3 +188,115 @@ func TestBarDataFromPointBothSides(t *testing.T) {
 		t.Errorf("col 3 (left of axis) = %+v, want the negative segment", r.Values)
 	}
 }
+
+func TestBidirectionalOneDrawableCell(t *testing.T) {
+	for _, horizontal := range []bool{false, true} {
+		for _, axis := range []bool{false, true} {
+			for _, tc := range []struct {
+				name     string
+				max, min float64
+				negative bool
+			}{
+				{"positive", 2, -1, false},
+				{"negative", 1, -2, true},
+				{"tie", 1, -1, false},
+			} {
+				bc := New(1, 1, WithMaxValue(tc.max), WithMinValue(tc.min), WithNoAutoMaxValue())
+				bc.SetHorizontal(horizontal)
+				bc.SetShowAxis(axis)
+				w, h := 1, 1
+				if axis {
+					if horizontal {
+						w = 2
+					} else {
+						h = 3
+					}
+				}
+				bc.Resize(w, h)
+				bc.Push(BarData{Values: []BarValue{{Value: tc.max, Style: posStyle}, {Value: tc.min, Style: negStyle}}})
+				bc.Draw()
+				if !near(bc.Scale(), 1/math.Max(tc.max, -tc.min)) {
+					t.Fatalf("%s horizontal=%t axis=%t scale=%v", tc.name, horizontal, axis, bc.Scale())
+				}
+				p := canvas.Point{}
+				if axis {
+					if horizontal && !tc.negative {
+						p.X = 1
+					}
+					if !horizontal && tc.negative {
+						p.Y = 1
+					}
+				}
+				want := posStyle.GetForeground()
+				if tc.negative {
+					want = negStyle.GetForeground()
+				}
+				c := bc.Canvas.Cell(p)
+				if c.Rune != runes.FullBlock || c.Style.GetForeground() != want {
+					t.Errorf("%s horizontal=%t axis=%t: cell %v = %+v", tc.name, horizontal, axis, p, c)
+				}
+				if hit := bc.BarDataFromPoint(p); len(hit.Values) != 1 || (hit.Values[0].Value < 0) != tc.negative {
+					t.Errorf("%s: hit = %+v", tc.name, hit)
+				}
+			}
+		}
+	}
+}
+
+func TestBidirectionalHitBounds(t *testing.T) {
+	for _, horizontal := range []bool{false, true} {
+		bc := New(1, 7, WithMaxValue(2), WithMinValue(-2), WithNoAutoMaxValue())
+		bc.SetHorizontal(horizontal)
+		bc.Push(BarData{Label: "A", Values: []BarValue{{Value: 20}, {Value: -20}}})
+		w, h := 1, 7
+		if horizontal {
+			w, h = 7, 1
+		}
+		bc.Resize(w, h)
+		bc.Draw()
+		for y := -1; y <= h; y++ {
+			for x := -1; x <= w; x++ {
+				p := canvas.Point{X: x, Y: y}
+				c := bc.Canvas.Cell(p)
+				want := 0
+				if c.Rune == runes.FullBlock {
+					want = 1
+				}
+				if hit := bc.BarDataFromPoint(p); len(hit.Values) != want {
+					t.Errorf("horizontal=%t point=%v rune=%q hit=%+v", horizontal, p, c.Rune, hit)
+				}
+			}
+		}
+		bc.Clear()
+		if hit := bc.BarDataFromPoint(canvas.Point{}); len(hit.Values) != 0 {
+			t.Errorf("hit after clear = %+v", hit)
+		}
+	}
+}
+
+func TestBidirectionalHitRoundedEndpoints(t *testing.T) {
+	for _, value := range []float64{1, 1.01, 1.0625, 1.9375, 2} {
+		for _, horizontal := range []bool{false, true} {
+			bc := New(1, 10, WithMaxValue(4), WithMinValue(-4), WithNoAutoMaxValue())
+			bc.SetHorizontal(horizontal)
+			bc.Push(BarData{Values: []BarValue{{Value: value}, {Value: -value}}})
+			if horizontal {
+				bc.Resize(9, 1)
+			}
+			bc.Draw()
+			for y := 0; y < bc.Height(); y++ {
+				for x := 0; x < bc.Width(); x++ {
+					p := canvas.Point{X: x, Y: y}
+					r := bc.Canvas.Cell(p).Rune
+					want := 0
+					if runes.IsLowerBlockElement(r) || runes.IsLeftBlockElement(r) {
+						want = 1
+					}
+					if hit := bc.BarDataFromPoint(p); len(hit.Values) != want {
+						t.Errorf("value=%v horizontal=%t point=%v rune=%q hit=%+v", value, horizontal, p, r, hit)
+					}
+				}
+			}
+		}
+	}
+}

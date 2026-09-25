@@ -445,6 +445,8 @@ func DrawColumnBottomToTop(m *canvas.Model, p canvas.Point, v float64, s lipglos
 // If that last cell already holds a full block from a longer column drawn
 // earlier (stacked segments), the two foreground colors are combined
 // instead: the new color fills the top and the existing color the bottom.
+// If both segments end in the same fractional cell, its total extent is
+// preserved using the larger segment's color (the new segment wins ties).
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawColumnTopToBottom(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
@@ -477,6 +479,8 @@ func DrawColumnTopToBottom(m *canvas.Model, p canvas.Point, v float64, s lipglos
 // If that last cell already holds a full block from a longer row drawn
 // earlier (stacked segments), the two foreground colors are combined
 // instead: the new color fills the right and the existing color the left.
+// If both segments end in the same fractional cell, its total extent is
+// preserved using the larger segment's color (the new segment wins ties).
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawRowRightToLeft(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
@@ -508,12 +512,39 @@ func DrawRowRightToLeft(m *canvas.Model, p canvas.Point, v float64, s lipgloss.S
 // existing color and the background takes the new color; over anything
 // else the glyph is drawn in reverse video so the terminal background
 // shows through the glyph and the bar color fills the rest.
+// When two segments and the background share a fractional cell, only two
+// colors can be represented. Preserve the existing extent and use the
+// segment occupying more of that extent (the new segment wins ties).
 func drawInverseEndRune(m *canvas.Model, p canvas.Point, r rune, s lipgloss.Style) {
 	c := m.Cell(p)
 	if c.Rune == runes.FullBlock {
 		rs := s.Copy().Foreground(c.Style.GetForeground()).Background(s.GetForeground())
 		m.SetCell(p, canvas.NewCellWithStyle(r, rs))
 		return
+	}
+	sameDirection := (runes.IsLowerBlockElement(r) && runes.IsLowerBlockElement(c.Rune)) ||
+		(runes.IsLeftBlockElement(r) && runes.IsLeftBlockElement(c.Rune))
+	if sameDirection {
+		if !c.Style.GetReverse() {
+			// This cell already joins two segments. Retain the outer color
+			// instead of replacing it with the terminal background.
+			rs := s.Copy().Foreground(c.Style.GetForeground()).Background(s.GetForeground()).Reverse(false)
+			m.SetCell(p, canvas.NewCellWithStyle(r, rs))
+			return
+		}
+		filled := func(block rune) int {
+			if runes.IsLowerBlockElement(block) {
+				return int(runes.FullBlock - block)
+			}
+			return int(block - runes.FullBlock)
+		}
+		oldFill, newFill := filled(c.Rune), filled(r)
+		if newFill < oldFill {
+			if newFill*2 >= oldFill {
+				m.SetCell(p, canvas.NewCellWithStyle(c.Rune, s.Copy().Reverse(true)))
+			}
+			return
+		}
 	}
 	m.SetCell(p, canvas.NewCellWithStyle(r, s.Copy().Reverse(true)))
 }
