@@ -11,6 +11,7 @@
  * feat(examples): add `kitty-animation` picture transport lifecycle diagnostic
  * feat(examples): add `shaders` example, running WebGPU WGSL shaders via `wgpu` and compositing them with a `picture.Model`. It has its own Go module; run it with `task shaders`.
  * feat(ci): Restructure `go.mod` into subdirectories, to shield users from unnecessary dependencies.
+ * chore(release): add `task release VERSION=v2.X.Y`, which bumps the nested modules, dates the changelog, commits, and tags the root and `picture/chartpicture/v0.X.Y` together.
  * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pull these in automatically, even if one didn't need it. **BREAKING**
 
 ## v2.2.0 (2026-05-28)

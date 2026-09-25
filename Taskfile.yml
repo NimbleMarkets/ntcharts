@@ -31,6 +31,11 @@ tasks:
       - cd picture/chartpicture && go mod tidy
       - go work sync
 
+  release:
+    desc: 'Cut a release: bump nested modules, date the changelog, commit, and tag (task release VERSION=v2.X.Y)'
+    cmds:
+      - ./scripts/release.sh {{.VERSION}}
+
   go-update:
     desc: 'Go update dependencies in all modules'
     run: once
