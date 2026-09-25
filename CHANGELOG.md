@@ -5,10 +5,13 @@
  * fix(picture): fix animation flicker when `KittyResolutionFactor` is below 1. Geometry bookkeeping now uses the same scaled cell-pixel dimensions as encoding, so unchanged animation frames no longer emit a Kitty image delete.
  * chore(deps): update Go dependencies (bubbles v2.2.1, bubbletea v2.0.9, lipgloss v2.0.6, go-analyze/charts v0.6.1, and others) and GitHub Actions. **ntcharts now requires Go 1.26+.**
  * chore(build): scope the bubbletea WASM fork to a dedicated `wasm.work` workspace used only by the WASM showcase build. Normal builds and tests now use upstream `charm.land/bubbletea/v2`, matching what library consumers resolve.
- * feat(picture): add automatic tmux passthrough wrapping for Kitty graphics. Added `NTCHARTS_TMUX_PASSTHROUGH` and `NTCHARTS_KITTY` environment variables for easy runtime overrides.
- * feat(kitty): add `kitty-probe` test program
+ * feat(picture): add automatic tmux passthrough wrapping for Kitty graphics, with `picture.SetTmuxPassthrough` for programmatic control. Each 4 KiB Kitty chunk is wrapped in its own DCS so large images are not discarded by tmux's input buffer limit. Added `NTCHARTS_TMUX_PASSTHROUGH` and `NTCHARTS_KITTY` environment variables for easy runtime overrides. When passthrough is enabled, tmux counts as a positive signal for the Kitty capability probe, since the outer terminal's environment is hidden.
+ * perf(picture): encode Kitty images with `png.BestSpeed`. Frames encode faster at the cost of somewhat larger payloads.
+ * feat(kitty): add `kitty-probe` test program, with transport diagnostics and JSON reports
+ * feat(examples): add `kitty-animation` picture transport lifecycle diagnostic
+ * feat(examples): add `shaders` example, running WebGPU WGSL shaders via `wgpu` and compositing them with a `picture.Model`. It has its own Go module; run it with `task shaders`.
  * feat(ci): Restructure `go.mod` into subdirectories, to shield users from unnecessary dependencies.
- * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pulled these in automatically, even if one didn't need it. **BREAKING**
+ * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pull these in automatically, even if one didn't need it. **BREAKING**
 
 ## v2.2.0 (2026-05-28)
 
