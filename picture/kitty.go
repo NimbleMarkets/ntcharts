@@ -66,11 +66,15 @@ func buildKittyAPC(img image.Image, id, cols, rows int) string {
 	if err := encoder.Encode(&buf, img); err != nil {
 		return ""
 	}
-	return tmuxWrap(buildKittyPNGAPC(buf.Bytes(), id, cols, rows))
+	return buildKittyPNGAPC(buf.Bytes(), id, cols, rows)
 }
 
+// kittyPNGOptions builds the transmit options for a PNG image. When tmux
+// passthrough is enabled each 4 KiB chunk is wrapped in its own DCS rather
+// than wrapping the whole transmission: tmux discards any single DCS larger
+// than its input buffer (1 MiB by default), which large images exceed.
 func kittyPNGOptions(id, cols, rows int) *kitty.Options {
-	return &kitty.Options{
+	o := &kitty.Options{
 		Action:           kitty.TransmitAndPut,
 		Transmission:     kitty.Direct,
 		Format:           kitty.PNG,
@@ -81,6 +85,10 @@ func kittyPNGOptions(id, cols, rows int) *kitty.Options {
 		Quiet:            2,
 		Chunk:            true,
 	}
+	if tmuxPassthroughEnabled.Load() {
+		o.ChunkFormatter = ansi.TmuxPassthrough
+	}
+	return o
 }
 
 // buildKittyPNGAPC is also used by framing regression tests and benchmarks.

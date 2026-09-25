@@ -2,12 +2,47 @@ package picture
 
 import (
 	"image"
+	"math/rand/v2"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
 )
+
+// tmuxWrapChunks wraps each APC chunk of a multi-chunk Kitty sequence in its
+// own tmux passthrough DCS, which is how the library must frame large images.
+func tmuxWrapChunks(apc string) string {
+	var sb strings.Builder
+	for _, chunk := range strings.Split(strings.TrimSuffix(apc, "\x1b\\"), "\x1b\\") {
+		sb.WriteString(ansi.TmuxPassthrough(chunk + "\x1b\\"))
+	}
+	return sb.String()
+}
+
+func TestTmuxPassthroughWrapsEachChunk(t *testing.T) {
+	defer SetTmuxPassthrough(false)
+	SetTmuxPassthrough(false)
+	// Random noise does not compress, so the PNG spans several 4 KiB chunks.
+	src := image.NewNRGBA(image.Rect(0, 0, 96, 96))
+	random := rand.New(rand.NewPCG(3, 4))
+	for i := range src.Pix {
+		src.Pix[i] = byte(random.Uint32())
+	}
+	plain := buildKittyAPC(src, 45, 2, 3)
+	chunks := strings.Count(plain, "\x1b_G")
+	if chunks < 2 {
+		t.Fatalf("expected a multi-chunk APC, got %d chunk(s)", chunks)
+	}
+	SetTmuxPassthrough(true)
+	wrapped := buildKittyAPC(src, 45, 2, 3)
+	if got := strings.Count(wrapped, "\x1bPtmux;"); got != chunks {
+		t.Fatalf("expected one tmux DCS per chunk: got %d, want %d", got, chunks)
+	}
+	if wrapped != tmuxWrapChunks(plain) {
+		t.Fatal("wrapped output does not match per-chunk tmux passthrough framing")
+	}
+}
 
 func TestTmuxPassthrough(t *testing.T) {
 	// Ensure we restore state after test

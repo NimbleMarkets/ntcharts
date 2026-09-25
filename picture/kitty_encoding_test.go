@@ -94,7 +94,7 @@ func TestKittyBestSpeedPNGRoundTrip(t *testing.T) {
 		}
 	}
 	SetTmuxPassthrough(true)
-	if got := buildKittyAPC(src, 45, 2, 3); got != ansi.TmuxPassthrough(apc) {
+	if got := buildKittyAPC(src, 45, 2, 3); got != tmuxWrapChunks(apc) {
 		t.Fatal("tmux framing changed")
 	}
 }
