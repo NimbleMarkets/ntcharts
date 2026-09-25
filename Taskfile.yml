@@ -301,6 +301,12 @@ tasks:
     generates:
       - bin/ntcharts-sparkline
 
+  shaders:
+    desc: 'Build and run the GPU shader example (pass viewer flags after --)'
+    deps: [build-ex-shaders]
+    cmds:
+      - bin/ntcharts-shaders {{.CLI_ARGS}}
+
   build-ex-shaders:
     desc: 'Build the GPU shader example'
     cmds:
