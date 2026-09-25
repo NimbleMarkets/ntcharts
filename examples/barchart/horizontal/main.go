@@ -53,7 +53,7 @@ type model struct {
 }
 
 func title(m *barchart.Model) string {
-	return fmt.Sprintf("Max:%.1f, AutoMax:%t\nBarGap:%d, ShowAxis:%t\n", m.MaxValue(), m.AutoMaxValue, m.BarGap(), m.ShowAxis())
+	return fmt.Sprintf("Max:%.1f, Min:%.1f, AutoMax:%t\nBarGap:%d, ShowAxis:%t\n", m.MaxValue(), m.MinValue(), m.AutoMaxValue, m.BarGap(), m.ShowAxis())
 }
 
 func legend(bd barchart.BarData) (r string) {
@@ -159,7 +159,7 @@ func main() {
 			{Name: "Name1", Value: 15.1, Style: blockStyle},
 			{Name: "Name2", Value: 15.1, Style: blockStyle2},
 			{Name: "Name3", Value: 3.3, Style: blockStyle3},
-			{Name: "Name4", Value: 7.7, Style: blockStyle4},
+			{Name: "Name4", Value: -7.7, Style: blockStyle4},
 		},
 	}
 	v3 := barchart.BarData{
@@ -167,7 +167,7 @@ func main() {
 		Values: []barchart.BarValue{
 			{Name: "Name1", Value: 13.6, Style: blockStyle},
 			{Name: "Name2", Value: 14.1, Style: blockStyle2},
-			{Name: "Name3", Value: 4.4, Style: blockStyle3},
+			{Name: "Name3", Value: -4.4, Style: blockStyle3},
 			{Name: "Name4", Value: 4.4, Style: blockStyle4},
 		},
 	}
@@ -177,9 +177,10 @@ func main() {
 			{Name: "Name1", Value: 13.1, Style: blockStyle},
 			{Name: "Name2", Value: 11.1, Style: blockStyle2},
 			{Name: "Name3", Value: 10.9, Style: blockStyle3},
-			{Name: "Name4", Value: 9.8, Style: blockStyle4},
+			{Name: "Name4", Value: -9.8, Style: blockStyle4},
 		},
 	}
+	// negative values stack away from the axis in the opposite direction
 	values := []barchart.BarData{v1, v2, v3, v4}
 
 	// create new bubblezone Manager to enable mouse support to zoom in and out of chart
@@ -198,6 +199,7 @@ func main() {
 			barchart.WithZoneManager(zoneManager),
 			barchart.WithDataSet(values),
 			barchart.WithMaxValue(100.0),
+			barchart.WithMinValue(-20.0),
 			barchart.WithNoAutoMaxValue(),
 			barchart.WithNoAxis(),
 			barchart.WithHorizontalBars()),
@@ -205,6 +207,7 @@ func main() {
 			barchart.WithZoneManager(zoneManager),
 			barchart.WithDataSet(values),
 			barchart.WithMaxValue(30.0),
+			barchart.WithMinValue(-10.0),
 			barchart.WithNoAutoMaxValue(),
 			barchart.WithBarGap(0),
 			barchart.WithHorizontalBars()),

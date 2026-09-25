@@ -67,6 +67,8 @@ There are various graphing functions for drawing runes onto the Canvas.
 ## Bar Chart
 
 Barcharts displays values as either horizontal rows or vertical columns.
+Negative values extend from the axis in the opposite direction of positive values, so one chart can show both.
+The axis follows the data range automatically, or is fixed with `WithMaxValue` and `WithMinValue`.
 
 ### Rows
 
