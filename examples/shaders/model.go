@@ -42,14 +42,14 @@ type model struct {
 	transport                                                          string
 	playing, fullscreen, forceGlyph, busy, dirty                       bool
 	epoch, slideGeneration, wakeGeneration                             uint64
-	slideshow, duration                                                time.Duration
+	slideshow, slideshowInterval, duration                             time.Duration
 	err                                                                error
 }
 
 func newModel(r frameRenderer, index, fps, density int, slideshow time.Duration) *model {
 	p := presets[index]
 	return &model{encodedFrames: make(map[string]int), renderedPresets: make(map[string]int), renderer: r, selected: index, speed: 0.6, scale: p.scale, detail: p.detail, density: density, targetFPS: fps,
-		playing: true, dirty: true, slideshow: slideshow, transport: "probing", pic: picture.NewWithConfig(picture.Config{
+		playing: true, dirty: true, slideshow: slideshow, slideshowInterval: slideshow, transport: "probing", pic: picture.NewWithConfig(picture.Config{
 			Fit: picture.FitFill, CellPixelWidth: 8, CellPixelHeight: 16,
 		})}
 }
@@ -248,7 +248,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.slideshow > 0 {
 				m.slideshow = 0
 			} else {
-				m.slideshow = 8 * time.Second
+				m.slideshow = m.slideshowInterval
+				if m.slideshow <= 0 {
+					m.slideshow = 8 * time.Second
+				}
 				extra = m.slide()
 			}
 		case "up":

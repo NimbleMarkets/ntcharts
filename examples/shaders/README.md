@@ -45,7 +45,7 @@ terminals use glyph half-blocks. Under tmux, enable
 GOWORK=off go run . -fullscreen -slideshow=8s
 
 # More source detail:
-GOWORK=off go run . -preset=orbits -density=24 -transport=png
+GOWORK=off go run . -preset=orbits -density=24
 
 # Capture all shaders on the GPU without a terminal:
 GOWORK=off go run . -snapshot=/tmp/shader-previews

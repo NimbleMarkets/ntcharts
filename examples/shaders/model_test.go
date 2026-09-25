@@ -161,3 +161,16 @@ func TestDensityDoesNotLosePixelToRounding(t *testing.T) {
 		t.Fatalf("unexpected raster: %dx%d", m.rasterW, m.rasterH)
 	}
 }
+
+func TestSlideshowToggleKeepsConfiguredInterval(t *testing.T) {
+	r := &fakeRenderer{}
+	m := newModel(r, 0, 60, 16, 3*time.Second)
+	m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
+	if m.slideshow != 0 {
+		t.Fatalf("a did not pause the slideshow: %v", m.slideshow)
+	}
+	m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
+	if m.slideshow != 3*time.Second {
+		t.Fatalf("slideshow resumed at %v, want the configured 3s", m.slideshow)
+	}
+}

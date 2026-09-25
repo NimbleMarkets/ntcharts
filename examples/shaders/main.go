@@ -25,7 +25,6 @@ func main() {
 func run() error {
 	name := flag.String("preset", "plasma", "initial preset (see -list)")
 	list := flag.Bool("list", false, "list bundled shaders")
-	transport := flag.String("transport", "png", "transport (png)")
 	fps := flag.Int("fps", 60, "maximum application frame rate (1..120)")
 	density := flag.Int("density", 16, "vertical source pixels per terminal row (2..40)")
 	slideshow := flag.Duration("slideshow", 0, "switch presets automatically, e.g. 8s (0 disables)")
@@ -44,11 +43,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if *fps < 1 || *fps > 120 || *density < 2 || *density > 40 || *slideshow < 0 || *duration < 0 {
-		return errors.New("invalid fps, density or duration")
-	}
-	if *transport != "png" {
-		return errors.New("only png transport is supported")
+	switch {
+	case *fps < 1 || *fps > 120:
+		return fmt.Errorf("-fps=%d: must be between 1 and 120", *fps)
+	case *density < 2 || *density > 40:
+		return fmt.Errorf("-density=%d: must be between 2 and 40", *density)
+	case *slideshow < 0:
+		return fmt.Errorf("-slideshow=%v: must not be negative", *slideshow)
+	case *duration < 0:
+		return fmt.Errorf("-duration=%v: must not be negative", *duration)
 	}
 	gpu, err := newGPU()
 	if err != nil {
@@ -65,11 +68,14 @@ func run() error {
 	var reportErr error
 	if *report != "" {
 		data, marshalErr := json.MarshalIndent(struct {
-			GPU                        string         `json:"gpu"`
-			EncodedFrames              map[string]int `json:"encoded_frames"`
-			Presets                    map[string]int `json:"rendered_presets"`
-			AppFPS, RenderMS, EncodeMS float64
-			Width, Height              int
+			GPU           string         `json:"gpu"`
+			EncodedFrames map[string]int `json:"encoded_frames"`
+			Presets       map[string]int `json:"rendered_presets"`
+			AppFPS        float64        `json:"app_fps"`
+			RenderMS      float64        `json:"render_ms"`
+			EncodeMS      float64        `json:"encode_ms"`
+			Width         int            `json:"width"`
+			Height        int            `json:"height"`
 		}{gpu.name, m.encodedFrames, m.renderedPresets, m.fps, m.renderMS, m.encodeMS, m.rasterW, m.rasterH}, "", "  ")
 		reportErr = marshalErr
 		if reportErr == nil {
