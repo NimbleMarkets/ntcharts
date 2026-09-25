@@ -59,6 +59,16 @@ func WithMaxValue(f float64) Option {
 	}
 }
 
+// WithMinValue sets the expected minimum data value
+// to given float64. Values above 0 are clamped to 0.
+// Use with negative bar values to fix the axis position
+// instead of letting it follow the data.
+func WithMinValue(f float64) Option {
+	return func(m *Model) {
+		m.SetMin(f)
+	}
+}
+
 // WithNoAutoBarWidth disables automatically setting the bar widths
 // to fill the canvas when drawing.
 func WithNoAutoBarWidth() Option {

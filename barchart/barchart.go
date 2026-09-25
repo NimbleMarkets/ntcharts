@@ -17,6 +17,9 @@ import (
 )
 
 // BarValue contain bar segment name, value and style for drawing.
+// A negative Value draws away from the axis in the opposite direction
+// of positive values: within one bar, positive segments stack up (or
+// right) from zero and negative segments stack down (or left) from zero.
 type BarValue struct {
 	Name  string
 	Value float64
@@ -53,10 +56,14 @@ type Model struct {
 	barWidth   int   // width of each bar on the canvas
 	barGap     int   // number of empty spaces between each bar on the canvas
 	barIndices []int // size of graphing area, index value is which bar will be drawn
+	labelWidth int   // columns reserved for labels when horizontal with axis
 
-	max  float64    // expected maximum data value
-	sf   float64    // scale factor
-	data []*dataSet // each index is a unique bar
+	max      float64    // expected maximum data value (>= 0)
+	min      float64    // expected minimum data value (<= 0); 0 unless data goes negative
+	posCells int        // cells of graph length for values above zero
+	negCells int        // cells of graph length for values below zero
+	sf       float64    // scale factor
+	data     []*dataSet // each index is a unique bar
 
 	zoneManager *zone.Manager // provides mouse functionality
 	zoneID      string
@@ -64,9 +71,11 @@ type Model struct {
 
 // New returns a barchart Model initialized with given width, height
 // and various options.
-// By default, barchart will automatically scale bar to new maximum data values,
+// By default, barchart will automatically scale bar to new maximum
+// (and minimum, when values are negative) data values,
 // bar width to fill up the canvas and have one gap between bars, and display
-// bars vertically.
+// bars vertically. When any value is negative the axis moves away from the
+// edge so that bars can extend both above and below (or right and left of) it.
 // If the given data values are too small compared to the max value,
 // then it is possible that the rendering of the bars will not be accurate
 // in terms of proportions due to the limitations of the block element runes.
@@ -85,6 +94,7 @@ func New(w, h int, opts ...Option) Model {
 		sf:           1,
 		data:         []*dataSet{},
 	}
+	m.resetScale()
 	for _, opt := range opts {
 		opt(&m)
 	}
@@ -103,39 +113,80 @@ func (m *Model) newDataSet(lv BarData) *dataSet {
 	return ds
 }
 
-// resetScale will recompute scale factor and scale
-// all existing data sets
-func (m *Model) resetScale() {
+// graphLength returns the number of cells available for bars along the
+// value direction: canvas height less the axis and label rows for vertical
+// bars, or canvas width less the label columns and axis column for
+// horizontal bars.
+func (m *Model) graphLength() int {
+	var l int
 	if m.horizontal {
-		m.sf = float64(m.Canvas.Width()-m.origin.X) / m.max
+		l = m.Canvas.Width() - m.labelWidth
+		if m.showAxis {
+			l--
+		}
 	} else {
-		m.sf = float64(m.origin.Y) / m.max
+		l = m.Canvas.Height()
+		if m.showAxis {
+			l -= 2
+		}
+	}
+	return max(l, 0)
+}
+
+// axisOffset returns 1 when an axis line occupies a cell between the
+// positive and negative bar regions, otherwise 0.
+func (m *Model) axisOffset() int {
+	if m.showAxis {
+		return 1
+	}
+	return 0
+}
+
+// resetScale splits the graph length between values above and below zero,
+// recomputes the scale factor so both extremes fit, places the origin
+// (the axis cell, or the first positive cell when no axis is shown), and
+// rescales all existing data sets.
+func (m *Model) resetScale() {
+	length := m.graphLength()
+	m.posCells, m.negCells = length, 0
+	if rng := m.max - m.min; m.min < 0 && rng > 0 {
+		m.posCells = int(math.Round(float64(length) * m.max / rng))
+		if m.max > 0 && m.posCells == 0 && length > 1 {
+			m.posCells = 1
+		}
+		m.negCells = length - m.posCells
+		if m.negCells == 0 && length > 1 {
+			m.negCells = 1
+			m.posCells--
+		}
+	}
+	switch {
+	case m.min < 0 && m.max > 0:
+		m.sf = math.Min(float64(m.posCells)/m.max, float64(m.negCells)/-m.min)
+	case m.min < 0:
+		m.sf = float64(m.negCells) / -m.min
+	default:
+		m.sf = float64(m.posCells) / m.max
+	}
+	if m.horizontal {
+		m.origin = canvas.Point{X: m.labelWidth + m.negCells, Y: 0}
+	} else {
+		m.origin = canvas.Point{X: 0, Y: m.posCells}
 	}
 	for _, ds := range m.data {
 		ds.buf.SetScale(m.sf)
 	}
 }
 
-// resetOrigin will set origin for axis and labels
+// resetOrigin recomputes the space reserved for labels. The origin itself
+// is placed by resetScale, which callers invoke next.
 func (m *Model) resetOrigin() {
-	if m.showAxis {
-		if m.horizontal {
-			var maxLen int
-			for _, ds := range m.data {
-				lw := len(ds.bd.Label)
-				if lw > maxLen {
-					maxLen = lw
-				}
+	m.labelWidth = 0
+	if m.showAxis && m.horizontal {
+		for _, ds := range m.data {
+			if lw := len(ds.bd.Label); lw > m.labelWidth {
+				m.labelWidth = lw
 			}
-			m.origin = canvas.Point{X: maxLen, Y: 0}
-		} else {
-			m.origin = canvas.Point{X: 0, Y: m.Canvas.Height() - 2}
-		}
-	} else {
-		if m.horizontal {
-			m.origin = canvas.Point{X: 0, Y: 0}
-		} else {
-			m.origin = canvas.Point{X: 0, Y: m.Canvas.Height()}
 		}
 	}
 }
@@ -216,7 +267,8 @@ func (m *Model) Clear() {
 	m.data = []*dataSet{}
 	if m.AutoMaxValue {
 		m.max = 1
-		m.sf = 1
+		m.min = 0
+		m.resetScale()
 	}
 }
 
@@ -267,6 +319,12 @@ func (m *Model) MaxValue() float64 {
 	return m.max
 }
 
+// MinValue returns expected minimum data value.
+// It is 0 unless negative values were pushed or SetMin was called.
+func (m *Model) MinValue() float64 {
+	return m.min
+}
+
 // Scale returns data scaling factor.
 func (m *Model) Scale() float64 {
 	return m.sf
@@ -295,39 +353,53 @@ func (m *Model) Horizontal() bool {
 
 // BarDataFromPoint returns a possible BarData containing
 // all BarValues drawn for the rune on the barchart canvas
-// at the given Point.
+// at the given Point. Points on the positive side of the axis
+// match positive segments; points on the negative side match
+// negative segments.
 func (m *Model) BarDataFromPoint(p canvas.Point) (r BarData) {
-	bIdx := p.X                  // which bar is selected
-	vIdx := m.origin.Y - p.Y - 1 // which bar rune is selected
+	var bIdx, posIdx, negIdx int // which bar; distance into the positive / negative stack
 	if m.horizontal {
 		bIdx = p.Y
-		vIdx = p.X - m.origin.X
-		if m.showAxis {
-			vIdx -= 1
-		}
+		posIdx = p.X - (m.origin.X + m.axisOffset())
+		negIdx = (m.origin.X - 1) - p.X
+	} else {
+		bIdx = p.X
+		posIdx = (m.origin.Y - 1) - p.Y
+		negIdx = p.Y - (m.origin.Y + m.axisOffset())
 	}
-	if bIdx >= len(m.barIndices) {
+	if bIdx < 0 || bIdx >= len(m.barIndices) {
 		return
 	}
-	// get bar data and return all values that
-	// can be drawn onto that point on the canvas
-	if idx := m.barIndices[bIdx]; idx != -1 {
-		r.Label = m.data[idx].bd.Label
-		v := m.data[idx].bd.Values
-		// can use scaled data to check if which
-		// values are drawn on the canvas since
-		sv := m.data[idx].buf.ReadAll()
-		var sum float64
-		var oLen int
-		for i, f := range sv {
-			newSum := sum + f
-			nLen := int(math.Floor(newSum))
-			if oLen <= vIdx && vIdx <= nLen {
-				r.Values = append(r.Values, v[i])
-			}
-			sum = newSum
-			oLen = nLen
+	idx := m.barIndices[bIdx]
+	if idx == -1 {
+		return
+	}
+	r.Label = m.data[idx].bd.Label
+	negative := posIdx < 0
+	want := posIdx
+	if negative {
+		want = negIdx
+	}
+	if want < 0 { // the axis cell itself
+		return
+	}
+	// walk the scaled values on the selected side of the axis and
+	// return all values that can be drawn onto that point on the canvas
+	v := m.data[idx].bd.Values
+	sv := m.data[idx].buf.ReadAll()
+	var sum float64
+	var oLen int
+	for i, f := range sv {
+		if (f < 0) != negative {
+			continue
 		}
+		newSum := sum + math.Abs(f)
+		nLen := int(math.Floor(newSum))
+		if oLen <= want && want <= nLen {
+			r.Values = append(r.Values, v[i])
+		}
+		sum = newSum
+		oLen = nLen
 	}
 	return
 }
@@ -378,25 +450,49 @@ func (m *Model) SetMax(f float64) {
 	m.resetScale()
 }
 
+// SetMin will update the expected minimum value and scale factor.
+// Values above 0 are clamped to 0 so the axis always sits at zero.
+// Existing values will be updated to new scaling.
+func (m *Model) SetMin(f float64) {
+	m.min = math.Min(f, 0)
+	m.resetScale()
+}
+
 // Push adds given BarData to barchart data set.
-// Negative values will be treated as the value 0.
-// Data will be scaled using expected max value and barchart size.
+// Positive values stack away from the axis in one direction and negative
+// values in the other. If AutoMaxValue is enabled, the expected maximum
+// and minimum grow to fit the bar's positive and negative sums.
+// Data will be scaled using the expected range and barchart size.
 func (m *Model) Push(lv BarData) {
-	var sum float64 // assumes no overflow
+	var posSum, negSum float64 // assumes no overflow
 	for _, v := range lv.Values {
-		v.Value = math.Max(v.Value, 0)
-		sum += v.Value
+		if v.Value < 0 {
+			negSum += v.Value
+		} else {
+			posSum += v.Value
+		}
 	}
-	if m.AutoMaxValue && sum > m.max {
-		m.SetMax(sum)
+	if m.AutoMaxValue {
+		rescale := false
+		if posSum > m.max {
+			m.max = posSum
+			rescale = true
+		}
+		if negSum < m.min {
+			m.min = negSum
+			rescale = true
+		}
+		if rescale {
+			m.resetScale()
+		}
 	}
 	m.data = append(m.data, m.newDataSet(lv))
 	m.resetBarIndices()
 }
 
 // PushAll adds all data values in []BarData to barchart data set.
-// Negative values will be treated as the value 0.
-// Data will be scaled using expected max value and barchart size.
+// See Push for how negative values are handled.
+// Data will be scaled using the expected range and barchart size.
 func (m *Model) PushAll(lv []BarData) {
 	for _, v := range lv {
 		m.Push(v)
@@ -412,54 +508,65 @@ func (m *Model) Draw() {
 	m.drawBars()
 }
 
-// drawBars will draw columns from bottom to top
-// for each data values, from left to right of the graph
-// for the data set for vertical bars.
-// The function will draw rows from left to right
-// for each data values, from top to bottom of the graph
-// for the data set for horizontal bars.
+// drawBars draws each bar's positive segments away from the axis in one
+// direction (up, or right) and its negative segments in the other (down,
+// or left). Vertical bars are laid out left to right and horizontal bars
+// top to bottom, in insertion order.
 func (m *Model) drawBars() {
-	// value bounded by bar length
-	startX := m.origin.X
-	barLen := float64(m.origin.Y)
-	if m.horizontal {
-		barLen = float64(m.Canvas.Width() - m.origin.X)
-		if m.showAxis {
-			startX += 1
-			barLen -= 1
-		}
-	}
 	dLen := len(m.data)
 	for i, b := range m.barIndices {
-		if b >= 0 && b < dLen {
-			v := m.data[b].buf.ReadAll()
-			s := m.data[b].bd.Values
-			var sum float64
-			for _, f := range v {
-				sum += f
-			}
-			startIdx := len(v) - 1
-			for j := startIdx; j >= 0; j-- {
-				style := s[j].Style.Copy()
-				if j+1 < startIdx {
-					// in case of edge cases where column top runes
-					// are replaced, use the previous style's colors
-					// as the background to avoid a gap in the column
-					style.Background(s[j+1].Style.GetForeground())
-				}
-				if m.horizontal {
-					graph.DrawRowLeftToRight(&m.Canvas,
-						canvas.Point{X: startX, Y: i},
-						math.Min(sum, barLen),
-						style)
-				} else {
-					graph.DrawColumnBottomToTop(&m.Canvas,
-						canvas.Point{X: i, Y: m.origin.Y - 1},
-						math.Min(sum, barLen), style)
-				}
-				sum -= v[j]
+		if b < 0 || b >= dLen {
+			continue
+		}
+		v := m.data[b].buf.ReadAll()
+		var pos, neg []int // indices of segments on each side of the axis
+		for j, f := range v {
+			if f < 0 {
+				neg = append(neg, j)
+			} else {
+				pos = append(pos, j)
 			}
 		}
+		m.drawStack(i, pos, v, m.data[b].bd.Values, false)
+		m.drawStack(i, neg, v, m.data[b].bd.Values, true)
+	}
+}
+
+// drawStack draws one side of a bar. Segments are drawn from the outermost
+// (the full stacked length, in the last segment's style) to the innermost,
+// so each shorter draw overlays the previous one and the boundary cells
+// blend the two adjacent colors.
+func (m *Model) drawStack(i int, idx []int, v []float64, s []BarValue, negative bool) {
+	limit := float64(m.posCells)
+	if negative {
+		limit = float64(m.negCells)
+	}
+	var sum float64
+	for _, j := range idx {
+		sum += math.Abs(v[j])
+	}
+	last := len(idx) - 1
+	for k := last; k >= 0; k-- {
+		j := idx[k]
+		style := s[j].Style.Copy()
+		if !negative && k+1 < last {
+			// in case of edge cases where column top runes
+			// are replaced, use the previous style's colors
+			// as the background to avoid a gap in the column
+			style.Background(s[idx[k+1]].Style.GetForeground())
+		}
+		length := math.Min(sum, limit)
+		switch {
+		case m.horizontal && negative:
+			graph.DrawRowRightToLeft(&m.Canvas, canvas.Point{X: m.origin.X - 1, Y: i}, length, style)
+		case m.horizontal:
+			graph.DrawRowLeftToRight(&m.Canvas, canvas.Point{X: m.origin.X + m.axisOffset(), Y: i}, length, style)
+		case negative:
+			graph.DrawColumnTopToBottom(&m.Canvas, canvas.Point{X: i, Y: m.origin.Y + m.axisOffset()}, length, style)
+		default:
+			graph.DrawColumnBottomToTop(&m.Canvas, canvas.Point{X: i, Y: m.origin.Y - 1}, length, style)
+		}
+		sum -= math.Abs(v[j])
 	}
 }
 
@@ -482,10 +589,10 @@ func (m *Model) drawAxisAndLabels() {
 		if b >= 0 && b < dLen {
 			if b != lastIdx {
 				l := m.data[b].bd.Label
-				p := canvas.Point{X: i, Y: m.origin.Y + 1}
+				p := canvas.Point{X: i, Y: m.Canvas.Height() - 1} // labels sit on the bottom row
 				if m.horizontal {
-					if len(l) > m.origin.X {
-						l = l[:m.origin.X]
+					if len(l) > m.labelWidth {
+						l = l[:m.labelWidth]
 					}
 					p = canvas.Point{X: 0, Y: i}
 				} else {
