@@ -40,7 +40,7 @@ type model struct {
 	renderMS, encodeMS, fps                                            float64
 	bytes                                                              int
 	transport                                                          string
-	playing, fullscreen, forceGlyph, busy, dirty                       bool
+	playing, fullscreen, forceGlyph, busy, dirty, mosaic               bool
 	epoch, slideGeneration, wakeGeneration                             uint64
 	slideshow, slideshowInterval, duration                             time.Duration
 	err                                                                error
@@ -76,6 +76,46 @@ func (m *model) selectPreset(index int) {
 	m.epoch++
 }
 func (m *model) showChrome() bool { return !m.fullscreen && m.width >= 40 && m.height >= 8 }
+
+// visiblePresets returns the preset indices on screen: the selected one, or
+// in mosaic mode the selected one and the next three in preset order.
+func (m *model) visiblePresets() []int {
+	if !m.mosaic {
+		return []int{m.selected}
+	}
+	out := make([]int, 4)
+	for i := range out {
+		out[i] = (m.selected + i) % len(presets)
+	}
+	return out
+}
+
+// tile pairs a GPU render request with where its result lands in the frame.
+type tile struct {
+	req  renderRequest
+	rect image.Rectangle
+}
+
+// tiles returns the render work for one frame: the whole raster for a single
+// shader, or four quarter-size renders in mosaic mode. The selected preset
+// keeps the live scale and detail; the other three use their preset defaults.
+// Rasters too small to split fall back to a single shader.
+func (m *model) tiles(base renderRequest) []tile {
+	if !m.mosaic || base.width < mosaicMinSize || base.height < mosaicMinSize {
+		return []tile{{req: base, rect: image.Rect(0, 0, base.width, base.height)}}
+	}
+	rects := mosaicRects(base.width, base.height)
+	out := make([]tile, 4)
+	for i, p := range m.visiblePresets() {
+		req := base
+		req.preset, req.width, req.height = p, rects[i].Dx(), rects[i].Dy()
+		if i > 0 {
+			req.scale, req.detail = presets[p].scale, presets[p].detail
+		}
+		out[i] = tile{req: req, rect: rects[i]}
+	}
+	return out
+}
 
 func (m *model) geometry() {
 	m.cols, m.rows = max(1, m.width), max(1, m.height)
@@ -121,12 +161,24 @@ func (m *model) render() tea.Cmd {
 	m.busy = true
 	m.dirty = false
 	epoch := m.epoch
-	req := renderRequest{preset: m.selected, width: m.rasterW, height: m.rasterH, seconds: float32(m.seconds), speed: m.speed, scale: m.scale, color: m.color, detail: m.detail}
+	base := renderRequest{preset: m.selected, width: m.rasterW, height: m.rasterH, seconds: float32(m.seconds), speed: m.speed, scale: m.scale, color: m.color, detail: m.detail}
+	tiles := m.tiles(base)
 	renderer := m.renderer
 	return func() tea.Msg {
 		start := time.Now()
-		img, err := renderer.Render(req)
-		return renderedMsg{epoch, img, time.Since(start), err}
+		if len(tiles) == 1 {
+			img, err := renderer.Render(tiles[0].req)
+			return renderedMsg{epoch, img, time.Since(start), err}
+		}
+		var imgs [4]*image.NRGBA
+		for i, t := range tiles {
+			img, err := renderer.Render(t.req)
+			if err != nil {
+				return renderedMsg{epoch, nil, time.Since(start), err}
+			}
+			imgs[i] = img
+		}
+		return renderedMsg{epoch, composeMosaic(imgs, base.width, base.height), time.Since(start), nil}
 	}
 }
 func smooth(old, next float64) float64 {
@@ -174,7 +226,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.busy = false
 			return m, m.render()
 		}
-		m.renderedPresets[presets[m.selected].name]++
+		for _, p := range m.visiblePresets() {
+			m.renderedPresets[presets[p].name]++
+		}
 		m.renderMS = smooth(m.renderMS, float64(msg.elapsed)/float64(time.Millisecond))
 		cmd := m.pic.SetImage(msg.image)
 		if cmd == nil {
@@ -242,6 +296,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				extra = m.pic.Toggle()
 			}
 			m.geometry()
+			m.epoch++
+		case "m":
+			m.mosaic = !m.mosaic
 			m.epoch++
 		case "a":
 			m.slideGeneration++
@@ -314,16 +371,23 @@ func (m *model) View() tea.View {
 	if m.showChrome() {
 		if m.width >= 100 {
 			lines := []string{accent.Render("SHADER GALLERY"), ""}
+			visible := map[int]bool{}
+			for _, p := range m.visiblePresets() {
+				visible[p] = true
+			}
 			for i, p := range presets {
 				label := fmt.Sprintf(" %d  %s", i+1, p.name)
-				if i == m.selected {
+				switch {
+				case i == m.selected:
 					label = accent.Render("›" + label[1:])
-				} else {
+				case visible[i]:
+					label = accent.Render("•" + label[1:])
+				default:
 					label = muted.Render(label)
 				}
 				lines = append(lines, label, "")
 			}
-			lines = append(lines, muted.Render("← → browse"), muted.Render("a   slideshow"))
+			lines = append(lines, muted.Render("← → browse"), muted.Render("a   slideshow"), muted.Render("m   mosaic"))
 			if len(lines) > m.rows {
 				lines = lines[:m.rows]
 			}
@@ -337,12 +401,15 @@ func (m *model) View() tea.View {
 		if m.slideshow > 0 {
 			state += " · SLIDESHOW"
 		}
+		if m.mosaic {
+			state += " · MOSAIC"
+		}
 		title := accent.Render("NTCHARTS / SHADERS") + "   " + presets[m.selected].title + "   " + muted.Render(state)
 		stats := fmt.Sprintf("%s · %.0f app fps · %d×%d · R %.1f / E %.1f ms · %s", m.transport, m.fps, m.rasterW, m.rasterH, m.renderMS, m.encodeMS, formatBytes(m.bytes))
 		values := []string{fmt.Sprintf("speed %.2f", m.speed), fmt.Sprintf("scale %.2f", m.scale), fmt.Sprintf("color %.2f", m.color), fmt.Sprintf("detail %.2f", m.detail)}
 		values[m.parameter] = accent.Render("[" + values[m.parameter] + "]")
 		params := strings.Join(values, "   ") + fmt.Sprintf("   density %d", m.density)
-		help := "←→ preset · space pause · f full · ↑↓ select · [] edit · q quit"
+		help := "←→ preset · m mosaic · space pause · f full · ↑↓ select · [] edit · q quit"
 		note := presets[m.selected].description
 		clip := func(s string) string { return ansi.Truncate(s, m.width, "") }
 		content = clip(title) + "\n" + clip(muted.Render(stats)) + "\n" + content + "\n" + clip(params) + "\n" + clip(muted.Render(help)) + "\n" + clip(muted.Render(note))

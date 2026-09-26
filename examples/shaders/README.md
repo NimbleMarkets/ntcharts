@@ -44,6 +44,9 @@ terminals use glyph half-blocks. Under tmux, enable
 # A fullscreen slideshow for a demo or recording:
 GOWORK=off go run . -fullscreen -slideshow=8s
 
+# Four shaders at once; browsing rotates which four are shown:
+GOWORK=off go run . -mosaic
+
 # More source detail:
 GOWORK=off go run . -preset=orbits -density=24
 
@@ -66,6 +69,7 @@ GOWORK=off go run . -duration=10s -report=/tmp/shaders.json
 | , / . | Decrease / increase pixel density |
 | r | Restart the shader clock |
 | a | Toggle the slideshow (8 seconds per shader) |
+| m | Toggle a 2×2 mosaic: the selected shader plus the next three |
 | g | Toggle glyph rendering |
 | q or Ctrl+C | Quit |
 

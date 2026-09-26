@@ -2,18 +2,30 @@
 
 ## v2.3.0 (unreleased)
 
+ * **Bidirectional bar charts:** positive and negative values stack around a floating zero axis, with improved fractional rendering and hit testing (#13).
+ * **Kitty graphics improvements:** automatic tmux passthrough, faster frame encoding, and a fix for animation flicker at reduced resolution.
+ * **New demos and diagnostics:** a WebGPU shader example, `kitty-probe`, and a `kitty-animation` diagnostic.
+ * **Leaner dependencies:** separate modules and opt-in image decoder registration via `picture/decoders`. **Breaking change:** `picture` no longer registers image decoders automatically.
+ * **Go 1.26+ required**, alongside updated dependencies and a unified `task release` workflow.
+
+<details>
+<summary>Full release notes</summary>
+
  * fix(picture): fix animation flicker when `KittyResolutionFactor` is below 1. Geometry bookkeeping now uses the same scaled cell-pixel dimensions as encoding, so unchanged animation frames no longer emit a Kitty image delete.
  * chore(deps): update Go dependencies (bubbles v2.2.1, bubbletea v2.0.9, lipgloss v2.0.6, go-analyze/charts v0.6.1, and others) and GitHub Actions. **ntcharts now requires Go 1.26+.**
  * chore(build): scope the bubbletea WASM fork to a dedicated `wasm.work` workspace used only by the WASM showcase build. Normal builds and tests now use upstream `charm.land/bubbletea/v2`, matching what library consumers resolve.
  * feat(barchart): support negative values (#13). Within a bar, positive segments stack up (or right) from zero and negative segments stack down (or left), and the axis moves to wherever zero falls. Added `SetMin`, `MinValue`, and `WithMinValue`; `AutoMaxValue` now tracks the minimum as well. **Behavior change:** negative values were previously drawn as zero. New `graph.DrawColumnTopToBottom` and `graph.DrawRowRightToLeft` draw the downward and leftward bars, using inverse block elements in reverse video for fractional ends.
+ * fix(barchart): handle bidirectional rendering (#13) and hit-test edge cases. Fractional negative stacks preserve their total visible length and existing boundary colors; when two segments share a fractional cell with the background, the segment occupying more of that cell supplies its color. Charts with only one drawable cell show the larger side instead of disappearing (positive wins ties). Hit testing respects rounded bar endpoints and clipping, excludes labels and out-of-canvas points, and safely handles cleared charts. Added regression coverage for horizontal and vertical charts, tiny layouts, and shared stack boundaries.
  * feat(picture): add automatic tmux passthrough wrapping for Kitty graphics, with `picture.SetTmuxPassthrough` for programmatic control. Each 4 KiB Kitty chunk is wrapped in its own DCS so large images are not discarded by tmux's input buffer limit. Added `NTCHARTS_TMUX_PASSTHROUGH` and `NTCHARTS_KITTY` environment variables for easy runtime overrides. When passthrough is enabled, tmux counts as a positive signal for the Kitty capability probe, since the outer terminal's environment is hidden.
  * perf(picture): encode Kitty images with `png.BestSpeed`. Frames encode faster at the cost of somewhat larger payloads.
  * feat(kitty): add `kitty-probe` test program, with transport diagnostics and JSON reports
  * feat(examples): add `kitty-animation` picture transport lifecycle diagnostic
- * feat(examples): add `shaders` example, running WebGPU WGSL shaders via `wgpu` and compositing them with a `picture.Model`. It has its own Go module; run it with `task shaders`.
+ * feat(examples): add `shaders` example, running WebGPU WGSL shaders via `wgpu` and compositing them with a `picture.Model`. It has its own Go module; run it with `task shaders`. The `m` key (or `-mosaic`) shows four shaders at once in a 2×2 mosaic composed into a single picture frame.
  * feat(ci): Restructure `go.mod` into subdirectories, to shield users from unnecessary dependencies.
  * chore(release): add `task release VERSION=v2.X.Y`, which bumps the nested modules, dates the changelog, commits, and tags the root and `picture/chartpicture/v0.X.Y` together.
  * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pull these in automatically, even if one didn't need it. **BREAKING**
+
+</details>
 
 ## v2.2.0 (2026-05-28)
 

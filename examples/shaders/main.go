@@ -29,6 +29,7 @@ func run() error {
 	density := flag.Int("density", 16, "vertical source pixels per terminal row (2..40)")
 	slideshow := flag.Duration("slideshow", 0, "switch presets automatically, e.g. 8s (0 disables)")
 	fullscreen := flag.Bool("fullscreen", false, "start with an unobstructed image")
+	mosaic := flag.Bool("mosaic", false, "start with a 2×2 mosaic of four shaders")
 	duration := flag.Duration("duration", 0, "quit after this duration (0 disables)")
 	report := flag.String("report", "", "write final timing and transport statistics as JSON")
 	snapshot := flag.String("snapshot", "", "render all six shaders to PNGs in this directory, without a terminal")
@@ -63,6 +64,7 @@ func run() error {
 	}
 	m := newModel(gpu, index, *fps, *density, *slideshow)
 	m.fullscreen = *fullscreen
+	m.mosaic = *mosaic
 	m.duration = *duration
 	_, err = tea.NewProgram(m).Run()
 	var reportErr error

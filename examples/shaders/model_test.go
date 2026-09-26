@@ -174,3 +174,76 @@ func TestSlideshowToggleKeepsConfiguredInterval(t *testing.T) {
 		t.Fatalf("slideshow resumed at %v, want the configured 3s", m.slideshow)
 	}
 }
+
+func TestMosaicRectsTileTheRaster(t *testing.T) {
+	rects := mosaicRects(101, 63)
+	if rects[0].Min != (image.Point{}) {
+		t.Fatalf("top-left tile starts at %v", rects[0].Min)
+	}
+	if rects[3].Max != (image.Point{X: 101, Y: 63}) {
+		t.Fatalf("bottom-right tile ends at %v, want the raster corner", rects[3].Max)
+	}
+	if rects[1].Min.X-rects[0].Max.X != mosaicGutter || rects[2].Min.Y-rects[0].Max.Y != mosaicGutter {
+		t.Fatalf("tiles are not separated by the gutter: %v", rects)
+	}
+	for i, r := range rects {
+		if r.Dx() < 1 || r.Dy() < 1 {
+			t.Fatalf("tile %d is empty: %v", i, r)
+		}
+	}
+}
+
+func TestComposeMosaicPlacesTiles(t *testing.T) {
+	rects := mosaicRects(40, 20)
+	var tiles [4]*image.NRGBA
+	for i := range tiles {
+		tiles[i] = image.NewNRGBA(image.Rect(0, 0, rects[i].Dx(), rects[i].Dy()))
+		for j := range tiles[i].Pix {
+			tiles[i].Pix[j] = 0xff
+		}
+		tiles[i].Pix[0] = byte(i + 1) // red channel of the first pixel identifies the tile
+	}
+	img := composeMosaic(tiles, 40, 20)
+	if img.Bounds() != image.Rect(0, 0, 40, 20) {
+		t.Fatalf("composed bounds %v", img.Bounds())
+	}
+	for i, r := range rects {
+		if got := img.NRGBAAt(r.Min.X, r.Min.Y).R; got != byte(i+1) {
+			t.Fatalf("tile %d landed wrong: red=%d", i, got)
+		}
+	}
+	if g := img.NRGBAAt(rects[0].Max.X, 0); g.R != 0 || g.A != 0xff {
+		t.Fatalf("gutter pixel = %v, want opaque dark", g)
+	}
+}
+
+func TestMosaicRendersFourPresets(t *testing.T) {
+	m, r := testModel(t)
+	m.width, m.height = 80, 24
+	m.selectPreset(4)
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'm', Text: "m"})
+	if !m.mosaic || cmd == nil {
+		t.Fatal("m did not enter mosaic mode and schedule a frame")
+	}
+	msg := cmd().(renderedMsg)
+	if len(r.requests) != 4 {
+		t.Fatalf("mosaic issued %d renders, want 4", len(r.requests))
+	}
+	rects := mosaicRects(m.rasterW, m.rasterH)
+	for i, want := range []int{4, 5, 0, 1} {
+		req := r.requests[i]
+		if req.preset != want || req.width != rects[i].Dx() || req.height != rects[i].Dy() {
+			t.Fatalf("request %d = preset %d %dx%d, want preset %d %dx%d", i, req.preset, req.width, req.height, want, rects[i].Dx(), rects[i].Dy())
+		}
+	}
+	if msg.image.Bounds().Dx() != m.rasterW || msg.image.Bounds().Dy() != m.rasterH {
+		t.Fatalf("composed image %v, want %dx%d", msg.image.Bounds(), m.rasterW, m.rasterH)
+	}
+	m.Update(msg)
+	m.Update(presentedMsg{})
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'm', Text: "m"})
+	cmd()
+	if m.mosaic || len(r.requests) != 5 {
+		t.Fatalf("leaving mosaic should render one frame; mosaic=%v requests=%d", m.mosaic, len(r.requests))
+	}
+}
