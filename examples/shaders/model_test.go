@@ -70,11 +70,13 @@ func TestPauseStopsAfterPresentation(t *testing.T) {
 	}
 }
 func TestLayoutFitsTerminal(t *testing.T) {
-	for _, size := range [][2]int{{24, 6}, {60, 16}, {99, 24}, {100, 24}, {160, 48}} {
-		for _, full := range []bool{false, true} {
+	for _, size := range [][2]int{{24, 6}, {60, 16}, {99, 24}, {100, 24}, {119, 24}, {120, 24}, {160, 48}} {
+		for _, mode := range []struct{ full, source bool }{{false, false}, {true, false}, {false, true}, {true, true}} {
+			full := mode.full
 			m, _ := testModel(t)
 			m.width, m.height = size[0], size[1]
 			m.fullscreen = full
+			m.source = mode.source
 			m.geometry()
 			// Use an actual glyph image so this also checks picture placement dimensions.
 			m.pic.SetImage(image.NewNRGBA(image.Rect(0, 0, m.rasterW, m.rasterH)))
@@ -245,5 +247,58 @@ func TestMosaicRendersFourPresets(t *testing.T) {
 	cmd()
 	if m.mosaic || len(r.requests) != 5 {
 		t.Fatalf("leaving mosaic should render one frame; mosaic=%v requests=%d", m.mosaic, len(r.requests))
+	}
+}
+
+func TestSourcePaneLayout(t *testing.T) {
+	m, _ := testModel(t)
+	m.width, m.height = 140, 30
+	m.geometry()
+	without := m.cols
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
+	if !m.source || cmd == nil {
+		t.Fatal("s did not enable the source pane and schedule a frame")
+	}
+	if !m.showSource() || m.cols != without-sourcePaneWidth-2 {
+		t.Fatalf("image cols with source = %d, want %d", m.cols, without-sourcePaneWidth-2)
+	}
+	m.mosaic = true
+	m.geometry()
+	if m.showSource() || m.cols != without {
+		t.Fatalf("source pane should hide in mosaic mode; cols=%d", m.cols)
+	}
+	m.mosaic = false
+	m.width = 119
+	m.geometry()
+	if m.showSource() {
+		t.Fatal("source pane should hide below 120 columns")
+	}
+	m.width = 120
+	m.geometry()
+	if !m.showSource() || m.cols < 40 {
+		t.Fatalf("source pane at 120 columns leaves %d image cols", m.cols)
+	}
+}
+
+func TestSourceLinesBodyThenPrelude(t *testing.T) {
+	m, _ := testModel(t)
+	m.selectPreset(4) // julia: 15 body lines; prelude is 30 lines
+	lines := sourceLines(m.selected)
+	if len(lines) != 15+1+30 {
+		t.Fatalf("%d lines, want body + divider + prelude = 46", len(lines))
+	}
+	if !strings.HasPrefix(lines[0], "fn shade") {
+		t.Fatalf("first line should start the body: %q", lines[0])
+	}
+	if !strings.Contains(lines[15], "common.wgsl") {
+		t.Fatalf("divider missing after the body: %q", lines[15])
+	}
+	if !strings.HasPrefix(lines[16], "struct Uniforms") {
+		t.Fatalf("prelude should follow the divider: %q", lines[16])
+	}
+	for _, l := range lines {
+		if strings.Contains(l, "SHADER_BODY") {
+			t.Fatal("placeholder marker leaked into the prelude")
+		}
 	}
 }

@@ -40,7 +40,7 @@ type model struct {
 	renderMS, encodeMS, fps                                            float64
 	bytes                                                              int
 	transport                                                          string
-	playing, fullscreen, forceGlyph, busy, dirty, mosaic               bool
+	playing, fullscreen, forceGlyph, busy, dirty, mosaic, source       bool
 	epoch, slideGeneration, wakeGeneration                             uint64
 	slideshow, slideshowInterval, duration                             time.Duration
 	err                                                                error
@@ -76,6 +76,16 @@ func (m *model) selectPreset(index int) {
 	m.epoch++
 }
 func (m *model) showChrome() bool { return !m.fullscreen && m.width >= 40 && m.height >= 8 }
+
+// sourcePaneWidth is the width in cells of the shader source pane.
+const sourcePaneWidth = 48
+
+// showSource reports whether the source pane is on screen: enabled, in
+// single-shader mode with chrome, and wide enough to leave the image at
+// least 44 columns beside the sidebar.
+func (m *model) showSource() bool {
+	return m.source && !m.mosaic && m.showChrome() && m.width >= 120
+}
 
 // visiblePresets returns the preset indices on screen: the selected one, or
 // in mosaic mode the selected one and the next three in preset order.
@@ -123,6 +133,9 @@ func (m *model) geometry() {
 		m.rows = max(1, m.height-5)
 		if m.width >= 100 {
 			m.cols = m.width - 26
+		}
+		if m.showSource() {
+			m.cols -= sourcePaneWidth + 2
 		}
 	}
 	// The following setters invalidate pending frames. We render one fresh image
@@ -299,6 +312,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.epoch++
 		case "m":
 			m.mosaic = !m.mosaic
+			m.geometry()
+			m.epoch++
+		case "s":
+			m.source = !m.source
+			m.geometry()
 			m.epoch++
 		case "a":
 			m.slideGeneration++
@@ -387,12 +405,15 @@ func (m *model) View() tea.View {
 				}
 				lines = append(lines, label, "")
 			}
-			lines = append(lines, muted.Render("← → browse"), muted.Render("a   slideshow"), muted.Render("m   mosaic"))
+			lines = append(lines, muted.Render("← → browse"), muted.Render("a   slideshow"), muted.Render("m   mosaic"), muted.Render("s   source"))
 			if len(lines) > m.rows {
 				lines = lines[:m.rows]
 			}
 			sidebar := lipgloss.NewStyle().Width(24).Height(m.rows).Render(strings.Join(lines, "\n"))
 			content = lipgloss.JoinHorizontal(lipgloss.Top, sidebar, "  ", imageView)
+			if m.showSource() {
+				content = lipgloss.JoinHorizontal(lipgloss.Top, content, "  ", renderSourcePane(m.selected, sourcePaneWidth, m.rows))
+			}
 		}
 		state := "PLAY"
 		if !m.playing {
@@ -409,7 +430,7 @@ func (m *model) View() tea.View {
 		values := []string{fmt.Sprintf("speed %.2f", m.speed), fmt.Sprintf("scale %.2f", m.scale), fmt.Sprintf("color %.2f", m.color), fmt.Sprintf("detail %.2f", m.detail)}
 		values[m.parameter] = accent.Render("[" + values[m.parameter] + "]")
 		params := strings.Join(values, "   ") + fmt.Sprintf("   density %d", m.density)
-		help := "←→ preset · m mosaic · space pause · f full · ↑↓ select · [] edit · q quit"
+		help := "←→ preset · m mosaic · s source · space pause · f full · ↑↓ select · [] edit · q quit"
 		note := presets[m.selected].description
 		clip := func(s string) string { return ansi.Truncate(s, m.width, "") }
 		content = clip(title) + "\n" + clip(muted.Render(stats)) + "\n" + content + "\n" + clip(params) + "\n" + clip(muted.Render(help)) + "\n" + clip(muted.Render(note))

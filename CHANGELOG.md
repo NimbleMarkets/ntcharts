@@ -20,7 +20,7 @@
  * perf(picture): encode Kitty images with `png.BestSpeed`. Frames encode faster at the cost of somewhat larger payloads.
  * feat(kitty): add `kitty-probe` test program, with transport diagnostics and JSON reports
  * feat(examples): add `kitty-animation` picture transport lifecycle diagnostic
- * feat(examples): add `shaders` example, running WebGPU WGSL shaders via `wgpu` and compositing them with a `picture.Model`. It has its own Go module; run it with `task shaders`. The `m` key (or `-mosaic`) shows four shaders at once in a 2×2 mosaic composed into a single picture frame.
+ * feat(examples): add `shaders` example, running WebGPU WGSL shaders via `wgpu` and compositing them with a `picture.Model`. It has its own Go module; run it with `task shaders`. The `m` key (or `-mosaic`) shows four shaders at once in a 2×2 mosaic composed into a single picture frame. The `s` key (or `-source`) shows the shader's WGSL source with syntax highlighting beside the image.
  * feat(ci): Restructure `go.mod` into subdirectories, to shield users from unnecessary dependencies.
  * chore(release): add `task release VERSION=v2.X.Y`, which bumps the nested modules, dates the changelog, commits, and tags the root and `picture/chartpicture/v0.X.Y` together.
  * feat(picture): Add `picture/decoders` package for automatic registration of `Image` decoders like PNG.  Previously, `picture` would pull these in automatically, even if one didn't need it. **BREAKING**
