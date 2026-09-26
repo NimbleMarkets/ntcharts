@@ -77,14 +77,29 @@ func (m *model) selectPreset(index int) {
 }
 func (m *model) showChrome() bool { return !m.fullscreen && m.width >= 40 && m.height >= 8 }
 
-// sourcePaneWidth is the width in cells of the shader source pane.
-const sourcePaneWidth = 48
+// sidebarWidth fits the longest preset label, " 1  kaleidoscope".
+const sidebarWidth = 16
+
+// The source pane takes about half of the space beside the sidebar, never
+// narrower than sourcePaneMinWidth, never wider than sourcePaneMaxWidth, and
+// always leaving the image at least imageMinWidth columns.
+const (
+	sourcePaneMinWidth = 48
+	sourcePaneMaxWidth = 96
+	imageMinWidth      = 40
+)
 
 // showSource reports whether the source pane is on screen: enabled, in
-// single-shader mode with chrome, and wide enough to leave the image at
-// least 44 columns beside the sidebar.
+// single-shader mode with chrome, and wide enough for both panes.
 func (m *model) showSource() bool {
-	return m.source && !m.mosaic && m.showChrome() && m.width >= 120
+	return m.source && !m.mosaic && m.showChrome() && m.width >= 110
+}
+
+// sourceWidth returns the source pane width for the current terminal width.
+func (m *model) sourceWidth() int {
+	remaining := m.width - sidebarWidth - 2
+	w := min(max(remaining/2, sourcePaneMinWidth), sourcePaneMaxWidth)
+	return max(1, min(w, remaining-2-imageMinWidth))
 }
 
 // visiblePresets returns the preset indices on screen: the selected one, or
@@ -132,10 +147,10 @@ func (m *model) geometry() {
 	if m.showChrome() {
 		m.rows = max(1, m.height-5)
 		if m.width >= 100 {
-			m.cols = m.width - 26
+			m.cols = m.width - sidebarWidth - 2
 		}
 		if m.showSource() {
-			m.cols -= sourcePaneWidth + 2
+			m.cols -= m.sourceWidth() + 2
 		}
 	}
 	// The following setters invalidate pending frames. We render one fresh image
@@ -409,10 +424,10 @@ func (m *model) View() tea.View {
 			if len(lines) > m.rows {
 				lines = lines[:m.rows]
 			}
-			sidebar := lipgloss.NewStyle().Width(24).Height(m.rows).Render(strings.Join(lines, "\n"))
+			sidebar := lipgloss.NewStyle().Width(sidebarWidth).Height(m.rows).Render(strings.Join(lines, "\n"))
 			content = lipgloss.JoinHorizontal(lipgloss.Top, sidebar, "  ", imageView)
 			if m.showSource() {
-				content = lipgloss.JoinHorizontal(lipgloss.Top, content, "  ", renderSourcePane(m.selected, sourcePaneWidth, m.rows))
+				content = lipgloss.JoinHorizontal(lipgloss.Top, content, "  ", renderSourcePane(m.selected, m.sourceWidth(), m.rows))
 			}
 		}
 		state := "PLAY"

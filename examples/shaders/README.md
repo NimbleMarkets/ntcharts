@@ -73,7 +73,7 @@ GOWORK=off go run . -duration=10s -report=/tmp/shaders.json
 | r | Restart the shader clock |
 | a | Toggle the slideshow (8 seconds per shader) |
 | m | Toggle a 2×2 mosaic: the selected shader plus the next three |
-| s | Toggle the source pane: the shader's WGSL with syntax highlighting, then the shared prelude (single-shader mode, 120+ columns) |
+| s | Toggle the source pane: the shader's WGSL with syntax highlighting, then the shared prelude (single-shader mode, 110+ columns; the pane takes about half the width) |
 | g | Toggle glyph rendering |
 | q or Ctrl+C | Quit |
 

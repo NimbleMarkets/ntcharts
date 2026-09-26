@@ -70,7 +70,7 @@ func TestPauseStopsAfterPresentation(t *testing.T) {
 	}
 }
 func TestLayoutFitsTerminal(t *testing.T) {
-	for _, size := range [][2]int{{24, 6}, {60, 16}, {99, 24}, {100, 24}, {119, 24}, {120, 24}, {160, 48}} {
+	for _, size := range [][2]int{{24, 6}, {60, 16}, {99, 24}, {100, 24}, {109, 24}, {110, 24}, {160, 48}, {240, 60}} {
 		for _, mode := range []struct{ full, source bool }{{false, false}, {true, false}, {false, true}, {true, true}} {
 			full := mode.full
 			m, _ := testModel(t)
@@ -255,12 +255,16 @@ func TestSourcePaneLayout(t *testing.T) {
 	m.width, m.height = 140, 30
 	m.geometry()
 	without := m.cols
+	if without != 140-sidebarWidth-2 {
+		t.Fatalf("image cols without source = %d, want the width less the sidebar and gap", without)
+	}
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	if !m.source || cmd == nil {
 		t.Fatal("s did not enable the source pane and schedule a frame")
 	}
-	if !m.showSource() || m.cols != without-sourcePaneWidth-2 {
-		t.Fatalf("image cols with source = %d, want %d", m.cols, without-sourcePaneWidth-2)
+	// The pane takes about half of the space beside the sidebar.
+	if !m.showSource() || m.sourceWidth() < without/2-1 || m.cols != without-m.sourceWidth()-2 {
+		t.Fatalf("image cols with source = %d, pane = %d, without = %d", m.cols, m.sourceWidth(), without)
 	}
 	m.mosaic = true
 	m.geometry()
@@ -268,15 +272,20 @@ func TestSourcePaneLayout(t *testing.T) {
 		t.Fatalf("source pane should hide in mosaic mode; cols=%d", m.cols)
 	}
 	m.mosaic = false
-	m.width = 119
+	m.width = 109
 	m.geometry()
 	if m.showSource() {
-		t.Fatal("source pane should hide below 120 columns")
+		t.Fatal("source pane should hide below 110 columns")
 	}
-	m.width = 120
+	m.width = 110
 	m.geometry()
-	if !m.showSource() || m.cols < 40 {
-		t.Fatalf("source pane at 120 columns leaves %d image cols", m.cols)
+	if !m.showSource() || m.cols < 40 || m.sourceWidth() < 48 {
+		t.Fatalf("source pane at 110 columns leaves %d image cols and %d pane cols", m.cols, m.sourceWidth())
+	}
+	m.width = 240
+	m.geometry()
+	if m.sourceWidth() > 100 || m.cols < 100 {
+		t.Fatalf("very wide terminal: pane %d, image %d; the pane should cap so the image keeps growing", m.sourceWidth(), m.cols)
 	}
 }
 
