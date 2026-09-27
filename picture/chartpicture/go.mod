@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	charm.land/bubbletea/v2 v2.0.9
-	github.com/NimbleMarkets/ntcharts/v2 v2.2.0
+	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
 	github.com/go-analyze/charts v0.6.1
 )
 

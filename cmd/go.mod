@@ -6,7 +6,7 @@ require (
 	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
-	github.com/NimbleMarkets/ntcharts/v2 v2.2.0
+	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260910203606-6c9e17dc7a16
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	golang.org/x/sys v0.48.0

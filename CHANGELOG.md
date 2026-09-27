@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.3.0 (unreleased)
+## v2.3.0 (2026-09-26)
 
  * **Bidirectional bar charts:** positive and negative values stack around a floating zero axis, with improved fractional rendering and hit testing (#13).
  * **Kitty graphics improvements:** automatic tmux passthrough, faster frame encoding, and a fix for animation flicker at reduced resolution.

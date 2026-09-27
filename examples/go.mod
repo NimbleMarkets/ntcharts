@@ -7,8 +7,8 @@ require (
 	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/NimbleMarkets/go-booba v0.6.1-0.20260511134559-58814d532cc1
-	github.com/NimbleMarkets/ntcharts/v2 v2.2.0
-	github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture v0.0.0-00010101000000-000000000000
+	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
+	github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture v0.3.0
 	github.com/aquilax/go-perlin v1.1.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260910203606-6c9e17dc7a16
 	github.com/go-analyze/charts v0.6.1
