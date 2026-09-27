@@ -70,7 +70,7 @@ func TestKittyBestSpeedPNGRoundTrip(t *testing.T) {
 			src.SetNRGBA(x, y, color.NRGBA{uint8(random.Uint32()), uint8(random.Uint32()), uint8(random.Uint32()), uint8(random.Uint32())})
 		}
 	}
-	apc := buildKittyAPC(src, 45, 2, 3)
+	apc := buildKittyAPC(src, 45, 2, 3, KittyFormatPNG)
 	data := decodeKittyPNG(t, apc)
 	var expected bytes.Buffer
 	enc := png.Encoder{CompressionLevel: png.BestSpeed}
@@ -94,7 +94,7 @@ func TestKittyBestSpeedPNGRoundTrip(t *testing.T) {
 		}
 	}
 	SetTmuxPassthrough(true)
-	if got := buildKittyAPC(src, 45, 2, 3); got != tmuxWrapChunks(apc) {
+	if got := buildKittyAPC(src, 45, 2, 3, KittyFormatPNG); got != tmuxWrapChunks(apc) {
 		t.Fatal("tmux framing changed")
 	}
 }

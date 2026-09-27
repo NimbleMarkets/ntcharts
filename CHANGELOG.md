@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+ * feat(picture): add opt-in raw RGBA and shared-memory Kitty transport, with PNG/direct fallback when shared-memory creation is unavailable. Native shared memory requires a local compatible terminal; direct transmission supports SSH.
+ * feat(picture): expose requested/actual transport metadata and signed Kitty placement depth. Preserve per-chunk tmux framing for PNG and RGBA, and single wrapping for shared-memory references.
+
 ## v2.3.0 (2026-09-26)
 
  * **Bidirectional bar charts:** positive and negative values stack around a floating zero axis, with improved fractional rendering and hit testing (#13).

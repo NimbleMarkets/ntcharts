@@ -29,18 +29,23 @@ func TestTmuxPassthroughWrapsEachChunk(t *testing.T) {
 	for i := range src.Pix {
 		src.Pix[i] = byte(random.Uint32())
 	}
-	plain := buildKittyAPC(src, 45, 2, 3)
-	chunks := strings.Count(plain, "\x1b_G")
-	if chunks < 2 {
-		t.Fatalf("expected a multi-chunk APC, got %d chunk(s)", chunks)
-	}
-	SetTmuxPassthrough(true)
-	wrapped := buildKittyAPC(src, 45, 2, 3)
-	if got := strings.Count(wrapped, "\x1bPtmux;"); got != chunks {
-		t.Fatalf("expected one tmux DCS per chunk: got %d, want %d", got, chunks)
-	}
-	if wrapped != tmuxWrapChunks(plain) {
-		t.Fatal("wrapped output does not match per-chunk tmux passthrough framing")
+	for _, format := range []KittyFormat{KittyFormatPNG, KittyFormatRGBA} {
+		t.Run(format.String(), func(t *testing.T) {
+			SetTmuxPassthrough(false)
+			plain := buildKittyAPC(src, 45, 2, 3, format)
+			chunks := strings.Count(plain, "\x1b_G")
+			if chunks < 2 {
+				t.Fatalf("expected a multi-chunk APC, got %d chunk(s)", chunks)
+			}
+			SetTmuxPassthrough(true)
+			wrapped := buildKittyAPC(src, 45, 2, 3, format)
+			if got := strings.Count(wrapped, "\x1bPtmux;"); got != chunks {
+				t.Fatalf("expected one tmux DCS per chunk: got %d, want %d", got, chunks)
+			}
+			if wrapped != tmuxWrapChunks(plain) {
+				t.Fatal("wrapped output does not match per-chunk tmux passthrough framing")
+			}
+		})
 	}
 }
 
@@ -85,7 +90,7 @@ func TestTmuxPassthrough(t *testing.T) {
 
 	// 3. Test buildKittyAPC wrapped
 	img := image.NewRGBA(image.Rect(0, 0, 10, 10))
-	apc := buildKittyAPC(img, 45, 2, 2)
+	apc := buildKittyAPC(img, 45, 2, 2, KittyFormatPNG)
 	if !strings.HasPrefix(apc, "\x1bPtmux;\x1b") {
 		t.Errorf("expected buildKittyAPC output to be wrapped in tmux passthrough; got %q", apc)
 	}
