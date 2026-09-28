@@ -1,16 +1,16 @@
 module github.com/NimbleMarkets/ntcharts/v2/examples
 
-go 1.26.0
+go 1.26.8
 
 require (
 	charm.land/bubbles/v2 v2.2.1
-	charm.land/bubbletea/v2 v2.0.9
+	charm.land/bubbletea/v2 v2.0.10
 	charm.land/lipgloss/v2 v2.0.6
-	github.com/NimbleMarkets/go-booba v0.6.1-0.20260511134559-58814d532cc1
+	github.com/NimbleMarkets/go-booba v0.7.0
 	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
 	github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture v0.3.0
 	github.com/aquilax/go-perlin v1.1.0
-	github.com/charmbracelet/ultraviolet v0.0.0-20260910203606-6c9e17dc7a16
+	github.com/charmbracelet/ultraviolet v0.0.0-20260928045949-bbf040aedf25
 	github.com/go-analyze/charts v0.6.1
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	github.com/spf13/pflag v1.0.10

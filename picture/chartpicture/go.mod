@@ -1,9 +1,9 @@
 module github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture
 
-go 1.26.0
+go 1.26.8
 
 require (
-	charm.land/bubbletea/v2 v2.0.9
+	charm.land/bubbletea/v2 v2.0.10
 	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
 	github.com/go-analyze/charts v0.6.1
 )
@@ -13,7 +13,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.6 // indirect
 	github.com/NimbleMarkets/pixterm v0.0.0-20260501211346-dc18ac6c1a0f // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260910203606-6c9e17dc7a16 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20260928045949-bbf040aedf25 // indirect
 	github.com/charmbracelet/x/ansi v0.11.8 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect

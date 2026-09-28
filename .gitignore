@@ -9,6 +9,7 @@ web/index.html
 web/demos/*/index.html
 web/demos/*/app.wasm
 web/_assets/wasm_exec.js
+web/_assets/wasm_exec_tinygo.js
 web/_assets/index.html
 web/_assets/booba/
 web/_assets/ghostty-web/

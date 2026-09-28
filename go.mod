@@ -1,13 +1,13 @@
 module github.com/NimbleMarkets/ntcharts/v2
 
-go 1.26.0
+go 1.26.8
 
 require (
 	charm.land/bubbles/v2 v2.2.1
-	charm.land/bubbletea/v2 v2.0.9
+	charm.land/bubbletea/v2 v2.0.10
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/NimbleMarkets/pixterm v0.0.0-20260501211346-dc18ac6c1a0f
-	github.com/charmbracelet/ultraviolet v0.0.0-20260910203606-6c9e17dc7a16
+	github.com/charmbracelet/ultraviolet v0.0.0-20260928045949-bbf040aedf25
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	golang.org/x/image v0.46.0
 )
@@ -27,5 +27,5 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v1.2.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sys v0.48.0
 )
