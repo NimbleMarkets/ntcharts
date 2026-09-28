@@ -11,7 +11,7 @@ trap 'chmod -R u+w "$SCRATCH"; rm -rf "$SCRATCH"' EXIT
 REPO="$SCRATCH/repo"
 MODULE=github.com/NimbleMarkets/ntcharts
 mkdir -p "$REPO/scripts" "$REPO/picture/chartpicture" "$REPO/examples/quickstart" "$REPO/examples/shaders" "$REPO/cmd"
-cp scripts/{release,check-release,tidy}.sh "$REPO/scripts/"
+cp scripts/{release,check-release,tidy}.sh scripts/sortsum.go "$REPO/scripts/"
 cp Taskfile.yml "$REPO/"
 cd "$REPO"
 export GOWORK="$REPO/go.work"
@@ -52,6 +52,35 @@ EOF
 cp go.work wasm.work
 git add -A
 git commit -qm 'Initial fixture'
+
+# go.sum must keep the go command's order (path, semantic version, then the
+# /go.mod suffix), or tidy and go commands flip lines back and forth.
+printf '%s\n' \
+	'example.com/m v1.10.0/go.mod h1:b' \
+	'example.com/m v1.9.0 h1:a' \
+	'example.com/p v1.0.0 h1:x' \
+	'example.com/m v1.10.0 h1:b' \
+	'example.com/a v0.0.0-20200101000000-abcdef123456/go.mod h1:c' \
+	'example.com/m v1.9.0/go.mod h1:a' \
+	'example.com/p v1.0.0-rc.1 h1:y' \
+	'example.com/m v1.9.0 h1:a' \
+	> "$SCRATCH/scrambled.sum"
+printf '%s\n' \
+	'example.com/a v0.0.0-20200101000000-abcdef123456/go.mod h1:c' \
+	'example.com/m v1.9.0 h1:a' \
+	'example.com/m v1.9.0/go.mod h1:a' \
+	'example.com/m v1.10.0 h1:b' \
+	'example.com/m v1.10.0/go.mod h1:b' \
+	'example.com/p v1.0.0-rc.1 h1:y' \
+	'example.com/p v1.0.0 h1:x' \
+	> "$SCRATCH/expected.sum"
+go run scripts/sortsum.go "$SCRATCH/scrambled.sum"
+if ! cmp -s "$SCRATCH/scrambled.sum" "$SCRATCH/expected.sum"; then
+	echo 'FAIL: sortsum does not produce the go command order' >&2
+	diff "$SCRATCH/expected.sum" "$SCRATCH/scrambled.sum" >&2 || true
+	exit 1
+fi
+echo 'PASS: sortsum orders go.sum like the go command'
 
 check() {
 	local log=$1

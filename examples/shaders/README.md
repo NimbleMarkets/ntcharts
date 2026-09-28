@@ -35,8 +35,10 @@ cd examples/shaders
 go run .
 ```
 
-Inside the checkout the Go workspace builds it against the working tree; the
-module's own `go.mod` pins a released ntcharts so it also builds on its own.
+Inside the checkout the Go workspace builds it against the working tree. The
+module's own `go.mod` pins the ntcharts release it ships with, so a standalone
+build of a released version works, but a checkout between releases needs the
+workspace until the next tag exists.
 The default example build includes this native example, and it is also in the
 [live gallery](https://nimblemarkets.github.io/ntcharts/), where it runs on the
 browser's WebGPU (Chrome, Edge, or Safari 26+). The gallery carries two builds

@@ -32,9 +32,11 @@ for dir in . picture/chartpicture examples examples/shaders cmd; do
 			}
 			($1 " " $2) in keep
 		' "$SCRATCH/go.mod" go.sum >> "$SCRATCH/go.sum"
-		LC_ALL=C sort -u "$SCRATCH/go.sum" > "$SCRATCH/sorted.sum"
+		# Keep the go command's own ordering so go.sum does not churn between
+		# this script and go commands that rewrite the file.
+		go run "$ROOT/scripts/sortsum.go" "$SCRATCH/go.sum"
 		cp "$SCRATCH/go.mod" go.mod
-		cp "$SCRATCH/sorted.sum" go.sum
+		cp "$SCRATCH/go.sum" go.sum
 	)
 done
 go work sync

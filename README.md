@@ -104,8 +104,6 @@ If you used chartpicture from v2.2.0 or earlier, update its old
 Other library imports are unchanged. Examples and GPU shaders also have separate
 modules to keep their dependencies out of the core library.
 
-For local development and coordinated releases, see [CONTRIBUTING.md](./CONTRIBUTING.md).
-
 #### Canvas
 
 ```go
