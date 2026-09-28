@@ -121,3 +121,66 @@ groups:
         source: ` + source + `
 `
 }
+
+func TestManifestToolchain(t *testing.T) {
+	m, err := loadManifest(strings.NewReader(`
+groups:
+  - title: Shaders
+    demos:
+      - name: shaders
+        title: GPU Shaders
+        blurb: go
+        source: ./examples/shaders
+      - name: shaders-tinygo
+        title: GPU Shaders (TinyGo)
+        blurb: tinygo
+        source: ./examples/shaders
+        toolchain: tinygo
+`))
+	if err != nil {
+		t.Fatalf("loadManifest: %v", err)
+	}
+	demos := m.AllDemos()
+	if demos[0].TinyGo() || demos[0].WasmExec() != "/ntcharts/_assets/wasm_exec.js" {
+		t.Errorf("default demo: tinygo=%v wasm_exec=%q", demos[0].TinyGo(), demos[0].WasmExec())
+	}
+	if !demos[1].TinyGo() || demos[1].WasmExec() != "/ntcharts/_assets/wasm_exec_tinygo.js" {
+		t.Errorf("tinygo demo: tinygo=%v wasm_exec=%q", demos[1].TinyGo(), demos[1].WasmExec())
+	}
+	if !m.HasTinyGo() {
+		t.Error("HasTinyGo should report the tinygo demo")
+	}
+
+	_, err = loadManifest(strings.NewReader(`
+groups:
+  - title: X
+    demos:
+      - name: a
+        title: A
+        blurb: b
+        source: ./examples/a
+        toolchain: rustc
+`))
+	if err == nil || !strings.Contains(err.Error(), "toolchain") {
+		t.Fatalf("unknown toolchain should be rejected, got %v", err)
+	}
+}
+
+func TestWithoutTinyGoDropsThoseDemos(t *testing.T) {
+	m := &Manifest{Groups: []Group{
+		{Title: "Shaders", Demos: []Demo{
+			{Name: "shaders", Title: "Go", Source: "./examples/shaders"},
+			{Name: "shaders-tinygo", Title: "TinyGo", Source: "./examples/shaders", Toolchain: "tinygo"},
+		}},
+		{Title: "Only TinyGo", Demos: []Demo{
+			{Name: "x-tinygo", Title: "X", Source: "./examples/x", Toolchain: "tinygo"},
+		}},
+	}}
+	got := m.WithoutTinyGo()
+	if len(got.Groups) != 1 || len(got.Groups[0].Demos) != 1 || got.Groups[0].Demos[0].Name != "shaders" {
+		t.Fatalf("WithoutTinyGo = %+v, want only the Go shaders demo and no empty groups", got.Groups)
+	}
+	if len(m.Groups[0].Demos) != 2 {
+		t.Fatal("WithoutTinyGo must not modify the receiver")
+	}
+}

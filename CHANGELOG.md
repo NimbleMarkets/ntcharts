@@ -3,6 +3,7 @@
 ## v2.4.0 (unreleased)
 
  * fix(chartpicture): `BarChartOptionFromNT` now forwards the bar chart's minimum to the image value axis and stacks multi-value bars, so the go-analyze image matches the glyph chart, including negative segments below the baseline. **Behavior change:** multi-value bars were previously drawn grouped side by side in the image.
+ * feat(wasm-build): demos can set `toolchain: tinygo` in `web/demos.yaml` to be compiled with TinyGo (`-opt=2 -no-debug`) and served with TinyGo's `wasm_exec.js`. The gallery gains "GPU Shaders (TinyGo)", the same source at about a third of the wasm size. Building the site now needs TinyGo 0.42.0+, or `-skip-tinygo`.
  * feat(shaders): the shaders example joins the live WASM gallery, running its WGSL compute shaders on the browser's WebGPU. Browsers without WebGPU see an explanatory message instead of a blank terminal.
  * chore(shaders): the `examples/shaders` module no longer uses a local `replace` and is tagged with each release (`examples/shaders/v0.X.Y`), so it runs without a clone: `go run github.com/NimbleMarkets/ntcharts/v2/examples/shaders@latest`. Inside the repo it now builds through the Go workspace, so `GOWORK=off` is no longer needed, and its tests run in `task test`.
  * feat(picture): add opt-in raw RGBA and shared-memory Kitty transport, with PNG/direct fallback when shared-memory creation is unavailable. Native shared memory requires a local compatible terminal; direct transmission supports SSH.

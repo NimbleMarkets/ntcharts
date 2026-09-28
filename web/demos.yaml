@@ -111,3 +111,8 @@ groups:
         title: GPU Shaders
         blurb: Six animated WGSL compute shaders run on the GPU through the browser's WebGPU and shown through picture.Model — Kitty graphics where supported, Glyph fallback otherwise. Press <kbd>m</kbd> for a 2×2 mosaic and <kbd>s</kbd> for the highlighted source.
         source: ./examples/shaders
+      - name: shaders-tinygo
+        title: GPU Shaders (TinyGo)
+        blurb: The same shader gallery compiled with <a href="https://tinygo.org">TinyGo</a> instead of the Go toolchain — identical source, a wasm about a third of the size. Press <kbd>m</kbd> for a 2×2 mosaic and <kbd>s</kbd> for the highlighted source.
+        source: ./examples/shaders
+        toolchain: tinygo

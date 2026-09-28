@@ -9,7 +9,8 @@ These [examples are live](https://nimblemarkets.github.io/) at https://nimblemar
 The [shader gallery](shaders/README.md) runs six animated WGSL presets inside the
 terminal, with fullscreen, parameter controls and live rendering/encoding
 timings. It has an isolated `go.mod`, is included in the default example build,
-and runs in the live gallery on browsers with WebGPU:
+and runs in the live gallery on browsers with WebGPU, both as a Go build and
+as a [TinyGo](https://tinygo.org) build of the same source:
 
 ```sh
 task shaders

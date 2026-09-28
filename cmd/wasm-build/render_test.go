@@ -17,6 +17,9 @@ func TestRenderProducesAllPages(t *testing.T) {
 		{Title: "Heatmap", Demos: []Demo{
 			{Name: "heatmap-perlin", Title: "Heatmap (Perlin)", Blurb: "Press <kbd>F</kbd> to cycle", Source: "./examples/heatmap/perlin"},
 		}},
+		{Title: "Shaders", Demos: []Demo{
+			{Name: "shaders-tinygo", Title: "GPU Shaders (TinyGo)", Blurb: "z", Source: "./examples/shaders", Toolchain: "tinygo"},
+		}},
 	}}
 
 	if err := renderSite(m, "../../web/_templates", out); err != nil {
@@ -40,6 +43,10 @@ func TestRenderProducesAllPages(t *testing.T) {
 	// demo page alike.
 	mustContain(t, filepath.Join(out, "index.html"), "Press <kbd>F</kbd> to cycle")
 	mustContain(t, filepath.Join(out, "demos", "heatmap-perlin", "index.html"), "Press <kbd>F</kbd> to cycle")
+
+	// Each page loads the wasm_exec shim matching its toolchain.
+	mustContain(t, filepath.Join(out, "demos", "quickstart", "index.html"), `src="/ntcharts/_assets/wasm_exec.js"`)
+	mustContain(t, filepath.Join(out, "demos", "shaders-tinygo", "index.html"), `src="/ntcharts/_assets/wasm_exec_tinygo.js"`)
 }
 
 func mustContain(t *testing.T, path string, needles ...string) {

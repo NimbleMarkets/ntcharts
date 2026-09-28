@@ -39,7 +39,11 @@ Inside the checkout the Go workspace builds it against the working tree; the
 module's own `go.mod` pins a released ntcharts so it also builds on its own.
 The default example build includes this native example, and it is also in the
 [live gallery](https://nimblemarkets.github.io/ntcharts/), where it runs on the
-browser's WebGPU (Chrome, Edge, or Safari 26+).
+browser's WebGPU (Chrome, Edge, or Safari 26+). The gallery carries two builds
+of it: the Go toolchain's, and a [TinyGo](https://tinygo.org) build of the same
+source that is about a third of the size. Building the site needs TinyGo 0.42.0
+or newer on `PATH` (or `TINYGO=/path/to/tinygo`); pass `-skip-tinygo` to
+`cmd/wasm-build` to leave that demo out.
 It requires Go 1.26+ and a supported hardware GPU/driver. It uses gogpu/wgpu's
 pure-Go backends (no cgo, no native library to install): Metal on macOS, Vulkan
 on Linux, Vulkan or DirectX 12 on Windows, with a CPU software fallback.

@@ -24,11 +24,53 @@ type Demo struct {
 	Title  string `yaml:"title"`
 	Blurb  string `yaml:"blurb"`
 	Source string `yaml:"source"`
+	// Toolchain selects the compiler: "" (Go) or "tinygo".
+	Toolchain string `yaml:"toolchain"`
 }
 
 // BlurbHTML returns the blurb as trusted HTML. Blurbs are authored in the
 // repository's own manifest and may use inline markup such as <kbd>.
 func (d Demo) BlurbHTML() template.HTML { return template.HTML(d.Blurb) }
+
+// TinyGo reports whether the demo is compiled with TinyGo.
+func (d Demo) TinyGo() bool { return d.Toolchain == "tinygo" }
+
+// WasmExec returns the site path of the wasm_exec.js shim matching the
+// demo's toolchain; Go and TinyGo each ship their own.
+func (d Demo) WasmExec() string {
+	if d.TinyGo() {
+		return "/ntcharts/_assets/wasm_exec_tinygo.js"
+	}
+	return "/ntcharts/_assets/wasm_exec.js"
+}
+
+// HasTinyGo reports whether any demo needs the TinyGo toolchain.
+func (m *Manifest) HasTinyGo() bool {
+	for _, d := range m.AllDemos() {
+		if d.TinyGo() {
+			return true
+		}
+	}
+	return false
+}
+
+// WithoutTinyGo returns a copy of the manifest with TinyGo demos removed,
+// dropping any group left empty. The receiver is not modified.
+func (m *Manifest) WithoutTinyGo() *Manifest {
+	out := &Manifest{}
+	for _, g := range m.Groups {
+		var demos []Demo
+		for _, d := range g.Demos {
+			if !d.TinyGo() {
+				demos = append(demos, d)
+			}
+		}
+		if len(demos) > 0 {
+			out.Groups = append(out.Groups, Group{Title: g.Title, Demos: demos})
+		}
+	}
+	return out
+}
 
 func loadManifest(r io.Reader) (*Manifest, error) {
 	var m Manifest
@@ -53,6 +95,9 @@ func loadManifest(r io.Reader) (*Manifest, error) {
 			}
 			if !validDemoSource(d.Source) {
 				return nil, fmt.Errorf("group %q demo %q: invalid source %q: use a ./examples/... package path without traversal", g.Title, d.Name, d.Source)
+			}
+			if d.Toolchain != "" && d.Toolchain != "tinygo" {
+				return nil, fmt.Errorf("group %q demo %q: unknown toolchain %q: use \"tinygo\" or leave unset for Go", g.Title, d.Name, d.Toolchain)
 			}
 		}
 	}
