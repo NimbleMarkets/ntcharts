@@ -65,8 +65,8 @@ func newGPU() (*gpuRenderer, error) {
 		}
 		defer adapter.Release()
 		info := adapter.Info()
-		if info.DeviceType == gputypes.DeviceTypeCPU || info.Backend == gputypes.BackendEmpty {
-			ready <- errors.New("a hardware GPU is required for this example")
+		if err := adapterUsable(info, inBrowser); err != nil {
+			ready <- err
 			return
 		}
 		g.name = info.Name
@@ -179,4 +179,19 @@ func compileShader(dev *wgpu.Device, code string) (_ *gpuPipeline, err error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+// adapterUsable rejects adapters that would run the shaders on the CPU.
+// Natively an empty backend means no real GPU backend was found. The
+// browser's WebGPU API exposes no backend or device type at all, only a
+// name, so there the backend field carries no information and only an
+// explicit CPU device type is refused.
+func adapterUsable(info wgpu.AdapterInfo, browser bool) error {
+	if info.DeviceType == gputypes.DeviceTypeCPU {
+		return errors.New("a hardware GPU is required for this example")
+	}
+	if !browser && info.Backend == gputypes.BackendEmpty {
+		return errors.New("a hardware GPU is required for this example")
+	}
+	return nil
 }
