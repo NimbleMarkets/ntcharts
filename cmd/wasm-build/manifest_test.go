@@ -191,7 +191,6 @@ func TestDemoRunCommand(t *testing.T) {
 	}{
 		{"./examples/barchart/vertical", "", "github.com/NimbleMarkets/ntcharts/examples/v2/barchart/vertical"},
 		{"./examples/shaders", "", "github.com/NimbleMarkets/ntcharts/examples/shaders/v2"},
-		{"./examples/shaders", "tinygo", "github.com/NimbleMarkets/ntcharts/examples/shaders/v2"},
 		{"./examples/shaders-extra", "", "github.com/NimbleMarkets/ntcharts/examples/v2/shaders-extra"},
 	} {
 		t.Run(tc.source+tc.toolchain, func(t *testing.T) {
@@ -200,5 +199,27 @@ func TestDemoRunCommand(t *testing.T) {
 				t.Fatalf("RunCommand = %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+func TestTinyGoDemoRunCommandBuildsTheBrowserWasm(t *testing.T) {
+	d := Demo{Name: "shaders-tinygo", Source: "./examples/shaders", Toolchain: "tinygo"}
+	cmd := d.RunCommand()
+	for _, want := range []string{
+		"git clone https://github.com/NimbleMarkets/ntcharts",
+		"GOWORK=$PWD/wasm.work tinygo build -target=wasm -opt=2 -no-debug -o app.wasm ./examples/shaders",
+	} {
+		if !strings.Contains(cmd, want) {
+			t.Errorf("tinygo RunCommand lacks %q:\n%s", want, cmd)
+		}
+	}
+	if strings.Contains(cmd, "go run") {
+		t.Errorf("tinygo RunCommand should not advertise go run:\n%s", cmd)
+	}
+	if got := d.RunLabel(); !strings.Contains(got, "TinyGo "+tinygoVersion) {
+		t.Errorf("RunLabel = %q, want the TinyGo %s requirement", got, tinygoVersion)
+	}
+	if got := (Demo{Source: "./examples/quickstart"}).RunLabel(); got != "Run in your terminal:" {
+		t.Errorf("Go RunLabel = %q", got)
 	}
 }

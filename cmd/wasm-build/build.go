@@ -27,7 +27,8 @@ func findTinyGo() (string, error) {
 // demo asks for it.
 func buildCommand(d Demo, dst, goBin, tinygoBin string) (string, []string) {
 	if d.TinyGo() {
-		return tinygoBin, []string{"build", "-target=wasm", "-opt=2", "-no-debug", "-o", dst, d.Source}
+		args := append([]string{"build"}, tinygoBuildFlags...)
+		return tinygoBin, append(args, "-o", dst, d.Source)
 	}
 	return goBin, []string{"build", "-o", dst, d.Source}
 }

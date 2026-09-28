@@ -32,9 +32,33 @@ type Demo struct {
 // repository's own manifest and may use inline markup such as <kbd>.
 func (d Demo) BlurbHTML() template.HTML { return template.HTML(d.Blurb) }
 
-// RunCommand returns the native command for the module owning this demo.
-// Shaders is a separate module, including when shown as a TinyGo demo.
+// tinygoVersion is the TinyGo release the gallery is built with; keep it in
+// step with the setup-tinygo version in .github/workflows/pages.yml.
+const tinygoVersion = "0.42.0"
+
+// tinygoBuildFlags are the TinyGo flags used for every browser demo: speed
+// optimization, no debug info. They appear both in the site build and in the
+// command shown on TinyGo demo pages.
+var tinygoBuildFlags = []string{"-target=wasm", "-opt=2", "-no-debug"}
+
+// RunLabel introduces the command shown on the demo page.
+func (d Demo) RunLabel() string {
+	if d.TinyGo() {
+		return "Build the browser version yourself with TinyGo " + tinygoVersion + " or newer:"
+	}
+	return "Run in your terminal:"
+}
+
+// RunCommand returns the command shown on the demo page. Go demos run
+// natively from their published module. TinyGo demos show the browser build
+// the gallery performs, since TinyGo has no pkg@version form and the GPU
+// shaders only run under TinyGo in the browser.
 func (d Demo) RunCommand() string {
+	if d.TinyGo() {
+		return "git clone https://github.com/NimbleMarkets/ntcharts && cd ntcharts\n" +
+			"GOWORK=$PWD/wasm.work tinygo build " + strings.Join(tinygoBuildFlags, " ") +
+			" -o app.wasm " + d.Source
+	}
 	source := strings.TrimPrefix(d.Source, "./examples/")
 	module := "github.com/NimbleMarkets/ntcharts/examples/v2/" + source
 	if source == "shaders" || strings.HasPrefix(source, "shaders/") {
