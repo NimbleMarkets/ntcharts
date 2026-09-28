@@ -22,11 +22,12 @@ tasks:
 ###############################################################################
 
   go-tidy:
-    desc: 'Go tidy all modules (root, examples, cmd, picture/chartpicture)'
+    desc: 'Go tidy all modules (root, examples, examples/shaders, cmd, picture/chartpicture)'
     run: once
     cmds:
       - go mod tidy
       - cd examples && go mod tidy
+      - cd examples/shaders && go mod tidy
       - cd cmd && go mod tidy
       - cd picture/chartpicture && go mod tidy
       - go work sync
@@ -42,6 +43,7 @@ tasks:
     cmds:
       - go get -u ./...
       - cd examples && go get -u ./...
+      - cd examples/shaders && go get -u ./...
       - cd cmd && go get -u ./...
       - cd picture/chartpicture && go get -u ./...
       - go work sync
@@ -51,6 +53,7 @@ tasks:
     cmds:
       - go test ./...
       - cd examples && go test ./...
+      - cd examples/shaders && go test ./...
       - cd cmd && go test ./...
       - cd picture/chartpicture && go test ./...
 
@@ -315,7 +318,7 @@ tasks:
   build-ex-shaders:
     desc: 'Build the GPU shader example'
     cmds:
-      - cd examples/shaders && GOWORK=off go build -o ../../bin/ntcharts-shaders .
+      - go build -o bin/ntcharts-shaders ./examples/shaders
     sources:
       - go.mod
       - go.sum

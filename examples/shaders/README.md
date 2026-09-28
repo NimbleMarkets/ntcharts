@@ -12,29 +12,37 @@ no account, downloads or external textures at runtime.
 
 ## Run
 
-From the repository root:
+No clone needed. This example is its own Go module, tagged with each ntcharts
+release, so Go can fetch and run it directly (from the v2.3.0 release onward):
+
+```sh
+go run github.com/NimbleMarkets/ntcharts/v2/examples/shaders@latest
+go run github.com/NimbleMarkets/ntcharts/v2/examples/shaders@latest -mosaic
+```
+
+From a checkout of the repository root:
 
 ```sh
 task shaders
 task shaders -- -fullscreen -slideshow=8s
 ```
 
-The task builds `bin/ntcharts-shaders` using the example's isolated module and
-passes flags after `--` to the viewer. `task build-ex-shaders` only builds it.
-
-This example has its **own Go module**. To run directly with Go:
+The task builds `bin/ntcharts-shaders` and passes flags after `--` to the
+viewer. `task build-ex-shaders` only builds it. Or run it directly with Go:
 
 ```sh
 cd examples/shaders
-GOWORK=off go run .
+go run .
 ```
 
-`GOWORK=off` keeps GPU dependencies isolated from the parent workspace. The
-module's local replacement points at the ntcharts checkout two directories up.
+Inside the checkout the Go workspace builds it against the working tree; the
+module's own `go.mod` pins a released ntcharts so it also builds on its own.
 The default example build includes this native example; the WASM site excludes it.
 It requires Go 1.26+ and a supported hardware GPU/driver. It uses gogpu/wgpu's
-native backends; macOS/Metal is verified. Linux and Windows behavior depends on
-the available GPU backend and has not been visually verified for this example.
+pure-Go backends (no cgo, no native library to install): Metal on macOS, Vulkan
+on Linux, Vulkan or DirectX 12 on Windows, with a CPU software fallback.
+macOS/Metal is verified; Linux and Windows have not been visually verified for
+this example.
 
 A Kitty-capable terminal (such as Ghostty) provides the full image via PNG; other
 terminals use glyph half-blocks. Under tmux, enable
@@ -42,22 +50,22 @@ terminals use glyph half-blocks. Under tmux, enable
 
 ```sh
 # A fullscreen slideshow for a demo or recording:
-GOWORK=off go run . -fullscreen -slideshow=8s
+go run . -fullscreen -slideshow=8s
 
 # Four shaders at once; browsing rotates which four are shown:
-GOWORK=off go run . -mosaic
+go run . -mosaic
 
 # Read the WGSL beside the image:
-GOWORK=off go run . -source
+go run . -source
 
 # More source detail:
-GOWORK=off go run . -preset=orbits -density=24
+go run . -preset=orbits -density=24
 
 # Capture all shaders on the GPU without a terminal:
-GOWORK=off go run . -snapshot=/tmp/shader-previews
+go run . -snapshot=/tmp/shader-previews
 
 # A bounded run with final statistics:
-GOWORK=off go run . -duration=10s -report=/tmp/shaders.json
+go run . -duration=10s -report=/tmp/shaders.json
 ```
 
 ## Controls
@@ -113,9 +121,9 @@ from this project's trippad work; the module has no dependency on trippad.
 Run from this directory:
 
 ```sh
-GOWORK=off go test ./...
-GOWORK=off go vet ./...
-GOWORK=off NTCHARTS_GPU_TEST=1 go test -run TestGPUAllPresets -v
+go test ./...
+go vet ./...
+NTCHARTS_GPU_TEST=1 go test -run TestGPUAllPresets -v
 ```
 
 The normal tests exercise frame scheduling, pause, resize/layout and slideshow
