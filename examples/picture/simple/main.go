@@ -43,7 +43,7 @@ type model struct {
 }
 
 func initialModel() (model, error) {
-	pic := picture.NewWithConfig(picture.Config{KittyID: kittyID})
+	pic := picture.NewWithConfig(picture.Config{KittyID: kittyID, KittyMedium: picture.KittyMediumSharedMemory})
 
 	img, _, err := image.Decode(bytes.NewReader(fujiPNG))
 	if err != nil {

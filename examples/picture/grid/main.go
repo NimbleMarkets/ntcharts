@@ -38,8 +38,9 @@ type model struct {
 
 func initialModel() model {
 	pic := picture.NewWithConfig(picture.Config{
-		KittyID: kittyID,
-		Fit:     picture.FitFill,
+		KittyMedium: picture.KittyMediumSharedMemory, // raw RGBA via shared memory where supported
+		KittyID:     kittyID,
+		Fit:         picture.FitFill,
 	})
 
 	m := model{

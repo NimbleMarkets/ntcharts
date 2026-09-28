@@ -64,7 +64,7 @@ type model struct {
 }
 
 func initialModel() model {
-	left := picture.NewWithConfig(picture.Config{KittyID: kittyIDLeft})
+	left := picture.NewWithConfig(picture.Config{KittyID: kittyIDLeft, KittyMedium: picture.KittyMediumSharedMemory})
 	right := pictureurl.NewWithConfig(pictureurl.Config{
 		KittyID:   kittyIDRight,
 		UserAgent: userAgent,

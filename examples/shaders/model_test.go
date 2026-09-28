@@ -344,3 +344,31 @@ func TestProgramOptionsSkipSignalsInBrowser(t *testing.T) {
 		t.Fatalf("native build should keep default signal handling, got %d options", len(opts))
 	}
 }
+
+func TestTransportStatsFollowFrameMetadata(t *testing.T) {
+	m, _ := testModel(t)
+	m.width, m.height = 80, 24
+	cases := []struct {
+		frame picture.KittyFrameMsg
+		want  string
+	}{
+		{picture.KittyFrameMsg{Medium: picture.KittyMediumSharedMemory, Format: picture.KittyFormatRGBA, APC: "ref"}, "shm"},
+		{picture.KittyFrameMsg{Medium: picture.KittyMediumDirect, Format: picture.KittyFormatPNG, APC: "png-bytes"}, "png"},
+		{picture.KittyFrameMsg{Medium: picture.KittyMediumDirect, Format: picture.KittyFormatRGBA, APC: "rgba-bytes"}, "rgba"},
+	}
+	for _, c := range cases {
+		m.Update(encodedMsg{frame: c.frame})
+		if m.transport != c.want {
+			t.Errorf("transport label = %q, want %q", m.transport, c.want)
+		}
+		if m.bytes != len(c.frame.APC) {
+			t.Errorf("bytes = %d, want the wire length %d", m.bytes, len(c.frame.APC))
+		}
+	}
+	if m.encodedFrames["shm"] != 1 || m.encodedFrames["png"] != 1 || m.encodedFrames["rgba"] != 1 {
+		t.Fatalf("encoded frame counts = %v, want one of each", m.encodedFrames)
+	}
+	if m.pic.KittyMedium() != picture.KittyMediumSharedMemory {
+		t.Fatal("the gallery model should request the shared-memory medium (direct is the automatic fallback)")
+	}
+}

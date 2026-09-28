@@ -56,6 +56,10 @@ func newModel(r frameRenderer, index, fps, density int, slideshow time.Duration)
 	return &model{encodedFrames: make(map[string]int), renderedPresets: make(map[string]int), renderer: r, selected: index, speed: 0.6, scale: p.scale, detail: p.detail, density: density, targetFPS: fps,
 		playing: true, dirty: true, slideshow: slideshow, slideshowInterval: slideshow, transport: "probing", pic: picture.NewWithConfig(picture.Config{
 			Fit: picture.FitFill, CellPixelWidth: 8, CellPixelHeight: 16,
+			// Hand frames over as raw RGBA through shared memory where the
+			// terminal supports it (booba 0.7.0 in the browser, local Kitty
+			// terminals natively); picture falls back to direct PNG otherwise.
+			KittyMedium: picture.KittyMediumSharedMemory,
 		})}
 }
 func (m *model) Init() tea.Cmd {
@@ -277,9 +281,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case encodedMsg:
 		m.encodeMS = smooth(m.encodeMS, float64(msg.elapsed)/float64(time.Millisecond))
 		if frame, ok := msg.frame.(picture.KittyFrameMsg); ok {
-			m.encodedFrames["png"]++
+			label := transportLabel(frame)
+			m.encodedFrames[label]++
 			m.bytes = len(frame.APC)
-			m.transport = "png"
+			m.transport = label
 		}
 		return m, tea.Sequence(m.pic.Update(msg.frame), func() tea.Msg { return presentedMsg{} })
 	case presentedMsg:
@@ -479,4 +484,16 @@ func formatBytes(n int) string {
 		return fmt.Sprintf("%.1f KiB", float64(n)/1024)
 	}
 	return fmt.Sprintf("%.2f MiB", float64(n)/(1024*1024))
+}
+
+// transportLabel names the transport a Kitty frame actually used: "shm" for
+// shared memory, otherwise the direct format that was sent.
+func transportLabel(frame picture.KittyFrameMsg) string {
+	if frame.Medium == picture.KittyMediumSharedMemory {
+		return "shm"
+	}
+	if frame.Format == picture.KittyFormatRGBA {
+		return "rgba"
+	}
+	return "png"
 }
