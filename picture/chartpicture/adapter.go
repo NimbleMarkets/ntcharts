@@ -7,9 +7,11 @@ import (
 )
 
 // BarChartOptionFromNT builds a charts.BarChartOption from an ntcharts
-// barchart.Model. It pulls the bar data via the new Data() accessor and
-// mirrors visual configuration (orientation, axis visibility) onto the
-// returned option.
+// barchart.Model. It pulls the bar data via the Data() accessor and mirrors
+// visual configuration (orientation, axis visibility, value range) onto the
+// returned option. Bars with more than one value are stacked, as the glyph
+// chart draws them, so positive segments diverge above the baseline and
+// negative segments below it.
 func BarChartOptionFromNT(bc *barchart.Model) charts.BarChartOption {
 	if bc == nil {
 		return charts.NewBarChartOptionWithSeries(nil)
@@ -25,6 +27,12 @@ func BarChartOptionFromNT(bc *barchart.Model) charts.BarChartOption {
 	opt := charts.NewBarChartOptionWithSeries(series)
 	opt.Horizontal = bc.Horizontal()
 	opt.CategoryAxis = charts.CategoryAxisOption{Labels: labels}
+	for _, b := range bd {
+		if len(b.Values) > 1 {
+			opt.StackSeries = charts.Ptr(true)
+			break
+		}
+	}
 
 	if !bc.ShowAxis() {
 		show := false
@@ -36,6 +44,12 @@ func BarChartOptionFromNT(bc *barchart.Model) charts.BarChartOption {
 			opt.ValueAxis = []charts.ValueAxisOption{{}}
 		}
 		opt.ValueAxis[0].Max = charts.Ptr(max)
+	}
+	if min := bc.MinValue(); min < 0 {
+		if len(opt.ValueAxis) == 0 {
+			opt.ValueAxis = []charts.ValueAxisOption{{}}
+		}
+		opt.ValueAxis[0].Min = charts.Ptr(min)
 	}
 	return opt
 }

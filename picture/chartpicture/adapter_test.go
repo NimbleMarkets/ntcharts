@@ -117,3 +117,41 @@ func equalFloats(a, b []float64) bool {
 	}
 	return true
 }
+
+func TestBarChartOptionFromNTForwardsMinAndMax(t *testing.T) {
+	bc := barchart.New(20, 10, barchart.WithNoAutoMaxValue(), barchart.WithMaxValue(50), barchart.WithMinValue(-20))
+	bc.Push(barchart.BarData{Label: "Q1", Values: []barchart.BarValue{{Name: "net", Value: -12}}})
+
+	opt := BarChartOptionFromNT(&bc)
+
+	if len(opt.ValueAxis) != 1 || opt.ValueAxis[0].Max == nil || *opt.ValueAxis[0].Max != 50 {
+		t.Fatalf("value axis max = %+v, want 50", opt.ValueAxis)
+	}
+	if opt.ValueAxis[0].Min == nil || *opt.ValueAxis[0].Min != -20 {
+		t.Fatalf("value axis min = %v, want -20 so zero sits where the glyph chart puts it", opt.ValueAxis[0].Min)
+	}
+
+	// Positive-only data keeps the axis minimum unset, as before.
+	pos := barchart.New(20, 10)
+	pos.Push(barchart.BarData{Label: "Q1", Values: []barchart.BarValue{{Name: "rev", Value: 10}}})
+	if opt := BarChartOptionFromNT(&pos); len(opt.ValueAxis) == 0 || opt.ValueAxis[0].Min != nil {
+		t.Fatalf("positive-only chart should leave Min unset, got %+v", opt.ValueAxis)
+	}
+}
+
+func TestBarChartOptionFromNTStacksMultiValueBars(t *testing.T) {
+	bc := barchart.New(20, 10)
+	bc.PushAll([]barchart.BarData{
+		{Label: "Q1", Values: []barchart.BarValue{{Name: "rev", Value: 100}, {Name: "cost", Value: -60}}},
+		{Label: "Q2", Values: []barchart.BarValue{{Name: "rev", Value: 150}, {Name: "cost", Value: -80}}},
+	})
+	if opt := BarChartOptionFromNT(&bc); opt.StackSeries == nil || !*opt.StackSeries {
+		t.Fatal("multi-value bars are stacked in the glyph chart; the image should stack them too")
+	}
+
+	single := barchart.New(20, 10)
+	single.Push(barchart.BarData{Label: "Q1", Values: []barchart.BarValue{{Name: "rev", Value: 100}}})
+	if opt := BarChartOptionFromNT(&single); opt.StackSeries != nil {
+		t.Fatal("single-value bars should not request stacking")
+	}
+}
