@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
-	tea "charm.land/bubbletea/v2"
+	booba "github.com/NimbleMarkets/go-booba"
 )
 
 func main() {
@@ -55,12 +55,20 @@ func run() error {
 	case *duration < 0:
 		return fmt.Errorf("-duration=%v: must not be negative", *duration)
 	}
-	gpu, err := newGPU()
-	if err != nil {
-		return fmt.Errorf("initialize GPU: %w", err)
+	gpu, gpuErr := newGPU()
+	if gpuErr != nil {
+		gpuErr = fmt.Errorf("initialize GPU: %w", gpuErr)
+		if !inBrowser {
+			return gpuErr
+		}
+		// In the gallery there is nothing to exit into; show the error instead.
+	} else {
+		defer gpu.Close()
 	}
-	defer gpu.Close()
 	if *snapshot != "" {
+		if gpuErr != nil {
+			return gpuErr
+		}
 		return snapshots(gpu, *snapshot)
 	}
 	m := newModel(gpu, index, *fps, *density, *slideshow)
@@ -68,7 +76,9 @@ func run() error {
 	m.mosaic = *mosaic
 	m.source = *source
 	m.duration = *duration
-	_, err = tea.NewProgram(m).Run()
+	m.err = gpuErr
+	// booba.Run dispatches to native Bubble Tea or the WASM bridge by build target.
+	err = booba.Run(m)
 	var reportErr error
 	if *report != "" {
 		data, marshalErr := json.MarshalIndent(struct {
@@ -80,7 +90,7 @@ func run() error {
 			EncodeMS      float64        `json:"encode_ms"`
 			Width         int            `json:"width"`
 			Height        int            `json:"height"`
-		}{gpu.name, m.encodedFrames, m.renderedPresets, m.fps, m.renderMS, m.encodeMS, m.rasterW, m.rasterH}, "", "  ")
+		}{gpuName(gpu), m.encodedFrames, m.renderedPresets, m.fps, m.renderMS, m.encodeMS, m.rasterW, m.rasterH}, "", "  ")
 		reportErr = marshalErr
 		if reportErr == nil {
 			reportErr = os.WriteFile(*report, append(data, '\n'), 0600)
@@ -122,4 +132,11 @@ func writePNG(path string, img image.Image) error {
 		return err
 	}
 	return errors.Join(png.Encode(f, img), f.Close())
+}
+
+func gpuName(g *gpuRenderer) string {
+	if g == nil {
+		return ""
+	}
+	return g.name
 }

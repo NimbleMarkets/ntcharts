@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
+	github.com/NimbleMarkets/go-booba v0.6.1-0.20260511134559-58814d532cc1
 	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260910203606-6c9e17dc7a16
 	github.com/charmbracelet/x/ansi v0.11.8

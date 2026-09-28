@@ -9,6 +9,7 @@ use (
 	.
 	./cmd
 	./examples
+	./examples/shaders
 	./picture/chartpicture
 )
 

@@ -105,3 +105,9 @@ groups:
         title: Heat Picture (Perlin)
         blurb: High-resolution Perlin-noise heatmap rendered through picture.Model — Kitty graphics protocol where supported (per-pixel sampling, smooth gradients, no cell quantization), Glyph half-blocks otherwise. Press <kbd>t</kbd> to toggle modes, <kbd>F</kbd> to cycle sampling factor.
         source: ./examples/heatpicture/perlin
+  - title: Shaders
+    demos:
+      - name: shaders
+        title: GPU Shaders
+        blurb: Six animated WGSL compute shaders run on the GPU through the browser's WebGPU and shown through picture.Model — Kitty graphics where supported, Glyph fallback otherwise. Press <kbd>m</kbd> for a 2×2 mosaic and <kbd>s</kbd> for the highlighted source.
+        source: ./examples/shaders

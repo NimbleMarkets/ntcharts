@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"image"
 	"strings"
 	"testing"
@@ -309,5 +310,24 @@ func TestSourceLinesBodyThenPrelude(t *testing.T) {
 		if strings.Contains(l, "SHADER_BODY") {
 			t.Fatal("placeholder marker leaked into the prelude")
 		}
+	}
+}
+
+func TestGPUErrorIsShownInsteadOfBlankScreen(t *testing.T) {
+	m, r := testModel(t)
+	m.width, m.height = 80, 24
+	m.err = errors.New("WebGPU is not available in this browser")
+	if m.render() != nil {
+		t.Fatal("render scheduled GPU work after a GPU error")
+	}
+	if !strings.Contains(m.View().Content, "WebGPU is not available") {
+		t.Fatalf("view does not show the GPU error:\n%s", m.View().Content)
+	}
+	if len(r.requests) != 0 {
+		t.Fatal("renderer was called despite the error")
+	}
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
+	if cmd == nil {
+		t.Fatal("q should still quit")
 	}
 }

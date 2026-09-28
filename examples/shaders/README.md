@@ -37,7 +37,9 @@ go run .
 
 Inside the checkout the Go workspace builds it against the working tree; the
 module's own `go.mod` pins a released ntcharts so it also builds on its own.
-The default example build includes this native example; the WASM site excludes it.
+The default example build includes this native example, and it is also in the
+[live gallery](https://nimblemarkets.github.io/ntcharts/), where it runs on the
+browser's WebGPU (Chrome, Edge, or Safari 26+).
 It requires Go 1.26+ and a supported hardware GPU/driver. It uses gogpu/wgpu's
 pure-Go backends (no cgo, no native library to install): Metal on macOS, Vulkan
 on Linux, Vulkan or DirectX 12 on Windows, with a CPU software fallback.

@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogpu/gputypes"
 	"github.com/gogpu/wgpu"
-	_ "github.com/gogpu/wgpu/hal/allbackends"
 )
 
 type renderRequest struct {

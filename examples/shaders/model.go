@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"runtime"
 	"strings"
 	"time"
 
@@ -13,6 +14,10 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 )
+
+// inBrowser is true for the WASM gallery build, where there is no process
+// to exit into: errors are shown in the terminal instead of quitting.
+var inBrowser = runtime.GOOS == "js"
 
 type tickMsg struct{ generation uint64 }
 type slideMsg struct{ generation uint64 }
@@ -248,6 +253,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 			m.busy = false
+			if inBrowser {
+				return m, nil
+			}
 			return m, tea.Quit
 		}
 		if msg.epoch != m.epoch {
@@ -395,6 +403,15 @@ var muted = lipgloss.NewStyle().Foreground(lipgloss.Color("#8b91aa"))
 func (m *model) View() tea.View {
 	if m.width < 1 || m.height < 1 {
 		return tea.NewView("Starting GPU shader gallery…")
+	}
+	if m.err != nil {
+		text := accent.Render("NTCHARTS / SHADERS") + "\n\n" +
+			"GPU unavailable: " + m.err.Error() + "\n\n" +
+			muted.Render("This demo needs WebGPU (Chrome, Edge, or Safari 26+) or a native GPU driver.") + "\n" +
+			muted.Render("q quit")
+		view := tea.NewView(lipgloss.NewStyle().Width(m.width).Render(text))
+		view.AltScreen = true
+		return view
 	}
 	imageView := m.pic.String()
 	if imageView == "" {
