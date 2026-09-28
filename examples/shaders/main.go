@@ -78,7 +78,7 @@ func run() error {
 	m.duration = *duration
 	m.err = gpuErr
 	// booba.Run dispatches to native Bubble Tea or the WASM bridge by build target.
-	err = booba.Run(m)
+	err = booba.Run(m, programOptions()...)
 	var reportErr error
 	if *report != "" {
 		data, marshalErr := json.MarshalIndent(struct {

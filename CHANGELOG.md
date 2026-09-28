@@ -3,6 +3,7 @@
 ## v2.4.0 (unreleased)
 
  * fix(chartpicture): `BarChartOptionFromNT` now forwards the bar chart's minimum to the image value axis and stacks multi-value bars, so the go-analyze image matches the glyph chart, including negative segments below the baseline. **Behavior change:** multi-value bars were previously drawn grouped side by side in the image.
+ * fix(shaders): the browser build passes `tea.WithoutSignalHandler()`, since TinyGo 0.42.0's `os/signal` loop spins without yielding and hung the TinyGo gallery demo. Signals are meaningless in a browser, so the Go build is unaffected.
  * chore(deps): update to [go-booba v0.7.0](https://github.com/NimbleMarkets/go-booba) (GPU terminal renderers, browser Kitty shared-memory images, faster input echo), bubbletea v2.0.10, and the matching bubbletea WASM fork. **ntcharts now requires Go 1.26.8+.**
  * feat(wasm-build): demos can set `toolchain: tinygo` in `web/demos.yaml` to be compiled with TinyGo (`-opt=2 -no-debug`) and served with TinyGo's `wasm_exec.js`. The gallery gains "GPU Shaders (TinyGo)", the same source at about a third of the wasm size. Building the site now needs TinyGo 0.42.0+, or `-skip-tinygo`.
  * feat(shaders): the shaders example joins the live WASM gallery, running its WGSL compute shaders on the browser's WebGPU. Browsers without WebGPU see an explanatory message instead of a blank terminal.

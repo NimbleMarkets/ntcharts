@@ -331,3 +331,16 @@ func TestGPUErrorIsShownInsteadOfBlankScreen(t *testing.T) {
 		t.Fatal("q should still quit")
 	}
 }
+
+func TestProgramOptionsSkipSignalsInBrowser(t *testing.T) {
+	// In a browser there are no POSIX signals, and TinyGo 0.42.0's os/signal
+	// loop spins without yielding, which hangs the page. Native builds keep
+	// Bubble Tea's default SIGINT/SIGTERM handling.
+	opts := programOptions()
+	if inBrowser && len(opts) != 1 {
+		t.Fatalf("browser build should pass exactly WithoutSignalHandler, got %d options", len(opts))
+	}
+	if !inBrowser && len(opts) != 0 {
+		t.Fatalf("native build should keep default signal handling, got %d options", len(opts))
+	}
+}
