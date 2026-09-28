@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io"
 	"os"
 	"strings"
@@ -24,6 +25,10 @@ type Demo struct {
 	Blurb  string `yaml:"blurb"`
 	Source string `yaml:"source"`
 }
+
+// BlurbHTML returns the blurb as trusted HTML. Blurbs are authored in the
+// repository's own manifest and may use inline markup such as <kbd>.
+func (d Demo) BlurbHTML() template.HTML { return template.HTML(d.Blurb) }
 
 func loadManifest(r io.Reader) (*Manifest, error) {
 	var m Manifest

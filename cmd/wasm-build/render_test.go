@@ -15,7 +15,7 @@ func TestRenderProducesAllPages(t *testing.T) {
 			{Name: "quickstart", Title: "Quickstart", Blurb: "x", Source: "./examples/quickstart"},
 		}},
 		{Title: "Heatmap", Demos: []Demo{
-			{Name: "heatmap-perlin", Title: "Heatmap (Perlin)", Blurb: "y", Source: "./examples/heatmap/perlin"},
+			{Name: "heatmap-perlin", Title: "Heatmap (Perlin)", Blurb: "Press <kbd>F</kbd> to cycle", Source: "./examples/heatmap/perlin"},
 		}},
 	}}
 
@@ -34,6 +34,12 @@ func TestRenderProducesAllPages(t *testing.T) {
 
 	mustContain(t, filepath.Join(out, "demos", "heatmap-perlin", "index.html"),
 		"Heatmap (Perlin)", "sidebar-link-active")
+
+	// Blurbs are authored in the manifest and may carry inline HTML such as
+	// <kbd>; they must reach the page unescaped, on the landing page and the
+	// demo page alike.
+	mustContain(t, filepath.Join(out, "index.html"), "Press <kbd>F</kbd> to cycle")
+	mustContain(t, filepath.Join(out, "demos", "heatmap-perlin", "index.html"), "Press <kbd>F</kbd> to cycle")
 }
 
 func mustContain(t *testing.T, path string, needles ...string) {
