@@ -13,11 +13,11 @@ no account, downloads or external textures at runtime.
 ## Run
 
 No clone needed. This example is its own Go module, tagged with each ntcharts
-release, so Go can fetch and run it directly (from the v2.3.0 release onward):
+release, so Go can fetch and run it directly (starting with the v2.4.0 release):
 
 ```sh
-go run github.com/NimbleMarkets/ntcharts/v2/examples/shaders@latest
-go run github.com/NimbleMarkets/ntcharts/v2/examples/shaders@latest -mosaic
+go run github.com/NimbleMarkets/ntcharts/examples/shaders/v2@latest
+go run github.com/NimbleMarkets/ntcharts/examples/shaders/v2@latest -mosaic
 ```
 
 From a checkout of the repository root:

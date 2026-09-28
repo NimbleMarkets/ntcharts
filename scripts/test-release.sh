@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Exercise release/tidy/CI behavior with tiny modules and real Git tags.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+export PATH="$(go env GOROOT)/bin:$PATH"
+GO_VERSION=$(go env GOVERSION)
+GO_VERSION=${GO_VERSION#go}
+SCRATCH=$(mktemp -d "${TMPDIR:-/tmp}/ntcharts-release-test.XXXXXX")
+SCRATCH=$(cd "$SCRATCH" && pwd -P)
+trap 'chmod -R u+w "$SCRATCH"; rm -rf "$SCRATCH"' EXIT
+REPO="$SCRATCH/repo"
+MODULE=github.com/NimbleMarkets/ntcharts
+mkdir -p "$REPO/scripts" "$REPO/picture/chartpicture" "$REPO/examples/quickstart" "$REPO/examples/shaders" "$REPO/cmd"
+cp scripts/{release,check-release,tidy}.sh "$REPO/scripts/"
+cp Taskfile.yml "$REPO/"
+cd "$REPO"
+export GOWORK="$REPO/go.work"
+git init -q
+git config user.name 'Release regression test'
+git config user.email release-test@example.invalid
+git config commit.gpgsign false
+git config tag.gpgsign false
+git config core.hooksPath /dev/null
+printf '# Changelog\n\n## v2.4.0 (unreleased)\n' > CHANGELOG.md
+printf 'module %s/v2\n\ngo %s\n' "$MODULE" "$GO_VERSION" > go.mod
+printf 'package ntcharts\nconst Name = "ntcharts"\n' > charts.go
+for dir in picture/chartpicture examples examples/shaders cmd; do
+	printf 'module %s/%s/v2\n\ngo %s\n\nrequire %s/v2 v2.4.0\n' \
+		"$MODULE" "$dir" "$GO_VERSION" "$MODULE" > "$dir/go.mod"
+	: > "$dir/go.sum"
+done
+printf '\nrequire %s/picture/chartpicture/v2 v2.4.0\n' "$MODULE" >> examples/go.mod
+printf 'package chartpicture\nimport "%s/v2"\nconst Name = ntcharts.Name\n' "$MODULE" > picture/chartpicture/chart.go
+printf 'package main\nimport ("fmt"; "%s/v2"; "%s/picture/chartpicture/v2")\nfunc main() { fmt.Println(ntcharts.Name, chartpicture.Name) }\n' \
+	"$MODULE" "$MODULE" > examples/quickstart/main.go
+for dir in examples/shaders cmd; do
+	printf 'package main\nimport ("fmt"; "%s/v2")\nfunc main() { fmt.Println(ntcharts.Name) }\n' "$MODULE" > "$dir/main.go"
+done
+: > go.sum
+cat > go.work <<EOF
+go $GO_VERSION
+use (
+ .
+ ./picture/chartpicture
+ ./examples
+ ./examples/shaders
+ ./cmd
+)
+replace $MODULE/v2 v2.4.0 => .
+replace $MODULE/picture/chartpicture/v2 v2.4.0 => ./picture/chartpicture
+EOF
+cp go.work wasm.work
+git add -A
+git commit -qm 'Initial fixture'
+
+check() {
+	local log=$1
+	shift
+	if ! "$@" > "$SCRATCH/$log" 2>&1; then
+		cat "$SCRATCH/$log" >&2
+		return 1
+	fi
+}
+check release.log ./scripts/release.sh v2.4.0
+for dir in picture/chartpicture examples examples/shaders cmd; do
+	[[ $(grep -c "^$MODULE/v2 v2.4.0" "$dir/go.sum") == 2 ]]
+	cp "$dir/go.sum" "$SCRATCH/${dir//\//_}.sum"
+done
+[[ $(grep -c "^$MODULE/picture/chartpicture/v2 v2.4.0" examples/go.sum) == 2 ]]
+HEAD_COMMIT=$(git rev-parse HEAD)
+for prefix in '' picture/chartpicture/ examples/ examples/shaders/; do
+	[[ $(git rev-parse "${prefix}v2.4.0") == "$HEAD_COMMIT" ]]
+done
+# Fetch the actual final tags with a new cache: preparation must not have
+# recorded hashes for intermediate module contents.
+check published.log ./scripts/check-release.sh v2.4.0
+echo 'PASS: final release tags contain valid sibling hashes and standalone modules'
+
+printf '# Changelog\n\n## v2.5.0 (unreleased)\n\n## v2.4.0 (released)\n' > CHANGELOG.md
+check tidy.log ./scripts/tidy.sh
+for dir in picture/chartpicture examples examples/shaders cmd; do
+	cmp "$dir/go.sum" "$SCRATCH/${dir//\//_}.sum"
+done
+git add CHANGELOG.md
+git commit -qm 'Open v2.5.0, keep dependencies pinned to v2.4.0'
+check next.log ./scripts/check-release.sh
+echo 'PASS: tidy retains published sums; next changelog version resolves previous tags'
+
+# A check must fail on missing historical sums, not silently repair them.
+awk -v prefix="$MODULE/" 'index($1, prefix) != 1' examples/go.sum > "$SCRATCH/missing.sum"
+cp "$SCRATCH/missing.sum" examples/go.sum
+if ./scripts/check-release.sh > "$SCRATCH/missing.log" 2>&1; then
+	echo 'FAIL: missing historical checksums were not rejected' >&2
+	exit 1
+fi
+grep -q 'missing go.sum entry' "$SCRATCH/missing.log"
+cp "$SCRATCH/examples.sum" examples/go.sum
+echo 'PASS: readonly checks reject missing historical checksums'
+
+git clone --quiet --depth=1 --no-tags "file://$REPO" "$SCRATCH/ci"
+cd "$SCRATCH/ci"
+export GOWORK="$SCRATCH/ci/go.work"
+if ./scripts/check-release.sh > "$SCRATCH/shallow.log" 2>&1; then
+	echo 'FAIL: tag-less fixture unexpectedly resolved the previous release' >&2
+	exit 1
+fi
+grep -Eq 'unknown revision|invalid version' "$SCRATCH/shallow.log"
+git fetch --quiet --unshallow --tags origin
+check complete.log ./scripts/check-release.sh
+echo 'PASS: full history and tags fix the CI checkout regression'

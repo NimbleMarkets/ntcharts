@@ -134,6 +134,17 @@ h1, h2, h3 {
   font-size: 14px;
 }
 
+.demo-run { margin-bottom: 24px; }
+.demo-run p { margin: 0 0 8px; color: var(--fg-muted); }
+.demo-run pre {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .terminal-frame {
   background: #000;
   border: 1px solid var(--accent);

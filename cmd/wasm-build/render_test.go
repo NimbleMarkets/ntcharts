@@ -44,6 +44,12 @@ func TestRenderProducesAllPages(t *testing.T) {
 	mustContain(t, filepath.Join(out, "index.html"), "Press <kbd>F</kbd> to cycle")
 	mustContain(t, filepath.Join(out, "demos", "heatmap-perlin", "index.html"), "Press <kbd>F</kbd> to cycle")
 
+	// Native commands use the module owning the source, even for TinyGo demos.
+	mustContain(t, filepath.Join(out, "demos", "quickstart", "index.html"),
+		"go run github.com/NimbleMarkets/ntcharts/examples/v2/quickstart@latest")
+	mustContain(t, filepath.Join(out, "demos", "shaders-tinygo", "index.html"),
+		"go run github.com/NimbleMarkets/ntcharts/examples/shaders/v2@latest")
+
 	// Each page loads the wasm_exec shim matching its toolchain.
 	mustContain(t, filepath.Join(out, "demos", "quickstart", "index.html"), `src="/ntcharts/_assets/wasm_exec.js"`)
 	mustContain(t, filepath.Join(out, "demos", "shaders-tinygo", "index.html"), `src="/ntcharts/_assets/wasm_exec_tinygo.js"`)

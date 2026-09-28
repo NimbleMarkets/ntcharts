@@ -88,6 +88,24 @@ Please note that the `v2` designation is for BubbleTea API compatibility.  Despi
 
 See the [`examples` folder](./examples/README.md) for code samples and visuals of each type.
 
+The optional chartpicture integration is a separate module, so core users do not
+inherit its chart-rendering dependencies. Starting with v2.4.0, use:
+
+```sh
+go get github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2@latest
+```
+
+```go
+import "github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2"
+```
+
+If you used chartpicture from v2.2.0 or earlier, update its old
+`github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture` import to the path above.
+Other library imports are unchanged. Examples and GPU shaders also have separate
+modules to keep their dependencies out of the core library.
+
+For local development and coordinated releases, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 #### Canvas
 
 ```go

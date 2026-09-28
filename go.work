@@ -7,3 +7,8 @@ use (
 	./examples/shaders
 	./picture/chartpicture
 )
+
+replace github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.4.0 => ./picture/chartpicture
+
+// Resolve dependency graphs locally even before these versions are published.
+replace github.com/NimbleMarkets/ntcharts/v2 v2.4.0 => .

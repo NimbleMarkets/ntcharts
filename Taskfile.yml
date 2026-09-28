@@ -25,12 +25,12 @@ tasks:
     desc: 'Go tidy all modules (root, examples, examples/shaders, cmd, picture/chartpicture)'
     run: once
     cmds:
-      - go mod tidy
-      - cd examples && go mod tidy
-      - cd examples/shaders && go mod tidy
-      - cd cmd && go mod tidy
-      - cd picture/chartpicture && go mod tidy
-      - go work sync
+      - ./scripts/tidy.sh
+
+  check-release:
+    desc: 'Verify consumer downloads and builds using temporary local tags (no publish)'
+    cmds:
+      - ./scripts/check-release.sh {{.VERSION}}
 
   release:
     desc: 'Cut a release: bump nested modules, date the changelog, commit, and tag (task release VERSION=v2.X.Y)'

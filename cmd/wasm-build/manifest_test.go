@@ -184,3 +184,21 @@ func TestWithoutTinyGoDropsThoseDemos(t *testing.T) {
 		t.Fatal("WithoutTinyGo must not modify the receiver")
 	}
 }
+
+func TestDemoRunCommand(t *testing.T) {
+	for _, tc := range []struct {
+		source, toolchain, want string
+	}{
+		{"./examples/barchart/vertical", "", "github.com/NimbleMarkets/ntcharts/examples/v2/barchart/vertical"},
+		{"./examples/shaders", "", "github.com/NimbleMarkets/ntcharts/examples/shaders/v2"},
+		{"./examples/shaders", "tinygo", "github.com/NimbleMarkets/ntcharts/examples/shaders/v2"},
+		{"./examples/shaders-extra", "", "github.com/NimbleMarkets/ntcharts/examples/v2/shaders-extra"},
+	} {
+		t.Run(tc.source+tc.toolchain, func(t *testing.T) {
+			d := Demo{Source: tc.source, Toolchain: tc.toolchain}
+			if got, want := d.RunCommand(), "go run "+tc.want+"@latest"; got != want {
+				t.Fatalf("RunCommand = %q, want %q", got, want)
+			}
+		})
+	}
+}

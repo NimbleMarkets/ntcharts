@@ -1,4 +1,4 @@
-module github.com/NimbleMarkets/ntcharts/v2/examples
+module github.com/NimbleMarkets/ntcharts/examples/v2
 
 go 1.26.8
 
@@ -7,8 +7,8 @@ require (
 	charm.land/bubbletea/v2 v2.0.10
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/NimbleMarkets/go-booba v0.7.0
-	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
-	github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture v0.3.0
+	github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.4.0
+	github.com/NimbleMarkets/ntcharts/v2 v2.4.0
 	github.com/aquilax/go-perlin v1.1.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260928045949-bbf040aedf25
 	github.com/go-analyze/charts v0.6.1
@@ -38,7 +38,3 @@ require (
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 )
-
-replace github.com/NimbleMarkets/ntcharts/v2 => ..
-
-replace github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture => ../picture/chartpicture

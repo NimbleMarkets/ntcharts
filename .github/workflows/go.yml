@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -28,3 +31,9 @@ jobs:
 
       - name: Build the project
         run: task build
+
+      - name: Verify module publishing and consumer builds
+        run: task check-release
+
+      - name: Test release workflow regressions
+        run: ./scripts/test-release.sh

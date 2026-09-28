@@ -1,5 +1,15 @@
 # Examples
 
+Starting with the v2.4.0 release, run examples without cloning the repository:
+
+```sh
+go run github.com/NimbleMarkets/ntcharts/examples/v2/quickstart@latest
+go run github.com/NimbleMarkets/ntcharts/examples/v2/barchart/vertical@latest
+```
+
+Use `@v2.4.0` instead of `@latest` to select that release. GPU shaders have their
+own module: `go run github.com/NimbleMarkets/ntcharts/examples/shaders/v2@latest`.
+
 When you run `task`, all of the examples are built into the the `bin` directory of `ntcharts`.  So run any example below like so: `./bin/ntcharts-quickstart`.
 
 These [examples are live](https://nimblemarkets.github.io/) at https://nimblemarkets.github.io/ntcharts/.  They were compiled to WASM and embedded in HTML using [`NimbleMarkets/go-booba`](https://github.com/NimbleMarkets/go-booba).

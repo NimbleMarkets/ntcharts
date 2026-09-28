@@ -32,6 +32,17 @@ type Demo struct {
 // repository's own manifest and may use inline markup such as <kbd>.
 func (d Demo) BlurbHTML() template.HTML { return template.HTML(d.Blurb) }
 
+// RunCommand returns the native command for the module owning this demo.
+// Shaders is a separate module, including when shown as a TinyGo demo.
+func (d Demo) RunCommand() string {
+	source := strings.TrimPrefix(d.Source, "./examples/")
+	module := "github.com/NimbleMarkets/ntcharts/examples/v2/" + source
+	if source == "shaders" || strings.HasPrefix(source, "shaders/") {
+		module = "github.com/NimbleMarkets/ntcharts/examples/shaders/v2" + strings.TrimPrefix(source, "shaders")
+	}
+	return "go run " + module + "@latest"
+}
+
 // TinyGo reports whether the demo is compiled with TinyGo.
 func (d Demo) TinyGo() bool { return d.Toolchain == "tinygo" }
 

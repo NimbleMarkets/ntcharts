@@ -18,8 +18,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	booba "github.com/NimbleMarkets/go-booba"
+	"github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2"
 	"github.com/NimbleMarkets/ntcharts/v2/picture"
-	"github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture"
 	"github.com/go-analyze/charts"
 )
 

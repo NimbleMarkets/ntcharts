@@ -1,10 +1,10 @@
-module github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture
+module github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2
 
 go 1.26.8
 
 require (
 	charm.land/bubbletea/v2 v2.0.10
-	github.com/NimbleMarkets/ntcharts/v2 v2.3.0
+	github.com/NimbleMarkets/ntcharts/v2 v2.4.0
 	github.com/go-analyze/charts v0.6.1
 )
 
@@ -34,5 +34,3 @@ require (
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 )
-
-replace github.com/NimbleMarkets/ntcharts/v2 => ../..
