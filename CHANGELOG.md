@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.4.0 (unreleased)
+## v2.4.0 (2026-09-28)
 
  * **Import migration:** the optional chartpicture module is now `github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2`. Update imports from `github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture` and run `go get github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2@v2.4.0`. The old path was a valid package in the root module through v2.2.0; splitting it into a nested module in v2.3.0 broke remote resolution. Core library import paths are unchanged.
  * chore(release): the root, chartpicture, examples, and shaders modules now share the same release version, with directory-prefixed tags for nested modules. Local development uses workspaces; published modules have no local replacements. Tidy preserves released sibling checksums, and releases generate new hashes in dependency order before tagging. `task check-release` verifies standalone builds with readonly module files, vendoring, checksums, dependency isolation, and demo installation using temporary Git tags before anything is published. CI fetches full history and tags so a new unreleased changelog section can still resolve older pinned modules.
