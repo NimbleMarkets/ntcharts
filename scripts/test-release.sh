@@ -10,6 +10,13 @@ SCRATCH=$(cd "$SCRATCH" && pwd -P)
 trap 'chmod -R u+w "$SCRATCH"; rm -rf "$SCRATCH"' EXIT
 REPO="$SCRATCH/repo"
 MODULE=github.com/NimbleMarkets/ntcharts
+# Fixture versions must never exist for real: go work sync reads the original
+# version's go.mod from the module cache or proxy even when a workspace
+# replaces it by directory, and verifies it against any go.sum entry present.
+# A real tag with the fixture's number would make that check compare fake
+# content against the published release.
+RELEASE=v2.999.0
+NEXT=v2.999.1
 mkdir -p "$REPO/scripts" "$REPO/picture/chartpicture" "$REPO/examples/quickstart" "$REPO/examples/shaders" "$REPO/cmd"
 cp scripts/{release,check-release,tidy}.sh scripts/sortsum.go "$REPO/scripts/"
 cp Taskfile.yml "$REPO/"
@@ -21,15 +28,15 @@ git config user.email release-test@example.invalid
 git config commit.gpgsign false
 git config tag.gpgsign false
 git config core.hooksPath /dev/null
-printf '# Changelog\n\n## v2.4.0 (unreleased)\n' > CHANGELOG.md
+printf '# Changelog\n\n## %s (unreleased)\n' "$RELEASE" > CHANGELOG.md
 printf 'module %s/v2\n\ngo %s\n' "$MODULE" "$GO_VERSION" > go.mod
 printf 'package ntcharts\nconst Name = "ntcharts"\n' > charts.go
 for dir in picture/chartpicture examples examples/shaders cmd; do
-	printf 'module %s/%s/v2\n\ngo %s\n\nrequire %s/v2 v2.4.0\n' \
-		"$MODULE" "$dir" "$GO_VERSION" "$MODULE" > "$dir/go.mod"
+	printf 'module %s/%s/v2\n\ngo %s\n\nrequire %s/v2 %s\n' \
+		"$MODULE" "$dir" "$GO_VERSION" "$MODULE" "$RELEASE" > "$dir/go.mod"
 	: > "$dir/go.sum"
 done
-printf '\nrequire %s/picture/chartpicture/v2 v2.4.0\n' "$MODULE" >> examples/go.mod
+printf '\nrequire %s/picture/chartpicture/v2 %s\n' "$MODULE" "$RELEASE" >> examples/go.mod
 printf 'package chartpicture\nimport "%s/v2"\nconst Name = ntcharts.Name\n' "$MODULE" > picture/chartpicture/chart.go
 printf 'package main\nimport ("fmt"; "%s/v2"; "%s/picture/chartpicture/v2")\nfunc main() { fmt.Println(ntcharts.Name, chartpicture.Name) }\n' \
 	"$MODULE" "$MODULE" > examples/quickstart/main.go
@@ -46,8 +53,8 @@ use (
  ./examples/shaders
  ./cmd
 )
-replace $MODULE/v2 v2.4.0 => .
-replace $MODULE/picture/chartpicture/v2 v2.4.0 => ./picture/chartpicture
+replace $MODULE/v2 $RELEASE => .
+replace $MODULE/picture/chartpicture/v2 $RELEASE => ./picture/chartpicture
 EOF
 cp go.work wasm.work
 git add -A
@@ -90,28 +97,28 @@ check() {
 		return 1
 	fi
 }
-check release.log ./scripts/release.sh v2.4.0
+check release.log ./scripts/release.sh $RELEASE
 for dir in picture/chartpicture examples examples/shaders cmd; do
-	[[ $(grep -c "^$MODULE/v2 v2.4.0" "$dir/go.sum") == 2 ]]
+	[[ $(grep -c "^$MODULE/v2 $RELEASE" "$dir/go.sum") == 2 ]]
 	cp "$dir/go.sum" "$SCRATCH/${dir//\//_}.sum"
 done
-[[ $(grep -c "^$MODULE/picture/chartpicture/v2 v2.4.0" examples/go.sum) == 2 ]]
+[[ $(grep -c "^$MODULE/picture/chartpicture/v2 $RELEASE" examples/go.sum) == 2 ]]
 HEAD_COMMIT=$(git rev-parse HEAD)
 for prefix in '' picture/chartpicture/ examples/ examples/shaders/; do
-	[[ $(git rev-parse "${prefix}v2.4.0") == "$HEAD_COMMIT" ]]
+	[[ $(git rev-parse "${prefix}$RELEASE") == "$HEAD_COMMIT" ]]
 done
 # Fetch the actual final tags with a new cache: preparation must not have
 # recorded hashes for intermediate module contents.
-check published.log ./scripts/check-release.sh v2.4.0
+check published.log ./scripts/check-release.sh $RELEASE
 echo 'PASS: final release tags contain valid sibling hashes and standalone modules'
 
-printf '# Changelog\n\n## v2.5.0 (unreleased)\n\n## v2.4.0 (released)\n' > CHANGELOG.md
+printf '# Changelog\n\n## %s (unreleased)\n\n## %s (released)\n' "$NEXT" "$RELEASE" > CHANGELOG.md
 check tidy.log ./scripts/tidy.sh
 for dir in picture/chartpicture examples examples/shaders cmd; do
 	cmp "$dir/go.sum" "$SCRATCH/${dir//\//_}.sum"
 done
 git add CHANGELOG.md
-git commit -qm 'Open v2.5.0, keep dependencies pinned to v2.4.0'
+git commit -qm "Open $NEXT, keep dependencies pinned to $RELEASE"
 check next.log ./scripts/check-release.sh
 echo 'PASS: tidy retains published sums; next changelog version resolves previous tags'
 
