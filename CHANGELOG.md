@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.4.1 (unreleased)
+
+ * fix(wasm-build): build TinyGo demos with `-gc=boehm`, fixing the slow "GPU Shaders (TinyGo)" gallery demo.
+
 ## v2.4.0 (2026-09-28)
 
  * **Import migration:** the optional chartpicture module is now `github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2`. Update imports from `github.com/NimbleMarkets/ntcharts/v2/picture/chartpicture` and run `go get github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2@v2.4.0`. The old path was a valid package in the root module through v2.2.0; splitting it into a nested module in v2.3.0 broke remote resolution. Core library import paths are unchanged.

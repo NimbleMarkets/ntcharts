@@ -37,9 +37,10 @@ func (d Demo) BlurbHTML() template.HTML { return template.HTML(d.Blurb) }
 const tinygoVersion = "0.42.0"
 
 // tinygoBuildFlags are the TinyGo flags used for every browser demo: speed
-// optimization, no debug info. They appear both in the site build and in the
-// command shown on TinyGo demo pages.
-var tinygoBuildFlags = []string{"-target=wasm", "-opt=2", "-no-debug"}
+// optimization, no debug info, and the Boehm collector, since TinyGo 0.42.0's
+// default collector stalls the page. They appear both in the site build and
+// in the command shown on TinyGo demo pages.
+var tinygoBuildFlags = []string{"-target=wasm", "-opt=2", "-no-debug", "-gc=boehm"}
 
 // RunLabel introduces the command shown on the demo page.
 func (d Demo) RunLabel() string {

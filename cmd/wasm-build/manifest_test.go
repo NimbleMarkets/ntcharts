@@ -207,7 +207,7 @@ func TestTinyGoDemoRunCommandBuildsTheBrowserWasm(t *testing.T) {
 	cmd := d.RunCommand()
 	for _, want := range []string{
 		"git clone https://github.com/NimbleMarkets/ntcharts",
-		"GOWORK=$PWD/wasm.work tinygo build -target=wasm -opt=2 -no-debug -o app.wasm ./examples/shaders",
+		"GOWORK=$PWD/wasm.work tinygo build -target=wasm -opt=2 -no-debug -gc=boehm -o app.wasm ./examples/shaders",
 	} {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("tinygo RunCommand lacks %q:\n%s", want, cmd)

@@ -17,6 +17,7 @@ func TestBuildCommandPerToolchain(t *testing.T) {
 	joined := strings.Join(args, " ")
 	if name != "/opt/tinygo/bin/tinygo" || !strings.HasPrefix(joined, "build -target=wasm") ||
 		!strings.Contains(joined, "-opt=2") || !strings.Contains(joined, "-no-debug") ||
+		!strings.Contains(joined, "-gc=boehm") ||
 		!strings.HasSuffix(joined, "-o web/demos/shaders-tinygo/app.wasm ./examples/shaders") {
 		t.Errorf("tinygo: %s %v", name, args)
 	}
