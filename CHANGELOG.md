@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.5.0 (unreleased)
+## v2.5.0 (2026-09-30)
 
  * fix(wasm-build): build TinyGo demos with `-gc=boehm`, fixing the slow "GPU Shaders (TinyGo)" gallery demo.
  * feat(spec): Add `spec` package for surface-agnostic chart specifications: a JSON-marshalable `spec.Spec` (type, axes, format directives, series, heat data, OHLC points, options, theme) that `spec.Build` renders to a bar, line, timeseries, scatter, heatmap, sparkline, or candlestick (OHLC) model. `Validate` catches structural mistakes up front. See `spec/README.md` for the schema and the per-surface fidelity matrix.
