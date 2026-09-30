@@ -158,7 +158,7 @@ clamps to zero because the native bar model always retains a zero baseline.
 spec/
 ├── spec.go              Spec, XAxis, YAxis, Format, Data, Series, DataPoint,
 │                         HeatData, OHLCPoint, Options, Theme, Validate
-├── helpers.go            X-value coercion (exported PointTime; pointFloat / pointString)
+├── helpers.go            X-value coercion (exported PointX / PointTime; pointFloat / pointString)
 ├── format.go              FormatValue + Format.labelFormatter (number/percent/currency/si/time)
 ├── gradient.go            Theme.Gradient hex-stop interpolation for heatmap colour scales
 ├── build.go               Build(s) -> ntcharts terminal model (includes buildOHLC, on timeserieslinechart.Model;

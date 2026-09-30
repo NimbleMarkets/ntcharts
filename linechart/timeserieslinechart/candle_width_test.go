@@ -96,15 +96,15 @@ func newCandleModel(t *testing.T) Model {
 	return m
 }
 
-// DrawCandle output must be byte-identical to DrawCandleWidth at width 1.
+// DrawCandle output must be byte-identical to DrawCandleWithOpts at width 1.
 func TestDrawCandleDelegatesAtWidthOne(t *testing.T) {
 	s := lipgloss.NewStyle()
 	a := newCandleModel(t)
 	a.DrawCandle("open", "high", "low", "close", s, s)
 	b := newCandleModel(t)
-	b.DrawCandleWidth("open", "high", "low", "close", s, s, 1)
+	b.DrawCandleWithOpts("open", "high", "low", "close", s, s, DrawCandleOpts{Width: 1})
 	if a.View() != b.View() {
-		t.Fatal("DrawCandle and DrawCandleWidth(1) differ")
+		t.Fatal("DrawCandle and DrawCandleWithOpts(Width: 1) differ")
 	}
 }
 
@@ -112,10 +112,10 @@ func TestDrawCandleDelegatesAtWidthOne(t *testing.T) {
 // side columns must not overdraw the y-axis (Critical 1), and the newest
 // candle's center column must be clamped into the drawable area rather
 // than clipped past the last canvas column (Critical 2).
-func TestDrawCandleWidthPreservesAxisAndClampsNewest(t *testing.T) {
+func TestDrawCandleWithOptsPreservesAxisAndClampsNewest(t *testing.T) {
 	s := lipgloss.NewStyle()
 	m := newCandleModel(t)
-	m.DrawCandleWidth("open", "high", "low", "close", s, s, 7)
+	m.DrawCandleWithOpts("open", "high", "low", "close", s, s, DrawCandleOpts{Width: 7})
 	view := m.View()
 	lines := strings.Split(view, "\n")
 
@@ -157,7 +157,7 @@ func TestDrawCandleWidthPreservesAxisAndClampsNewest(t *testing.T) {
 }
 
 // Width 3 must produce strictly more candle-body columns than width 1.
-func TestDrawCandleWidthWidensBodies(t *testing.T) {
+func TestDrawCandleWithOptsWidensBodies(t *testing.T) {
 	s := lipgloss.NewStyle()
 	countBodyCols := func(view string) int {
 		cols := 0
@@ -167,9 +167,9 @@ func TestDrawCandleWidthWidensBodies(t *testing.T) {
 		return cols
 	}
 	a := newCandleModel(t)
-	a.DrawCandleWidth("open", "high", "low", "close", s, s, 1)
+	a.DrawCandleWithOpts("open", "high", "low", "close", s, s, DrawCandleOpts{Width: 1})
 	b := newCandleModel(t)
-	b.DrawCandleWidth("open", "high", "low", "close", s, s, 3)
+	b.DrawCandleWithOpts("open", "high", "low", "close", s, s, DrawCandleOpts{Width: 3})
 	if countBodyCols(b.View()) <= countBodyCols(a.View()) {
 		t.Fatalf("width 3 (%d heavy runes) not wider than width 1 (%d)",
 			countBodyCols(b.View()), countBodyCols(a.View()))

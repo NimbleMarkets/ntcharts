@@ -243,7 +243,7 @@ func ExampleBuild_heatmap() {
 // rendering it via Build to a *timeserieslinechart.Model. buildOHLC pushes
 // open/high/low/close data sets keyed by each point's parsed time and draws
 // candles at time-scaled X positions across the full graph width via
-// (*timeserieslinechart.Model).DrawCandleWidth, with a body width chosen
+// (*timeserieslinechart.Model).DrawCandleWithOpts, with a body width chosen
 // automatically from chart density.
 //
 // This compact example prints model metadata. The rendering tests inspect

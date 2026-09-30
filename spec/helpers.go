@@ -4,9 +4,11 @@ package spec
 
 import "time"
 
-// pointX resolves an omitted X against the shared list without changing data.
-func pointX(p DataPoint, index int, shared []any) any {
-	if p.X == nil && index < len(shared) {
+// PointX returns p.X, falling back to shared[index] when p.X is nil.
+// If index is outside shared, an omitted X remains nil. Neither p nor shared
+// is modified.
+func PointX(p DataPoint, index int, shared []any) any {
+	if p.X == nil && index >= 0 && index < len(shared) {
 		return shared[index]
 	}
 	return p.X

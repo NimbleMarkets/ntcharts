@@ -143,7 +143,7 @@ func toEChartsTimeSeries(s spec.Spec) (*charts.Line, error) {
 		}
 		items := make([]opts.LineData, 0, len(ser.Values))
 		for i, p := range ser.Values {
-			t, ok := spec.PointTime(pointX(p, i, s.Data.XAxisData))
+			t, ok := spec.PointTime(spec.PointX(p, i, s.Data.XAxisData))
 			if !ok {
 				// Skip points that cannot be interpreted as time — a strict
 				// renderer would error here; we prefer best-effort rendering.
@@ -170,7 +170,7 @@ func toEChartsTimeSeries(s spec.Spec) (*charts.Line, error) {
 			}
 			items := make([]opts.BarData, 0, len(ser.Values))
 			for i, p := range ser.Values {
-				t, ok := spec.PointTime(pointX(p, i, s.Data.XAxisData))
+				t, ok := spec.PointTime(spec.PointX(p, i, s.Data.XAxisData))
 				if !ok {
 					continue
 				}
@@ -188,14 +188,6 @@ func toEChartsTimeSeries(s spec.Spec) (*charts.Line, error) {
 	}
 
 	return line, nil
-}
-
-// pointX resolves omitted X values against the shared list, as spec.Build does.
-func pointX(p spec.DataPoint, index int, shared []any) any {
-	if p.X == nil && index < len(shared) {
-		return shared[index]
-	}
-	return p.X
 }
 
 // titleOpt builds the ECharts title option from the Spec.

@@ -137,7 +137,7 @@ func buildBar(s Spec) (*barchart.Model, error) {
 // resolveXFloat resolves a point's numeric X: the point's own X, else the
 // shared Data.XAxisData at idx, else the index itself. Shared with buildScatter.
 func resolveXFloat(s Spec, p DataPoint, idx int) float64 {
-	if x, ok := pointFloat(pointX(p, idx, s.Data.XAxisData)); ok {
+	if x, ok := pointFloat(PointX(p, idx, s.Data.XAxisData)); ok {
 		return x
 	}
 	return float64(idx)
@@ -375,7 +375,7 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 		m.SetDataSetStyle(name, seriesStyle(ser, i, s.Theme))
 
 		for j, p := range ser.Values {
-			t, ok := PointTime(pointX(p, j, s.Data.XAxisData))
+			t, ok := PointTime(PointX(p, j, s.Data.XAxisData))
 			if !ok {
 				continue
 			}
@@ -418,7 +418,7 @@ func DeriveBarLabels(data Data) []string {
 	first := data.Series[0].Values
 	labels := make([]string, 0, len(first))
 	for i, p := range first {
-		if s, ok := pointString(pointX(p, i, data.XAxisData)); ok {
+		if s, ok := pointString(PointX(p, i, data.XAxisData)); ok {
 			labels = append(labels, s)
 			continue
 		}
@@ -437,7 +437,7 @@ func timeBounds(data Data) (time.Time, time.Time, bool) {
 	)
 	for _, ser := range data.Series {
 		for i, p := range ser.Values {
-			t, ok := PointTime(pointX(p, i, data.XAxisData))
+			t, ok := PointTime(PointX(p, i, data.XAxisData))
 			if !ok {
 				continue
 			}
@@ -669,7 +669,7 @@ func autoCandleWidth(graphWidth int, times []time.Time, tMin, tMax time.Time) in
 		cols := make([]int, n)
 		for i, t := range times {
 			// Match the draw path's column formula exactly (see
-			// DrawCandleWidth / dataSet.tBuf scaling in
+			// DrawCandleWithOpts / dataSet.tBuf scaling in
 			// linechart/timeserieslinechart/timeserieslinechart.go):
 			// int(...) truncates a scaled-by-graphWidth fraction, it does
 			// not round a scaled-by-(graphWidth-1) fraction.

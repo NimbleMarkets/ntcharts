@@ -498,12 +498,6 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 	}
 }
 
-// DrawCandleWidth draws candles with the given body width using the
-// default line style. See DrawCandleWithOpts.
-func (m *Model) DrawCandleWidth(openName, highName, lowName, closeName string, bullStyle, bearStyle lipgloss.Style, width int) {
-	m.DrawCandleWithOpts(openName, highName, lowName, closeName, bullStyle, bearStyle, DrawCandleOpts{Width: width})
-}
-
 // DrawCandle draws single-column line-style candles. See DrawCandleWithOpts.
 func (m *Model) DrawCandle(openName, highName, lowName, closeName string, bullStyle, bearStyle lipgloss.Style) {
 	m.DrawCandleWithOpts(openName, highName, lowName, closeName, bullStyle, bearStyle, DrawCandleOpts{Width: 1})
