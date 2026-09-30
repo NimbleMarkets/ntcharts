@@ -13,3 +13,5 @@ web/_assets/wasm_exec_tinygo.js
 web/_assets/index.html
 web/_assets/booba/
 web/_assets/ghostty-web/
+# examples/combo-timeseries-bar writes its web rendering here
+combo_chart.html

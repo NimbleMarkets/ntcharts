@@ -35,7 +35,7 @@ snapshot() {
 	git -C "$SCRATCH/repo" -c user.name='Release check' -c user.email='release-check@example.invalid' \
 		-c commit.gpgsign=false -c core.hooksPath=/dev/null commit --quiet --allow-empty -m 'Release check snapshot'
 	if [[ "$NEW_RELEASE" == true ]]; then
-		for prefix in '' picture/chartpicture/ examples/ examples/shaders/; do
+		for prefix in '' picture/chartpicture/ spec/echarts/ examples/ examples/shaders/; do
 			git -C "$SCRATCH/repo" -c tag.gpgsign=false tag -f "${prefix}${VERSION}" >/dev/null
 		done
 	fi
@@ -75,9 +75,11 @@ candidate_sums() {
 	done < <(awk '{sub(/^require[ \t]+/, "")} $1 ~ /^github.com\/NimbleMarkets\/ntcharts\// && $2 ~ /^v/ {print $1, $2}' "$SCRATCH/repo/$dir/go.mod")
 }
 candidate_sums picture/chartpicture
+candidate_sums spec/echarts
 snapshot
 # Go caches Git tag resolutions as well as module zips. Use a fresh cache after
-# finalizing chartpicture so examples hash its updated go.sum, not the first tag.
+# finalizing chartpicture and spec/echarts so examples hash their updated
+# go.sum files, not the first tag.
 export GOMODCACHE="$SCRATCH/nested-cache"
 for dir in examples examples/shaders cmd; do
 	candidate_sums "$dir"
@@ -87,11 +89,11 @@ snapshot
 export GOMODCACHE="$SCRATCH/modcache"
 
 echo 'release check: standalone builds, verification, and vendoring (readonly module files)'
-for dir in . picture/chartpicture examples examples/shaders cmd; do
+for dir in . picture/chartpicture spec/echarts examples examples/shaders cmd; do
 	(
 		cd "$SCRATCH/repo/$dir"
 		case "$dir" in
-			.|picture/chartpicture) go build -mod=readonly ./... ;;
+			.|picture/chartpicture|spec/echarts) go build -mod=readonly ./... ;;
 			*)
 				mkdir -p "$SCRATCH/build/$dir"
 				go build -mod=readonly -o "$SCRATCH/build/$dir/" ./...
@@ -116,7 +118,7 @@ MODULE=github.com/NimbleMarkets/ntcharts
 echo "release check: core library and dependency isolation"
 go get "$MODULE/v2/...@$VERSION"
 go list -m all > "$SCRATCH/core-modules"
-if grep -Eq 'go-analyze/|gogpu/|go-webgpu/|go-booba|ntcharts/(picture/chartpicture|examples)' "$SCRATCH/core-modules"; then
+if grep -Eq 'go-analyze/|go-echarts/|gogpu/|go-webgpu/|go-booba|ntcharts/(picture/chartpicture|spec/echarts|examples)' "$SCRATCH/core-modules"; then
 	echo 'release check: optional dependencies leaked into the core module' >&2
 	exit 1
 fi
@@ -125,6 +127,10 @@ go build "$MODULE/v2/..."
 echo "release check: chartpicture consumer"
 go get "$MODULE/picture/chartpicture/v2@$VERSION"
 go build "$MODULE/picture/chartpicture/v2/..."
+
+echo "release check: spec/echarts consumer"
+go get "$MODULE/spec/echarts/v2@$VERSION"
+go build "$MODULE/spec/echarts/v2/..."
 
 echo "release check: install all published demos at $VERSION"
 go install "$MODULE/examples/v2/...@$VERSION"
@@ -144,7 +150,7 @@ done
 echo "release check: internal tools build without the workspace"
 (cd "$SCRATCH/repo/cmd" && go test -mod=readonly ./...)
 if [[ -n "$WRITE_SUMS" ]]; then
-	for dir in picture/chartpicture examples examples/shaders cmd; do
+	for dir in picture/chartpicture spec/echarts examples examples/shaders cmd; do
 		cp "$SCRATCH/repo/$dir/go.sum" "$ROOT/$dir/go.sum"
 	done
 fi

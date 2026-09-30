@@ -17,7 +17,7 @@ MODULE=github.com/NimbleMarkets/ntcharts
 # content against the published release.
 RELEASE=v2.999.0
 NEXT=v2.999.1
-mkdir -p "$REPO/scripts" "$REPO/picture/chartpicture" "$REPO/examples/quickstart" "$REPO/examples/shaders" "$REPO/cmd"
+mkdir -p "$REPO/scripts" "$REPO/picture/chartpicture" "$REPO/spec/echarts" "$REPO/examples/quickstart" "$REPO/examples/shaders" "$REPO/cmd"
 cp scripts/{release,check-release,tidy}.sh scripts/sortsum.go "$REPO/scripts/"
 cp Taskfile.yml "$REPO/"
 cd "$REPO"
@@ -31,15 +31,17 @@ git config core.hooksPath /dev/null
 printf '# Changelog\n\n## %s (unreleased)\n' "$RELEASE" > CHANGELOG.md
 printf 'module %s/v2\n\ngo %s\n' "$MODULE" "$GO_VERSION" > go.mod
 printf 'package ntcharts\nconst Name = "ntcharts"\n' > charts.go
-for dir in picture/chartpicture examples examples/shaders cmd; do
+for dir in picture/chartpicture spec/echarts examples examples/shaders cmd; do
 	printf 'module %s/%s/v2\n\ngo %s\n\nrequire %s/v2 %s\n' \
 		"$MODULE" "$dir" "$GO_VERSION" "$MODULE" "$RELEASE" > "$dir/go.mod"
 	: > "$dir/go.sum"
 done
 printf '\nrequire %s/picture/chartpicture/v2 %s\n' "$MODULE" "$RELEASE" >> examples/go.mod
+printf '\nrequire %s/spec/echarts/v2 %s\n' "$MODULE" "$RELEASE" >> examples/go.mod
 printf 'package chartpicture\nimport "%s/v2"\nconst Name = ntcharts.Name\n' "$MODULE" > picture/chartpicture/chart.go
-printf 'package main\nimport ("fmt"; "%s/v2"; "%s/picture/chartpicture/v2")\nfunc main() { fmt.Println(ntcharts.Name, chartpicture.Name) }\n' \
-	"$MODULE" "$MODULE" > examples/quickstart/main.go
+printf 'package echarts\nimport "%s/v2"\nconst Name = ntcharts.Name\n' "$MODULE" > spec/echarts/echarts.go
+printf 'package main\nimport ("fmt"; "%s/v2"; "%s/picture/chartpicture/v2"; "%s/spec/echarts/v2")\nfunc main() { fmt.Println(ntcharts.Name, chartpicture.Name, echarts.Name) }\n' \
+	"$MODULE" "$MODULE" "$MODULE" > examples/quickstart/main.go
 for dir in examples/shaders cmd; do
 	printf 'package main\nimport ("fmt"; "%s/v2")\nfunc main() { fmt.Println(ntcharts.Name) }\n' "$MODULE" > "$dir/main.go"
 done
@@ -49,12 +51,14 @@ go $GO_VERSION
 use (
  .
  ./picture/chartpicture
+ ./spec/echarts
  ./examples
  ./examples/shaders
  ./cmd
 )
 replace $MODULE/v2 $RELEASE => .
 replace $MODULE/picture/chartpicture/v2 $RELEASE => ./picture/chartpicture
+replace $MODULE/spec/echarts/v2 $RELEASE => ./spec/echarts
 EOF
 cp go.work wasm.work
 git add -A
@@ -98,13 +102,14 @@ check() {
 	fi
 }
 check release.log ./scripts/release.sh $RELEASE
-for dir in picture/chartpicture examples examples/shaders cmd; do
+for dir in picture/chartpicture spec/echarts examples examples/shaders cmd; do
 	[[ $(grep -c "^$MODULE/v2 $RELEASE" "$dir/go.sum") == 2 ]]
 	cp "$dir/go.sum" "$SCRATCH/${dir//\//_}.sum"
 done
 [[ $(grep -c "^$MODULE/picture/chartpicture/v2 $RELEASE" examples/go.sum) == 2 ]]
+[[ $(grep -c "^$MODULE/spec/echarts/v2 $RELEASE" examples/go.sum) == 2 ]]
 HEAD_COMMIT=$(git rev-parse HEAD)
-for prefix in '' picture/chartpicture/ examples/ examples/shaders/; do
+for prefix in '' picture/chartpicture/ spec/echarts/ examples/ examples/shaders/; do
 	[[ $(git rev-parse "${prefix}$RELEASE") == "$HEAD_COMMIT" ]]
 done
 # Fetch the actual final tags with a new cache: preparation must not have
@@ -114,7 +119,7 @@ echo 'PASS: final release tags contain valid sibling hashes and standalone modul
 
 printf '# Changelog\n\n## %s (unreleased)\n\n## %s (released)\n' "$NEXT" "$RELEASE" > CHANGELOG.md
 check tidy.log ./scripts/tidy.sh
-for dir in picture/chartpicture examples examples/shaders cmd; do
+for dir in picture/chartpicture spec/echarts examples examples/shaders cmd; do
 	cmp "$dir/go.sum" "$SCRATCH/${dir//\//_}.sum"
 done
 git add CHANGELOG.md

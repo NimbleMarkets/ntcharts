@@ -12,13 +12,14 @@ set -euo pipefail
 
 MODULE=github.com/NimbleMarkets/ntcharts/v2
 CHART_MODULE=github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2
+ECHARTS_MODULE=github.com/NimbleMarkets/ntcharts/spec/echarts/v2
 VERSION="${1:-}"
 
 if [[ ! "$VERSION" =~ ^v2\.([0-9]+)\.([0-9]+)$ ]]; then
 	echo "usage: task release VERSION=v2.X.Y (got '${VERSION}')" >&2
 	exit 2
 fi
-NESTED_TAGS=("picture/chartpicture/${VERSION}" "examples/${VERSION}" "examples/shaders/${VERSION}")
+NESTED_TAGS=("picture/chartpicture/${VERSION}" "spec/echarts/${VERSION}" "examples/${VERSION}" "examples/shaders/${VERSION}")
 
 cd "$(git rev-parse --show-toplevel)"
 
@@ -40,16 +41,19 @@ fi
 echo "release: bumping nested modules to ${MODULE}@${VERSION}"
 OLD_ROOT=$(awk -v module="$MODULE" '{sub(/^require[ \t]+/, "")} $1 == module {print $2}' examples/go.mod)
 OLD_CHART=$(awk -v module="$CHART_MODULE" '{sub(/^require[ \t]+/, "")} $1 == module {print $2}' examples/go.mod)
-for dir in cmd examples examples/shaders picture/chartpicture; do
+OLD_ECHARTS=$(awk -v module="$ECHARTS_MODULE" '{sub(/^require[ \t]+/, "")} $1 == module {print $2}' examples/go.mod)
+for dir in cmd examples examples/shaders picture/chartpicture spec/echarts; do
 	(cd "$dir" && go mod edit -require="${MODULE}@${VERSION}")
 done
-(cd examples && go mod edit -require="${CHART_MODULE}@${VERSION}")
+(cd examples && go mod edit -require="${CHART_MODULE}@${VERSION}" -require="${ECHARTS_MODULE}@${VERSION}")
 for workfile in go.work wasm.work; do
 	GOWORK="$PWD/$workfile" go work edit \
 		-dropreplace="${MODULE}@${OLD_ROOT}" \
 		-dropreplace="${CHART_MODULE}@${OLD_CHART}" \
+		-dropreplace="${ECHARTS_MODULE}@${OLD_ECHARTS}" \
 		-replace="${MODULE}@${VERSION}=." \
-		-replace="${CHART_MODULE}@${VERSION}=./picture/chartpicture"
+		-replace="${CHART_MODULE}@${VERSION}=./picture/chartpicture" \
+		-replace="${ECHARTS_MODULE}@${VERSION}=./spec/echarts"
 done
 task go-tidy
 

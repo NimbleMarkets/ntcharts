@@ -22,7 +22,7 @@ tasks:
 ###############################################################################
 
   go-tidy:
-    desc: 'Go tidy all modules (root, examples, examples/shaders, cmd, picture/chartpicture)'
+    desc: 'Go tidy all modules (root, examples, examples/shaders, cmd, picture/chartpicture, spec/echarts)'
     run: once
     cmds:
       - ./scripts/tidy.sh
@@ -46,16 +46,30 @@ tasks:
       - cd examples/shaders && go get -u ./...
       - cd cmd && go get -u ./...
       - cd picture/chartpicture && go get -u ./...
-      - go work sync
+      - cd spec/echarts && go get -u ./...
+      - task: go-tidy
 
   test:
     desc: 'Run all Go tests across modules'
+    deps: [go-tidy]
     cmds:
       - go test ./...
       - cd examples && go test ./...
       - cd examples/shaders && go test ./...
       - cd cmd && go test ./...
       - cd picture/chartpicture && go test ./...
+      - cd spec/echarts && go test ./...
+
+  test-spec:
+    desc: 'Run just the spec package and spec/echarts tests (fast inner loop)'
+    cmds:
+      - go test ./spec/ -count=1
+      - cd spec/echarts && go test ./... -count=1
+
+  vet:
+    desc: 'Vet the root module'
+    cmds:
+      - go vet ./...
 
   build:
     desc: 'Build all the things'

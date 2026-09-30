@@ -7,11 +7,13 @@ require (
 	charm.land/bubbletea/v2 v2.0.10
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/NimbleMarkets/go-booba v0.7.0
-	github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.4.0
-	github.com/NimbleMarkets/ntcharts/v2 v2.4.0
+	github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.5.0
+	github.com/NimbleMarkets/ntcharts/spec/echarts/v2 v2.5.0
+	github.com/NimbleMarkets/ntcharts/v2 v2.5.0
 	github.com/aquilax/go-perlin v1.1.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260928045949-bbf040aedf25
 	github.com/go-analyze/charts v0.6.1
+	github.com/go-echarts/go-echarts/v2 v2.7.2
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	github.com/spf13/pflag v1.0.10
 )
