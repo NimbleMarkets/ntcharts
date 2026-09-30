@@ -3,6 +3,7 @@
 ## v2.4.1 (unreleased)
 
  * fix(wasm-build): build TinyGo demos with `-gc=boehm`, fixing the slow "GPU Shaders (TinyGo)" gallery demo.
+ * fix(picture): query the terminal for Kitty shared-memory (`t=s`) support at startup, and send direct frames unless it answers `OK`. Frames were silently dropped on remote hosts and in terminals that cannot read the objects.
 
 ## v2.4.0 (2026-09-28)
 

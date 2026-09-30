@@ -12,6 +12,8 @@ import (
 )
 
 func shmTestRegistry(t *testing.T) js.Value {
+	// The registry is the browser's signal; no terminal query is involved.
+	resetKittySharedCap(t)
 	t.Helper()
 	old := js.Global().Get("ghosttyKittySharedMemory")
 	r := js.Global().Get("Map").New()

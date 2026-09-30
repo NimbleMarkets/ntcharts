@@ -15,10 +15,13 @@ import (
 // tests reset to Unknown via resetKittyCapability(t) for isolation.
 func TestMain(m *testing.M) {
 	ForceKittyCapability(KittyCapabilitySupported)
+	kittySharedCap.Store(int32(KittyCapabilitySupported))
 	// Package init enables passthrough when TMUX is set; pin it off so the
 	// suite behaves the same inside and outside a tmux session.
 	SetTmuxPassthrough(false)
-	os.Exit(m.Run())
+	code := m.Run()
+	_ = kittySharedProbe.Swap(nil).Unlink()
+	os.Exit(code)
 }
 
 // resetKittyCapability sets the package-level state to Unknown for the
@@ -283,3 +286,57 @@ func clearKittyEnv(t *testing.T) {
 // Sanity helper: silences unused-import warnings if a test file edit
 // removes the only reference to color.
 var _ = color.Transparent
+
+// resetKittySharedCap sets the shared-memory capability to Unknown for a
+// test and restores the suite default (Supported) afterwards.
+func resetKittySharedCap(t *testing.T) {
+	t.Helper()
+	kittySharedCap.Store(int32(KittyCapabilityUnknown))
+	t.Cleanup(func() { kittySharedCap.Store(int32(KittyCapabilitySupported)) })
+}
+
+func sharedCap() KittyCapability { return KittyCapability(kittySharedCap.Load()) }
+
+func sharedProbeReply(payload string) uv.KittyGraphicsEvent {
+	return uv.KittyGraphicsEvent{Options: kitty.Options{ID: kittySharedProbeID}, Payload: []byte(payload)}
+}
+
+// TestRecordKittyResponse_SharedMemoryProbe verifies only an OK reply to
+// the t=s query enables the shared-memory medium.
+func TestRecordKittyResponse_SharedMemoryProbe(t *testing.T) {
+	for payload, want := range map[string]KittyCapability{
+		"OK":                          KittyCapabilitySupported,
+		"EBADF:Failed to open shm":    KittyCapabilityUnsupported,
+		"EINVAL:Unsupported medium s": KittyCapabilityUnsupported,
+	} {
+		resetKittySharedCap(t)
+		recordKittyResponse(sharedProbeReply(payload))
+		if got := sharedCap(); got != want {
+			t.Errorf("reply %q: shared-memory capability = %v, want %v", payload, got, want)
+		}
+	}
+}
+
+// TestRecordKittyResponse_KittyProbeLeavesSharedMemoryUnknown verifies the
+// t=d query's reply says nothing about t=s.
+func TestRecordKittyResponse_KittyProbeLeavesSharedMemoryUnknown(t *testing.T) {
+	resetKittySharedCap(t)
+	recordKittyResponse(uv.KittyGraphicsEvent{Options: kitty.Options{ID: kittyProbeID}, Payload: []byte("OK")})
+	if got := sharedCap(); got != KittyCapabilityUnknown {
+		t.Fatalf("shared-memory capability = %v, want Unknown", got)
+	}
+}
+
+// TestRecordKittyTimeout_SharedMemory verifies an unanswered t=s query
+// resolves to Unsupported, and a late OK still wins.
+func TestRecordKittyTimeout_SharedMemory(t *testing.T) {
+	resetKittySharedCap(t)
+	recordKittyTimeout()
+	if got := sharedCap(); got != KittyCapabilityUnsupported {
+		t.Fatalf("after timeout: shared-memory capability = %v, want Unsupported", got)
+	}
+	recordKittyResponse(sharedProbeReply("OK"))
+	if got := sharedCap(); got != KittyCapabilitySupported {
+		t.Fatalf("late OK: shared-memory capability = %v, want Supported", got)
+	}
+}

@@ -3,11 +3,15 @@
 package picture
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"strings"
+	"sync"
 	"testing"
+
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestSharedMemoryTmuxWrapsOnce(t *testing.T) {
@@ -71,5 +75,89 @@ func BenchmarkKittySharedMemory(b *testing.B) {
 		if err := obj.Unlink(); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func TestNativeSharedMemoryWaitsForProbe(t *testing.T) {
+	original := tmuxPassthroughEnabled.Load()
+	SetTmuxPassthrough(false)
+	defer SetTmuxPassthrough(original)
+	resetKittySharedCap(t)
+	m := NewWithConfig(Config{KittyMedium: KittyMediumSharedMemory, Fit: FitFill, CellPixelWidth: 1, CellPixelHeight: 1})
+	m.mode = PictureKitty
+	m.cols, m.rows = 2, 2
+	m.img = randomNRGBA(2, 2)
+	defer m.SetImage(nil)
+	for _, c := range []KittyCapability{KittyCapabilityUnknown, KittyCapabilityUnsupported} {
+		kittySharedCap.Store(int32(c))
+		f := m.SetImage(randomNRGBA(2, 2))().(KittyFrameMsg)
+		if f.Medium != KittyMediumDirect || f.sharedMemory != nil || strings.Contains(f.APC, "t=s") {
+			t.Fatalf("capability %v: sent a shared-memory frame: %+v", c, f)
+		}
+	}
+	recordKittyResponse(sharedProbeReply("OK"))
+	if f := m.SetImage(randomNRGBA(2, 2))().(KittyFrameMsg); f.Medium != KittyMediumSharedMemory {
+		t.Fatalf("probed terminal got a direct frame: %+v", f)
+	}
+}
+
+func TestNativeSharedMemoryQuery(t *testing.T) {
+	original := tmuxPassthroughEnabled.Load()
+	SetTmuxPassthrough(false)
+	defer SetTmuxPassthrough(original)
+	resetKittySharedCap(t)
+	apc := kittySharedQueryAPC()
+	probe := kittySharedProbe.Load()
+	if probe == nil {
+		t.Fatal("no probe object")
+	}
+	defer probe.Unlink()
+	name := string(decodeKittyRaw(t, apc, "a=q", "t=s", "f=32", "s=1,v=1", "S=4", fmt.Sprintf("i=%d", kittySharedProbeID)))
+	if name != probe.Name {
+		t.Fatalf("query names %q, want %q", name, probe.Name)
+	}
+	if strings.Contains(apc, "q=") {
+		t.Fatalf("query suppresses its reply: %q", apc)
+	}
+	recordKittyTimeout()
+	if !probe.Done() || kittySharedProbe.Load() != nil {
+		t.Fatal("unanswered probe object not released")
+	}
+}
+
+// queryKittySupportRaw reruns the once-only startup probe and returns what
+// it writes to the terminal.
+func queryKittySupportRaw(t *testing.T) string {
+	t.Helper()
+	original := tmuxPassthroughEnabled.Load()
+	SetTmuxPassthrough(false)
+	t.Cleanup(func() { SetTmuxPassthrough(original) })
+	kittyQueryOnce = sync.Once{}
+	cmds := collectBatchCmds(QueryKittySupport())
+	if len(cmds) == 0 {
+		t.Fatal("no probe sent")
+	}
+	t.Cleanup(func() { _ = kittySharedProbe.Swap(nil).Unlink() })
+	raw, _ := cmds[0]().(tea.RawMsg)
+	seq, _ := raw.Msg.(string)
+	return seq
+}
+
+func TestQueryKittySupportProbesSharedMemoryFirst(t *testing.T) {
+	resetKittyCapability(t)
+	resetKittySharedCap(t)
+	t.Setenv("KITTY_WINDOW_ID", "1")
+	seq := queryKittySupportRaw(t)
+	shared, direct := strings.Index(seq, "a=q,t=s"), strings.Index(seq, "a=q,t=d")
+	if shared < 0 || direct < shared {
+		t.Fatalf("want the t=s query before the t=d query: %q", seq)
+	}
+}
+
+func TestQueryKittySupportProbesSharedMemoryWhenForced(t *testing.T) {
+	resetKittySharedCap(t)
+	seq := queryKittySupportRaw(t)
+	if !strings.Contains(seq, "a=q,t=s") || strings.Contains(seq, "a=q,t=d") {
+		t.Fatalf("want only the t=s query: %q", seq)
 	}
 }
