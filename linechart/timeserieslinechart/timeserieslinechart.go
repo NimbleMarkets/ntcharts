@@ -340,12 +340,37 @@ func (m *Model) DrawBrailleAll() {
 	m.DrawBrailleDataSets(names)
 }
 
-// DrawBraille will draw braille runes displayed from left to right
-// of the graphing area of the canvas.
+// DrawCandleOpts configures candle drawing.
+type DrawCandleOpts struct {
+	// Width is the candle body width in columns; < 1 is treated as 1.
+	Width int
+	// Block renders solid block bodies (█ ▄ ▀) instead of line runes.
+	Block bool
+}
+
+// DrawCandleWithOpts draws candles with the given body width and style. The
+// body spans opts.Width columns centered on the candle's time-scaled column,
+// the wick stays in the center column. Width < 1 is treated as 1.
+//
+// Side columns are clamped to the graph area: columns at or left of the
+// y-axis (Origin().X when YStep() > 0, or left of Origin().X when
+// YStep() == 0 since there is no axis line) are skipped so wide candles
+// never overdraw the y-axis or its tick labels, both of which live inside
+// the canvas.
+// Values outside the Y viewport are clipped before drawing so candles do
+// not overwrite the x-axis or its labels.
+//
+// The candle's center column is clamped so its whole body fits in the
+// drawable span (edge inset): edge candles shift inward up to half a body
+// from their true time position instead of rendering half-clipped. This
+// deliberately changes the output for the first and newest candles: at
+// width 1 the inset is zero (half == right == 0) so behavior is unchanged
+// and reduces to the previous newest-candle clamp.
+//
 // Requires four data sets containing candlestick data open, high, low, close values.
 // Assumes that all data sets have the same number of TimePoints and
 // the TimePoint at the same index of each data set has the same Time value.
-func (m *Model) DrawCandle(openName, highName, lowName, closeName string, bullStyle, bearStyle lipgloss.Style) {
+func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string, bullStyle, bearStyle lipgloss.Style, opts DrawCandleOpts) {
 	if len(openName) == 0 || len(highName) == 0 || len(lowName) == 0 || len(closeName) == 0 {
 		return
 	}
@@ -383,7 +408,7 @@ func (m *Model) DrawCandle(openName, highName, lowName, closeName string, bullSt
 	for i := 0; i < limit; i++ {
 		// assuming all time values are the same, can just any of the values to check
 		// if data point is outside of the current graph view to ignore
-		if oData[i].X < 0 {
+		if oData[i].X < 0 || oData[i].X > float64(m.GraphWidth()) {
 			continue
 		}
 		var s lipgloss.Style
@@ -397,14 +422,91 @@ func (m *Model) DrawCandle(openName, highName, lowName, closeName string, bullSt
 			bh = cData[i].Y
 			bl = oData[i].Y
 		}
+		// Clip the value span as well as the time span. Canvas bounds alone
+		// do not protect the x-axis and label rows below the graph area.
+		low, high := lData[i].Y, hData[i].Y
+		ceiling := float64(m.GraphHeight())
+		if ceiling <= 0 || high < 0 || low > ceiling {
+			continue
+		}
+		low, high = max(0, min(low, ceiling)), max(0, min(high, ceiling))
+		bl, bh = max(0, min(bl, ceiling)), max(0, min(bh, ceiling))
 		drawX := int(oData[i].X) + m.Origin().X
 		if m.YStep() > 0 {
 			drawX += 1
 		}
-		graph.DrawCandlestickBottomToTop(&m.Canvas,
-			canvas.Point{X: drawX, Y: m.Origin().Y - 1},
-			lData[i].Y, bl, bh, hData[i].Y, s)
+		// The time scale maps the viewport's final timestamp to X ==
+		// GraphWidth(), one column past the last drawable graph column, so
+		// without this clamp the newest candle's center column lands off
+		// canvas and never renders. Clamp it into the drawable area instead.
+		if last := m.Canvas.Width() - 1; drawX > last {
+			drawX = last
+		}
+
+		// Compute the candle's column span and only draw the
+		// columns inside the graph area, so wide candles never overdraw the
+		// y-axis (Origin().X when YStep()>0) or its tick label columns
+		// (which sit left of Origin().X, still inside the canvas). This
+		// mirrors graph.DrawCandlestickBottomToTopWide's own column loop
+		// (center column full candle, other columns body-only) but adds the
+		// boundary skip.
+		minCol := m.Origin().X
+		if m.YStep() > 0 {
+			minCol++ // Origin().X itself is the y-axis line column
+		}
+		cw := opts.Width
+		if cw < 1 {
+			cw = 1
+		}
+		// Edge inset: clamp the candle's CENTER so its whole body fits in
+		// the drawable span — edge candles shift inward up to half a body
+		// from their true time position (plot-inset behavior) instead of
+		// rendering half-clipped. Skipped when the chart is narrower than
+		// one candle (interval empty); the per-column guards below remain
+		// the safety net for that and for dense overlapping data.
+		half := (cw - 1) / 2
+		right := cw - 1 - half
+		if minCtr, maxCtr := minCol+half, m.Canvas.Width()-1-right; minCtr <= maxCtr {
+			if drawX < minCtr {
+				drawX = minCtr
+			}
+			if drawX > maxCtr {
+				drawX = maxCtr
+			}
+		}
+		left := drawX - half
+		y := m.Origin().Y - 1
+		for x := left; x < left+cw; x++ {
+			if x < minCol {
+				continue
+			}
+			q := canvas.Point{X: x, Y: y}
+			if opts.Block {
+				if x == drawX {
+					graph.DrawCandlestickBlockBottomToTop(&m.Canvas, q, low, bl, bh, high, s)
+				} else {
+					graph.DrawCandlestickBlockBottomToTop(&m.Canvas, q, bl, bl, bh, bh, s)
+				}
+			} else {
+				if x == drawX {
+					graph.DrawCandlestickBottomToTop(&m.Canvas, q, low, bl, bh, high, s)
+				} else {
+					graph.DrawCandlestickBottomToTop(&m.Canvas, q, bl, bl, bh, bh, s)
+				}
+			}
+		}
 	}
+}
+
+// DrawCandleWidth draws candles with the given body width using the
+// default line style. See DrawCandleWithOpts.
+func (m *Model) DrawCandleWidth(openName, highName, lowName, closeName string, bullStyle, bearStyle lipgloss.Style, width int) {
+	m.DrawCandleWithOpts(openName, highName, lowName, closeName, bullStyle, bearStyle, DrawCandleOpts{Width: width})
+}
+
+// DrawCandle draws single-column line-style candles. See DrawCandleWithOpts.
+func (m *Model) DrawCandle(openName, highName, lowName, closeName string, bullStyle, bearStyle lipgloss.Style) {
+	m.DrawCandleWithOpts(openName, highName, lowName, closeName, bullStyle, bearStyle, DrawCandleOpts{Width: 1})
 }
 
 // DrawBrailleDataSets will draw braille runes from left to right
