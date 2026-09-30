@@ -66,6 +66,16 @@ Standalone CLI demos. Run `task` to build them all into the `bin/` directory.
 
 <a href="./cmd/ntcharts-ohlc/README.md" alt="ntcharts-ohlc readme"><img src="cmd/ntcharts-ohlc/demo.gif" alt="ntcharts-ohlc gif" width="600"/></a>
 
+## Multi-surface rendering (`spec` package)
+
+The [`spec` package](./spec/README.md) defines a neutral, surface-agnostic
+chart specification. A single `spec.Spec` value can be rendered to the terminal
+(`spec.Build(s)` → an ntcharts model) or to the web
+(`echarts.ToECharts(s)` → a [go-echarts/v2](https://github.com/go-echarts/go-echarts)
+chart, from the optional `github.com/NimbleMarkets/ntcharts/spec/echarts/v2`
+module). See [`spec/README.md`](./spec/README.md) for details, the current
+chart-type support matrix, and how to run the tests.
+
 ## BubbleTea Version Compatibility
 
 We have migrated to **Bubble Tea v2**.  It exists on the [`v2` branch](https://github.com/NimbleMarkets/ntcharts/tree/v2).  You should import as so:
