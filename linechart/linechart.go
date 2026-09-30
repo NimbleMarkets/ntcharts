@@ -423,12 +423,41 @@ func (m *Model) drawXLabel(n int) {
 		// can only set if rune to the left of target coordinates is empty
 		if c := m.Canvas.Cell(canvas.Point{X: m.origin.X + i - 1, Y: m.origin.Y + 1}); c.Rune == runes.Null {
 			v := m.viewMinX + (increment * float64(i)) // value to set under X axis
+			if i == last {
+				// The per-column interpolation above is always exactly one
+				// increment short of viewMaxX — scalePoint plots the
+				// rightmost data point using graphWidth-1 as its
+				// denominator, one less than the denominator used for this
+				// per-column v — so using v here would understate the true
+				// axis maximum by one increment (a subtly wrong value, not
+				// just a spacing quirk) even when the label fits. Use the
+				// true axis-end value for the final tick instead, feeding
+				// both the left-anchored path below and the right-align
+				// fallback.
+				v = m.viewMaxX
+			}
 			s := m.XLabelFormatter(i, v)
 			// dont display if number will be cut off or value repeats
 			sLen := len(s) + m.origin.X + i
 			if (s != lastVal) && (sLen <= m.Canvas.Width()) {
 				m.Canvas.SetStringWithStyle(canvas.Point{X: m.origin.X + i, Y: m.origin.Y + 1}, s, m.LabelStyle)
 				lastVal = s
+			} else if i == last && s != lastVal {
+				// Final tick doesn't fit left-anchored: right-align it into
+				// remaining width if it does not overlap an earlier label.
+				if x := m.Canvas.Width() - len(s); x > m.origin.X {
+					clear := true
+					for col := x - 1; col < m.Canvas.Width(); col++ {
+						if m.Canvas.Cell(canvas.Point{X: col, Y: m.origin.Y + 1}).Rune != runes.Null {
+							clear = false
+							break
+						}
+					}
+					if clear {
+						m.Canvas.SetStringWithStyle(canvas.Point{X: x, Y: m.origin.Y + 1}, s, m.LabelStyle)
+						lastVal = s
+					}
+				}
 			}
 		}
 		if i == last {
