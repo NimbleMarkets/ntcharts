@@ -20,14 +20,17 @@ func TestGPUAllPresets(t *testing.T) {
 	for i, p := range presets {
 		t.Run(p.name, func(t *testing.T) {
 			req := renderRequest{preset: i, width: 160, height: 100, seconds: 1, speed: 0.6, scale: p.scale, detail: p.detail}
-			first, err := g.Render(req)
+			first, _, err := g.Render(req)
 			if err != nil {
 				t.Fatal(err)
 			}
 			req.seconds = 3
-			second, err := g.Render(req)
+			second, stages, err := g.Render(req)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if stages.setup <= 0 || stages.submit <= 0 || stages.mapWait <= 0 || stages.copy <= 0 {
+				t.Fatalf("a stage was not timed: %+v", stages)
 			}
 			if bytes.Equal(first.Pix, second.Pix) {
 				t.Fatal("shader did not animate")
@@ -47,7 +50,7 @@ func TestGPUAllPresets(t *testing.T) {
 		})
 	}
 	g.Close()
-	if _, err := g.Render(renderRequest{}); err == nil {
+	if _, _, err := g.Render(renderRequest{}); err == nil {
 		t.Fatal("closed GPU accepted a render")
 	}
 }

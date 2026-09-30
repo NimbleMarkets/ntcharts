@@ -32,9 +32,16 @@ func run() error {
 	mosaic := flag.Bool("mosaic", false, "start with a 2×2 mosaic of four shaders")
 	source := flag.Bool("source", false, "show the shader source beside the image (single-shader mode)")
 	duration := flag.Duration("duration", 0, "quit after this duration (0 disables)")
+	medium := flag.String("medium", "shm", "Kitty transport to request: shm or direct (shm falls back to direct)")
 	report := flag.String("report", "", "write final timing and transport statistics as JSON")
 	snapshot := flag.String("snapshot", "", "render all six shaders to PNGs in this directory, without a terminal")
-	flag.Parse()
+	args := queryArgs(pageQuery(), func(name string) bool { return flag.Lookup(name) != nil })
+	if len(os.Args) > 1 {
+		args = append(os.Args[1:], args...)
+	}
+	if err := flag.CommandLine.Parse(args); err != nil {
+		return err
+	}
 	if *list {
 		for _, p := range presets {
 			fmt.Printf("%-14s %s\n", p.name, p.description)
@@ -42,6 +49,10 @@ func run() error {
 		return nil
 	}
 	index, err := presetIndex(*name)
+	if err != nil {
+		return err
+	}
+	kittyMedium, err := parseMedium(*medium)
 	if err != nil {
 		return err
 	}
@@ -72,6 +83,11 @@ func run() error {
 		return snapshots(gpu, *snapshot)
 	}
 	m := newModel(gpu, index, *fps, *density, *slideshow)
+	m.pic.SetKittyMedium(kittyMedium)
+	m.publish = publishReport
+	if gpu != nil {
+		m.gpuName, m.gpuInit, m.shaderCompile = gpu.name, gpu.initTime, gpu.compileTime
+	}
 	m.fullscreen = *fullscreen
 	m.mosaic = *mosaic
 	m.source = *source
@@ -81,16 +97,7 @@ func run() error {
 	err = booba.Run(m, programOptions()...)
 	var reportErr error
 	if *report != "" {
-		data, marshalErr := json.MarshalIndent(struct {
-			GPU           string         `json:"gpu"`
-			EncodedFrames map[string]int `json:"encoded_frames"`
-			Presets       map[string]int `json:"rendered_presets"`
-			AppFPS        float64        `json:"app_fps"`
-			RenderMS      float64        `json:"render_ms"`
-			EncodeMS      float64        `json:"encode_ms"`
-			Width         int            `json:"width"`
-			Height        int            `json:"height"`
-		}{gpuName(gpu), m.encodedFrames, m.renderedPresets, m.fps, m.renderMS, m.encodeMS, m.rasterW, m.rasterH}, "", "  ")
+		data, marshalErr := json.MarshalIndent(m.report(), "", "  ")
 		reportErr = marshalErr
 		if reportErr == nil {
 			reportErr = os.WriteFile(*report, append(data, '\n'), 0600)
@@ -106,7 +113,7 @@ func snapshots(g *gpuRenderer, dir string) error {
 	for i, p := range presets {
 		r := renderRequest{preset: i, width: 640, height: 400, seconds: 3.5, speed: 0.6, scale: p.scale, detail: p.detail}
 		start := time.Now()
-		img, err := g.Render(r)
+		img, _, err := g.Render(r)
 		if err != nil {
 			return err
 		}
@@ -132,11 +139,4 @@ func writePNG(path string, img image.Image) error {
 		return err
 	}
 	return errors.Join(png.Encode(f, img), f.Close())
-}
-
-func gpuName(g *gpuRenderer) string {
-	if g == nil {
-		return ""
-	}
-	return g.name
 }

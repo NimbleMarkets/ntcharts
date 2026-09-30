@@ -74,7 +74,14 @@ go run . -snapshot=/tmp/shader-previews
 
 # A bounded run with final statistics:
 go run . -duration=10s -report=/tmp/shaders.json
+
+# Send PNG through the terminal instead of requesting shared memory:
+go run . -medium=direct
 ```
+
+In the browser the same flags come from the page's query string, for example
+`?preset=julia&density=24&medium=direct`. Parameters that are not flags are
+ignored.
 
 ## Controls
 
@@ -99,10 +106,17 @@ the sidebar; very small terminals show just the image.
 
 The header shows rendering mode, application FPS, raster size,
 **R** (GPU rendering plus readback), **E** (image preparation plus Kitty encoding),
-and encoded APC size. Timings and FPS are smoothed. Application FPS measures
+and encoded APC size. The second line divides R into `setup` (buffers, bind
+group and commands), `submit`, `map` (waiting for the mapped readback) and
+`copy` (pixels into the image); a mosaic sums its four tiles. Timings and FPS
+are smoothed. Application FPS measures
 completion of the app's frame-submission cycle, **not terminal display refresh**;
 Bubble Tea may batch output. APC size excludes placeholder cells and text.
-`-report` counts encoded frames, not confirmed terminal presentations.
+`-report` counts encoded frames, not confirmed terminal presentations. It also
+summarizes each stage over the last 600 frames (count, mean, median and 95th
+percentile), along with startup times and heap size. The browser build has no
+file to write, so it publishes the same report every two seconds as JSON in
+`globalThis.ntchartsShadersReport` and with `console.debug`.
 
 `-density` targets vertical pixels per terminal row, capped at native cell
 resolution. The renderer preserves the cell aspect ratio and caps the raster at

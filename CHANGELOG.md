@@ -4,6 +4,8 @@
 
  * fix(wasm-build): build TinyGo demos with `-gc=boehm`, fixing the slow "GPU Shaders (TinyGo)" gallery demo.
  * fix(picture): query the terminal for Kitty shared-memory (`t=s`) support at startup, and send direct frames unless it answers `OK`. Frames were silently dropped on remote hosts and in terminals that cannot read the objects.
+ * feat(shaders): time each stage of a frame. The header gains a line dividing R into `setup / submit / map / copy`, and `-report` adds per-stage summaries (mean, median, 95th percentile over the last 600 frames), startup times, heap size, and the compiler. Existing report fields are unchanged. The browser build publishes the same report in `globalThis.ntchartsShadersReport`.
+ * feat(shaders): add `-medium shm|direct`, and read flags from the page's query string in the browser (`?preset=julia&medium=direct`).
 
 ## v2.4.0 (2026-09-28)
 

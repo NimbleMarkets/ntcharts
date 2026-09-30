@@ -26,6 +26,7 @@ type renderedMsg struct {
 	epoch   uint64
 	image   *image.NRGBA
 	elapsed time.Duration
+	stages  stageTimes
 	err     error
 }
 type encodedMsg struct {
@@ -43,6 +44,12 @@ type model struct {
 	seconds                                                            float64
 	lastClock, frameStarted, lastPresented                             time.Time
 	renderMS, encodeMS, fps                                            float64
+	stages                                                             stageSamples
+	lastStages                                                         stageTimes
+	started                                                            time.Time
+	firstFrame, gpuInit, shaderCompile                                 time.Duration
+	gpuName                                                            string
+	publish                                                            func(report)
 	bytes                                                              int
 	transport                                                          string
 	playing, fullscreen, forceGlyph, busy, dirty, mosaic, source       bool
@@ -54,7 +61,7 @@ type model struct {
 func newModel(r frameRenderer, index, fps, density int, slideshow time.Duration) *model {
 	p := presets[index]
 	return &model{encodedFrames: make(map[string]int), renderedPresets: make(map[string]int), renderer: r, selected: index, speed: 0.6, scale: p.scale, detail: p.detail, density: density, targetFPS: fps,
-		playing: true, dirty: true, slideshow: slideshow, slideshowInterval: slideshow, transport: "probing", pic: picture.NewWithConfig(picture.Config{
+		started: processStart, playing: true, dirty: true, slideshow: slideshow, slideshowInterval: slideshow, transport: "probing", pic: picture.NewWithConfig(picture.Config{
 			Fit: picture.FitFill, CellPixelWidth: 8, CellPixelHeight: 16,
 			// Hand frames over as raw RGBA through shared memory where the
 			// terminal supports it (booba 0.7.0 in the browser, local Kitty
@@ -67,7 +74,11 @@ func (m *model) Init() tea.Cmd {
 	if m.duration > 0 {
 		quit = tea.Tick(m.duration, func(time.Time) tea.Msg { return quitMsg{} })
 	}
-	return tea.Batch(m.pic.Init(), m.slide(), quit)
+	var publish tea.Cmd
+	if m.publish != nil {
+		publish = reportTick()
+	}
+	return tea.Batch(m.pic.Init(), m.slide(), quit, publish)
 }
 func (m *model) slide() tea.Cmd {
 	if m.slideshow <= 0 {
@@ -154,7 +165,7 @@ func (m *model) tiles(base renderRequest) []tile {
 func (m *model) geometry() {
 	m.cols, m.rows = max(1, m.width), max(1, m.height)
 	if m.showChrome() {
-		m.rows = max(1, m.height-5)
+		m.rows = max(1, m.height-6)
 		if m.width >= 100 {
 			m.cols = m.width - sidebarWidth - 2
 		}
@@ -204,18 +215,20 @@ func (m *model) render() tea.Cmd {
 	return func() tea.Msg {
 		start := time.Now()
 		if len(tiles) == 1 {
-			img, err := renderer.Render(tiles[0].req)
-			return renderedMsg{epoch, img, time.Since(start), err}
+			img, stages, err := renderer.Render(tiles[0].req)
+			return renderedMsg{epoch, img, time.Since(start), stages, err}
 		}
 		var imgs [4]*image.NRGBA
+		var total stageTimes
 		for i, t := range tiles {
-			img, err := renderer.Render(t.req)
+			img, stages, err := renderer.Render(t.req)
 			if err != nil {
-				return renderedMsg{epoch, nil, time.Since(start), err}
+				return renderedMsg{epoch, nil, time.Since(start), total, err}
 			}
 			imgs[i] = img
+			total = total.plus(stages)
 		}
-		return renderedMsg{epoch, composeMosaic(imgs, base.width, base.height), time.Since(start), nil}
+		return renderedMsg{epoch, composeMosaic(imgs, base.width, base.height), time.Since(start), total, nil}
 	}
 }
 func smooth(old, next float64) float64 {
@@ -228,6 +241,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case quitMsg:
 		return m, tea.Quit
+	case reportMsg:
+		if m.publish == nil {
+			return m, nil
+		}
+		m.publish(m.report())
+		return m, reportTick()
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.epoch++
@@ -270,6 +289,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.renderedPresets[presets[p].name]++
 		}
 		m.renderMS = smooth(m.renderMS, float64(msg.elapsed)/float64(time.Millisecond))
+		m.stages.render.add(msg.elapsed)
+		m.stages.addDispatch(msg.stages)
+		m.lastStages = m.lastStages.smooth(msg.stages)
 		cmd := m.pic.SetImage(msg.image)
 		if cmd == nil {
 			m.bytes = 0
@@ -280,6 +302,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, func() tea.Msg { start := time.Now(); frame := cmd(); return encodedMsg{frame, time.Since(start)} }
 	case encodedMsg:
 		m.encodeMS = smooth(m.encodeMS, float64(msg.elapsed)/float64(time.Millisecond))
+		m.stages.encode.add(msg.elapsed)
 		if frame, ok := msg.frame.(picture.KittyFrameMsg); ok {
 			label := transportLabel(frame)
 			m.encodedFrames[label]++
@@ -289,8 +312,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Sequence(m.pic.Update(msg.frame), func() tea.Msg { return presentedMsg{} })
 	case presentedMsg:
 		now := time.Now()
+		if m.firstFrame == 0 {
+			m.firstFrame = now.Sub(m.started)
+		}
 		if m.playing && !m.lastPresented.IsZero() {
 			m.fps = smooth(m.fps, 1/now.Sub(m.lastPresented).Seconds())
+			m.stages.frame.add(now.Sub(m.lastPresented))
 		}
 		m.lastPresented = now
 		m.busy = false
@@ -406,6 +433,8 @@ var accent = lipgloss.NewStyle().Foreground(lipgloss.Color("#70ead1")).Bold(true
 var muted = lipgloss.NewStyle().Foreground(lipgloss.Color("#8b91aa"))
 
 func (m *model) View() tea.View {
+	start := time.Now()
+	defer func() { m.stages.view.add(time.Since(start)) }()
 	if m.width < 1 || m.height < 1 {
 		return tea.NewView("Starting GPU shader gallery…")
 	}
@@ -464,13 +493,15 @@ func (m *model) View() tea.View {
 		}
 		title := accent.Render("NTCHARTS / SHADERS") + "   " + presets[m.selected].title + "   " + muted.Render(state)
 		stats := fmt.Sprintf("%s · %.0f app fps · %d×%d · R %.1f / E %.1f ms · %s", m.transport, m.fps, m.rasterW, m.rasterH, m.renderMS, m.encodeMS, formatBytes(m.bytes))
+		s := m.lastStages
+		breakdown := fmt.Sprintf("R = setup %.1f / submit %.1f / map %.1f / copy %.1f ms", ms(s.setup), ms(s.submit), ms(s.mapWait), ms(s.copy))
 		values := []string{fmt.Sprintf("speed %.2f", m.speed), fmt.Sprintf("scale %.2f", m.scale), fmt.Sprintf("color %.2f", m.color), fmt.Sprintf("detail %.2f", m.detail)}
 		values[m.parameter] = accent.Render("[" + values[m.parameter] + "]")
 		params := strings.Join(values, "   ") + fmt.Sprintf("   density %d", m.density)
 		help := "←→ preset · m mosaic · s source · space pause · f full · ↑↓ select · [] edit · q quit"
 		note := presets[m.selected].description
 		clip := func(s string) string { return ansi.Truncate(s, m.width, "") }
-		content = clip(title) + "\n" + clip(muted.Render(stats)) + "\n" + content + "\n" + clip(params) + "\n" + clip(muted.Render(help)) + "\n" + clip(muted.Render(note))
+		content = clip(title) + "\n" + clip(muted.Render(stats)) + "\n" + clip(muted.Render(breakdown)) + "\n" + content + "\n" + clip(params) + "\n" + clip(muted.Render(help)) + "\n" + clip(muted.Render(note))
 	}
 	view := tea.NewView(content)
 	view.AltScreen = true

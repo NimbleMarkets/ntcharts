@@ -6,6 +6,7 @@ import (
 	"image"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/gogpu/gputypes"
 	"github.com/gogpu/wgpu"
@@ -21,15 +22,16 @@ type uniforms struct {
 	Detail, Pad               float32
 }
 type frameRenderer interface {
-	Render(renderRequest) (*image.NRGBA, error)
+	Render(renderRequest) (*image.NRGBA, stageTimes, error)
 }
 type gpuJob struct {
 	request renderRequest
 	reply   chan gpuResult
 }
 type gpuResult struct {
-	image *image.NRGBA
-	err   error
+	image  *image.NRGBA
+	stages stageTimes
+	err    error
 }
 type gpuRenderer struct {
 	mu     sync.Mutex
@@ -37,6 +39,9 @@ type gpuRenderer struct {
 	done   chan struct{}
 	closed bool
 	name   string
+	// initTime covers the instance, adapter and device; compileTime covers
+	// compiling every preset's pipeline.
+	initTime, compileTime time.Duration
 }
 
 // All GPU calls, including map/poll and destruction, stay on one OS thread.
@@ -48,6 +53,7 @@ func newGPU() (*gpuRenderer, error) {
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
 		defer close(g.done)
+		start := time.Now()
 		instance, err := wgpu.CreateInstance(nil)
 		if err != nil {
 			ready <- err
@@ -76,6 +82,8 @@ func newGPU() (*gpuRenderer, error) {
 			return
 		}
 		defer dev.Release()
+		g.initTime = time.Since(start)
+		start = time.Now()
 		compiled := make([]*gpuPipeline, len(presets))
 		defer func() {
 			for _, p := range compiled {
@@ -91,14 +99,15 @@ func newGPU() (*gpuRenderer, error) {
 				return
 			}
 		}
+		g.compileTime = time.Since(start)
 		ready <- nil
 		for job := range g.jobs {
 			r := job.request
 			u := uniforms{Time: r.seconds, Speed: r.speed, Scale: r.scale, Color: r.color, Width: uint32(r.width), Height: uint32(r.height), Detail: r.detail}
 			p := compiled[r.preset]
-			img, err := DispatchRGBA8(dev, ImageDispatch{Label: presets[r.preset].name, Width: r.width, Height: r.height,
+			img, stages, err := DispatchRGBA8(dev, ImageDispatch{Label: presets[r.preset].name, Width: r.width, Height: r.height,
 				Uniform: BytesOf(&u), BindGroupLayout: p.bindings, Pipeline: p.pipeline})
-			job.reply <- gpuResult{img, err}
+			job.reply <- gpuResult{img, stages, err}
 		}
 	}()
 	if err := <-ready; err != nil {
@@ -107,19 +116,19 @@ func newGPU() (*gpuRenderer, error) {
 	}
 	return g, nil
 }
-func (g *gpuRenderer) Render(r renderRequest) (*image.NRGBA, error) {
+func (g *gpuRenderer) Render(r renderRequest) (*image.NRGBA, stageTimes, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if g.closed {
-		return nil, errors.New("GPU renderer closed")
+		return nil, stageTimes{}, errors.New("GPU renderer closed")
 	}
 	if r.preset < 0 || r.preset >= len(presets) || r.width < 1 || r.height < 1 || r.width > 2048 || r.height > 1536 {
-		return nil, errors.New("invalid render request")
+		return nil, stageTimes{}, errors.New("invalid render request")
 	}
 	reply := make(chan gpuResult, 1)
 	g.jobs <- gpuJob{r, reply}
 	result := <-reply
-	return result.image, result.err
+	return result.image, result.stages, result.err
 }
 func (g *gpuRenderer) Close() {
 	g.mu.Lock()

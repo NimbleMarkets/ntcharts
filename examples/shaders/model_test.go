@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"image"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -12,11 +14,14 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-type fakeRenderer struct{ requests []renderRequest }
+type fakeRenderer struct {
+	requests []renderRequest
+	stages   stageTimes
+}
 
-func (r *fakeRenderer) Render(req renderRequest) (*image.NRGBA, error) {
+func (r *fakeRenderer) Render(req renderRequest) (*image.NRGBA, stageTimes, error) {
 	r.requests = append(r.requests, req)
-	return image.NewNRGBA(image.Rect(0, 0, req.width, req.height)), nil
+	return image.NewNRGBA(image.Rect(0, 0, req.width, req.height)), r.stages, nil
 }
 func testModel(t *testing.T) (*model, *fakeRenderer) {
 	t.Helper()
@@ -370,5 +375,118 @@ func TestTransportStatsFollowFrameMetadata(t *testing.T) {
 	}
 	if m.pic.KittyMedium() != picture.KittyMediumSharedMemory {
 		t.Fatal("the gallery model should request the shared-memory medium (direct is the automatic fallback)")
+	}
+}
+
+func fixedStages() stageTimes {
+	return stageTimes{setup: time.Millisecond, submit: 2 * time.Millisecond, mapWait: 3 * time.Millisecond, copy: 4 * time.Millisecond}
+}
+
+// wantStages checks the median of each named stage; every stage must have
+// been sampled exactly once.
+func wantStages(t *testing.T, got map[string]stageSummary, want map[string]float64) {
+	t.Helper()
+	for name, ms := range want {
+		if got[name].Count != 1 || got[name].P50MS != ms {
+			t.Errorf("stage %q = %+v, want one sample of %v ms", name, got[name], ms)
+		}
+	}
+}
+
+func TestReportSummarizesEachStageOfAFrame(t *testing.T) {
+	m, r := testModel(t)
+	r.stages = fixedStages()
+	_, render := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	rendered := render().(renderedMsg)
+	rendered.elapsed = 11 * time.Millisecond
+	m.Update(rendered)
+	m.Update(encodedMsg{frame: picture.KittyFrameMsg{Medium: picture.KittyMediumSharedMemory, APC: "ref"}, elapsed: 5 * time.Millisecond})
+	wantStages(t, m.report().Stages, map[string]float64{"render": 11, "setup": 1, "submit": 2, "map": 3, "copy": 4, "encode": 5})
+}
+
+func TestMosaicStagesSumTheFourTiles(t *testing.T) {
+	m, r := testModel(t)
+	r.stages = fixedStages()
+	m.width, m.height = 80, 24
+	_, render := m.Update(tea.KeyPressMsg{Code: 'm', Text: "m"})
+	m.Update(render())
+	wantStages(t, m.report().Stages, map[string]float64{"setup": 4, "submit": 8, "map": 12, "copy": 16})
+}
+
+func TestStaleFramesAreNotSampled(t *testing.T) {
+	m, r := testModel(t)
+	r.stages = fixedStages()
+	_, render := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m.selectPreset(2) // the frame in flight no longer matches what is on screen
+	m.Update(render())
+	if got := m.report().Stages["map"]; got.Count != 0 {
+		t.Fatalf("a discarded frame was sampled: %+v", got)
+	}
+}
+
+func TestReportCountsFrameIntervalsAndViews(t *testing.T) {
+	m, _ := testModel(t)
+	m.width, m.height = 80, 24
+	m.Update(presentedMsg{})
+	if got := m.report().Stages["frame"]; got.Count != 0 {
+		t.Fatalf("one presentation is not an interval: %+v", got)
+	}
+	m.Update(presentedMsg{})
+	m.View()
+	stages := m.report().Stages
+	if stages["frame"].Count != 1 || stages["view"].Count != 1 {
+		t.Fatalf("frame = %+v, view = %+v, want one sample each", stages["frame"], stages["view"])
+	}
+}
+
+func TestFirstFrameTimeIsRecordedOnce(t *testing.T) {
+	m, _ := testModel(t)
+	m.started = time.Now().Add(-time.Second)
+	m.Update(presentedMsg{})
+	first := m.report().Startup.FirstFrameMS
+	if first < 1000 || first > 5000 {
+		t.Fatalf("first frame = %v ms, want about 1000", first)
+	}
+	m.started = time.Now().Add(-time.Minute)
+	m.Update(presentedMsg{})
+	if got := m.report().Startup.FirstFrameMS; got != first {
+		t.Fatalf("first frame changed from %v to %v ms on a later frame", first, got)
+	}
+}
+
+func TestHeaderShowsTheStageBreakdown(t *testing.T) {
+	m, r := testModel(t)
+	r.stages = fixedStages()
+	_, render := m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	m.Update(render())
+	want := "setup 1.0 / submit 2.0 / map 3.0 / copy 4.0"
+	if content := ansi.Strip(m.View().Content); !strings.Contains(content, want) {
+		t.Fatalf("header does not show %q:\n%s", want, content)
+	}
+}
+
+func TestReportKeepsItsPublishedFields(t *testing.T) {
+	m, _ := testModel(t)
+	m.width, m.height = 80, 24
+	m.geometry()
+	data, err := json.Marshal(m.report())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	// Scripts already read these keys from -report; new fields only add to them.
+	for _, key := range []string{"gpu", "encoded_frames", "rendered_presets", "app_fps", "render_ms", "encode_ms", "width", "height"} {
+		if _, ok := got[key]; !ok {
+			t.Errorf("report lost %q: %s", key, data)
+		}
+	}
+	if got["compiler"] != runtime.Compiler {
+		t.Errorf("compiler = %v, want %q", got["compiler"], runtime.Compiler)
+	}
+	if got["width"] != float64(m.rasterW) || got["height"] != float64(m.rasterH) {
+		t.Errorf("raster = %vx%v, want %dx%d", got["width"], got["height"], m.rasterW, m.rasterH)
 	}
 }
