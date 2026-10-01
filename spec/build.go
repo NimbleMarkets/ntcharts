@@ -589,17 +589,47 @@ func buildHeatmap(s Spec) (any, error) {
 	} else {
 		opts = append(opts, heatmap.WithAutoValueRange())
 	}
-	m := heatmap.New(s.Width, s.Height, opts...)
+	// The cells form an index grid, drawn as filled blocks that tile the plot.
+	// Cell (x, y) is column x and row y, with row 0 first: the topmost row,
+	// where y_axis.labels[0] is drawn, as in flint's own heatmaps. The model
+	// counts rows up from the bottom, so rows and row labels are mirrored.
+	var cells []HeatCell
 	if len(s.Heat.Matrix) > 0 {
 		for y, row := range s.Heat.Matrix {
 			for x, value := range row {
-				m.Push(heatmap.NewHeatPoint(float64(x), float64(y), value))
+				cells = append(cells, HeatCell{X: float64(x), Y: float64(y), Z: value})
 			}
 		}
 	} else {
-		for _, c := range s.Heat.Cells {
-			m.Push(heatmap.NewHeatPoint(c.X, c.Y, c.Z))
+		cells = s.Heat.Cells
+	}
+	nx, ny := len(s.XAxis.Labels), len(s.YAxis.Labels)
+	for _, c := range cells {
+		if c.X < 0 || c.Y < 0 {
+			return nil, fmt.Errorf("spec: heatmap cell indices must be non-negative; got cell (%v, %v)", c.X, c.Y)
 		}
+		nx, ny = max(nx, int(math.Floor(c.X))+1), max(ny, int(math.Floor(c.Y))+1)
+	}
+	opts = append(opts, heatmap.WithCellSize(1, 1))
+	m := heatmap.New(s.Width, s.Height, opts...)
+	if len(s.XAxis.Labels) == 0 {
+		m.SetXStep(0) // no column labels: no rows reserved for them
+	}
+	if len(s.YAxis.Labels) == 0 {
+		m.SetYStep(0) // no row labels: no margin reserved for them
+	}
+	xLabels := make([]string, nx)
+	copy(xLabels, s.XAxis.Labels)
+	yLabels := make([]string, ny)
+	for j := range yLabels {
+		if i := ny - 1 - j; i < len(s.YAxis.Labels) {
+			yLabels[j] = s.YAxis.Labels[i]
+		}
+	}
+	m.SetXLabels(xLabels)
+	m.SetYLabels(yLabels)
+	for _, c := range cells {
+		m.Push(heatmap.NewHeatPoint(c.X, float64(ny-1)-c.Y, c.Z))
 	}
 	m.Draw()
 	return &m, nil

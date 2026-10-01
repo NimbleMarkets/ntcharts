@@ -134,7 +134,8 @@ type XAxis struct {
 	// XAxisValue. If empty, a sensible default is inferred from the chart type.
 	Type string `json:"type,omitempty"`
 	// Labels is the optional list of category labels, used when
-	// Type == XAxisCategory.
+	// Type == XAxisCategory. For a heatmap, Labels[i] names the column of
+	// cells at X = i and is drawn under the plot.
 	Labels []string `json:"labels,omitempty"`
 	// Format describes how axis labels render.
 	Format Format `json:"format,omitzero"`
@@ -153,8 +154,10 @@ type YAxis struct {
 	Min *float64 `json:"min,omitempty"`
 	// Max pins the Y axis maximum. If nil, auto-scale.
 	Max *float64 `json:"max,omitempty"`
-	// Labels is the optional list of row labels for grid-style charts (e.g.
-	// heatmap rows). Terminal surfaces currently ignore this field.
+	// Labels is the optional list of row labels for grid-style charts. For a
+	// heatmap, Labels[i] names the row of cells at Y = i; row 0 is drawn at
+	// the top, and the labels are drawn left of the plot. Other chart types
+	// ignore it.
 	Labels []string `json:"labels,omitempty"`
 	// Format describes how axis labels render.
 	Format Format `json:"format,omitzero"`

@@ -109,11 +109,11 @@ both:
 | `Data.Series` / `Series.Color` (ohlc) | exactly one series required; `Series.Color` ignored in favour of up/down palette slots | N/A — OHLC is scaffold-only |
 | `Theme.Palette` (bar, line, scatter, timeseries, sparkline) | fallback for series without `Series.Color` | honoured for bar and timeseries; other types are scaffold-only |
 | `XAxis.Format` / `YAxis.Format` (bar, heatmap, sparkline) | **ignored** | **ignored** for bar; other types are scaffold-only |
-| `XAxis.Labels` | honoured for bar; **ignored** by other terminal builders | honoured for bar; **ignored** for timeseries |
+| `XAxis.Labels` | honoured for bar (categories) and heatmap (column names); **ignored** by other terminal builders | honoured for bar; **ignored** for timeseries |
 | `YAxis.Min` / `YAxis.Max` (heatmap) | **ignored** — use `Heat.MinValue` / `Heat.MaxValue` for the colour domain | N/A — heatmap is scaffold-only |
 | `DataPoint.Size` | **ignored** everywhere — accepted by the schema, drawn as fixed-size markers on every surface | **ignored** everywhere |
 | `XAxis.Title` / `YAxis.Title` | **ignored** — no current ntcharts terminal model surfaces an axis title | **ignored** — not wired into `ToECharts()` |
-| `YAxis.Labels` (grid charts, e.g. heatmap rows) | **ignored** — terminal heatmap currently has no row-label rendering | **ignored** — not wired into `ToECharts()`; reserved for future grid-chart row labels |
+| `YAxis.Labels` (heatmap rows) | honoured — drawn left of the plot, first label on the top row; other chart types ignore it | **ignored** — not wired into `ToECharts()`; reserved for future grid-chart row labels |
 | `Title` / `Subtitle` | **ignored** — the terminal models draw no title; the host TUI is expected to place one (e.g. flint-tui's status line) | honoured — ECharts title/subtitle |
 | `Options.ShowLegend` / `Options.ShowGrid` | **ignored** — no terminal model draws a legend or background grid | honoured |
 | `Theme.Background` / `Theme.Foreground` | **ignored** — the terminal inherits the host's colours; only `Theme.Palette` (series colours) and `Theme.Gradient` (heatmap) are read | `Background` honoured as the canvas colour; `Foreground` ignored |
@@ -237,9 +237,8 @@ spec/
   `Min`/`Max` to pin the range: a lone `Min` or `Max` pins that bound while
   the other is data-derived, both pin an explicit range, and neither leaves
   the chart fully auto-scaled — see "One-sided Y-axis pins" above for the
-  full rule and its edge cases. `YAxis.Labels` is reserved for row labels on
-  grid-style charts (e.g. heatmap rows); see the fidelity matrix above — it
-  is currently ignored by both surfaces.
+  full rule and its edge cases. `XAxis.Labels` and `YAxis.Labels` name the
+  columns and rows of a heatmap; see the heatmap notes below.
 - **`Format`** describes how axis labels (and `FormatValue`) render a
   `float64`. `Kind` selects the family:
   - `""` / `"number"` — plain numeric formatting, `Precision` decimals.
@@ -269,13 +268,17 @@ spec/
   list (`{X, Y, Z}` triples) or a dense row-major `Matrix`; `MinValue`/
   `MaxValue` independently pin the colour-scale domain (data-derived when nil).
   A nonempty matrix takes precedence over cells; `Matrix[y][x]` corresponds
-  to a cell at `(x, y)`. Y-index
-  convention: `Y=0` is the **first row** per the producer's `labels` order
-  (row `i` in that order maps to `Y=i`); note the terminal heatmap canvas
-  itself draws data bottom-to-top (`heatmap.Model.Draw`'s doc comment), so
-  `Y=0` renders at the **bottom** row of the terminal viewport — renderers
-  that add row-label support must reconcile the label-order `Y=0` with the
-  canvas's bottom-row `Y=0`.
+  to a cell at `(x, y)`. Cell indices are whole, non-negative numbers
+  (`Build` rejects a negative one); each cell is drawn as a filled block, and
+  the blocks tile the plot. Row `Y=0` is the **first row, drawn at the top**,
+  and `y_axis.labels[0]` names it, as in flint's own heatmaps; `x_axis.labels[i]`
+  names column `X=i`, counting from the left. Row labels sit right-aligned in a
+  margin left of the plot, centred on their rows; column labels sit under the
+  plot, each at the left edge of its column. A label that would land on a row
+  already labelled, or run into the previous column label, is left out. The
+  plot grows to cover the labels, so a label with no cells is an empty row or
+  column. With no labels, no margin or label row is reserved and the cells
+  fill the whole chart.
 - **`Theme.Gradient`** is an ordered list of `"#rrggbb"` hex stops
   interpolated into a colour scale for heatmap rendering; empty falls back to
   the package's default grayscale scale.

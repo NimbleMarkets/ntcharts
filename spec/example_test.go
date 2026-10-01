@@ -4,6 +4,7 @@ package spec_test
 
 import (
 	"fmt"
+	"github.com/charmbracelet/x/ansi"
 	"strings"
 	"time"
 
@@ -318,4 +319,45 @@ func ExampleBuild_ohlc() {
 	m := term.(*timeserieslinechart.Model)
 	fmt.Printf("terminal: %T, non-empty view: %v\n", term, strings.TrimSpace(m.View()) != "")
 	// Output: terminal: *timeserieslinechart.Model, non-empty view: true
+}
+
+// ExampleBuild_heatmapLabels shows a labelled heatmap. Cells are drawn with
+// background colours, which the Example strips to keep its golden plain: each
+// block of blank cells below is one coloured cell, and the first row label
+// (Mon) is the top row.
+func ExampleBuild_heatmapLabels() {
+	days := []string{"Mon", "Tue", "Wed"}
+	hours := []string{"09", "12", "15", "18"}
+	var cells []spec.HeatCell
+	for y := range days {
+		for x := range hours {
+			cells = append(cells, spec.HeatCell{X: float64(x), Y: float64(y), Z: float64(x + y*4)})
+		}
+	}
+	s := spec.Spec{
+		Type: spec.ChartTypeHeatmap, Width: 28, Height: 9,
+		XAxis: spec.XAxis{Labels: hours},
+		YAxis: spec.YAxis{Labels: days},
+		Heat:  &spec.HeatData{Cells: cells},
+		Theme: spec.Theme{Gradient: []string{"#000044", "#ff4400"}},
+	}
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*heatmap.Model)
+	for _, line := range strings.Split(ansi.Strip(m.View()), "\n") {
+		fmt.Println(strings.TrimRight(line, " ") + "|") // | marks each row's end, so blank rows show
+	}
+	// Output:
+	// |
+	// Mon|
+	// |
+	// Tue|
+	// |
+	// |
+	// Wed|
+	//     09    12    15    18|
+	// |
 }
