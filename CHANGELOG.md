@@ -1,9 +1,8 @@
 # CHANGELOG
 
-## v2.6.0 (unreleased)
+## v2.6.0 (2026-10-01)
 
  * fix(spec): Numeric-X line charts now join each series' points with braille lines instead of drawing baseline spikes. Linear/log scales, series colours, and Y pins are preserved; singleton points draw as dots. **Behavior/API change from v2.5.0:** `Build` for `ChartTypeLine` returns `*linechart.Model` instead of `*wavelinechart.Model`. Points are connected in input order, with no connection between series.
-
  * feat(linechart): Add logarithmic axes. `linechart.Scale` is `ScaleLinear` (the default) or `ScaleLog` (base 10), set with `WithXScale` / `WithYScale` or `SetXScale` / `SetYScale` and read with `XScale` / `YScale`; `wavelinechart` exposes both options, `timeserieslinechart` and `streamlinechart` expose `WithYScale`. Ranges, data points, and label formatter values stay in data units. A log axis labels powers of ten on the rows and columns where they fall (adding 2× and 5× when a range holds fewer than three, and falling back to even spacing in a range too narrow for two round values), with the axis steps as the minimum label spacing. Points at or below zero are not drawn and are ignored by auto-ranging, non-positive range bounds are replaced (minimum = maximum/10, or 1..10), and zoom and pan steps are measured in decades. On a log Y axis a `wavelinechart` rests on the bottom of the view range. Linear axes are unchanged.
  * feat(heatmap): Heatmaps can draw filled cells and name their rows and columns. `WithCellSize` draws each point as a block that tiles the plot instead of a single character, and `WithXLabels` / `WithYLabels` (or `SetXLabels` / `SetYLabels`) draw column names under the plot and row names, centred on their rows, in a margin to its left. Existing heatmaps are unchanged unless they opt in.
  * feat(examples): Add `heatmap/labels`, a day-by-time heatmap with filled cells and row and column names, with keys to toggle the labels and resize the chart. It is in the WASM gallery as "Heatmap (labels)".
