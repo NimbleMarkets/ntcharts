@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.6.0 (unreleased)
+## v2.6.0 (2026-10-01)
 
  * fix(spec): Numeric-X line charts now join each series' points with braille lines instead of drawing baseline spikes. Linear/log scales, series colours, and Y pins are preserved; singleton points draw as dots. **Behavior/API change from v2.5.0:** `Build` for `ChartTypeLine` returns `*linechart.Model` instead of `*wavelinechart.Model`. Points are connected in input order, with no connection between series.
 
