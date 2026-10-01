@@ -9,8 +9,8 @@ use (
 	./spec/echarts
 )
 
-replace github.com/NimbleMarkets/ntcharts/v2 v2.5.0 => .
+replace github.com/NimbleMarkets/ntcharts/v2 v2.6.0 => .
 
-replace github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.5.0 => ./picture/chartpicture
+replace github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.6.0 => ./picture/chartpicture
 
-replace github.com/NimbleMarkets/ntcharts/spec/echarts/v2 v2.5.0 => ./spec/echarts
+replace github.com/NimbleMarkets/ntcharts/spec/echarts/v2 v2.6.0 => ./spec/echarts
