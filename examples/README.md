@@ -168,6 +168,10 @@ Heatmaps display (x,y) data over a grid with color mapping.
 `ntcharts-heatmap-perlin` [Perlin Noise TUI (source)](./heatmap/perlin/main.go)<br>
 <img src="heatmap/perlin/perlin.png" alt="heatmap perlin still" width="300"/>
 
+`ntcharts-heatmap-labels` [Labelled Heatmap (source)](./heatmap/labels/main.go)<br>
+An index grid drawn as filled cells (`heatmap.WithCellSize`) with row and column names (`WithXLabels` / `WithYLabels`). Press `l` to drop the labels and `-` / `+` to resize; labels that no longer fit are dropped rather than overdrawn.<br>
+<img src="heatmap/labels/demo.gif" alt="labelled heatmap gif"/>
+
 ## Picture
 
 `picture` displays a Golang [`image.Image`](https://pkg.go.dev/image) via Glyph (colored block) or full Kitty terminal graphics.  `pictureurl` adds HTTP loading features. (For details on running Kitty graphics inside tmux, see [KITTY.md](../KITTY.md)).

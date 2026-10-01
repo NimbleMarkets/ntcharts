@@ -65,6 +65,10 @@ groups:
         title: Heatmap (functor)
         blurb: Heatmap rendering of an arbitrary 2D math functor.
         source: ./examples/heatmap/functor
+      - name: heatmap-labels
+        title: Heatmap (labels)
+        blurb: Filled heatmap cells with row and column names; press l to drop the labels, +/- to resize.
+        source: ./examples/heatmap/labels
   - title: Graph
     demos:
       - name: graph-braille
