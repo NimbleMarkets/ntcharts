@@ -54,6 +54,29 @@ func TestValidateSchemaV1(t *testing.T) {
 		}
 	})
 
+	t.Run("bad axis scale", func(t *testing.T) {
+		s := base
+		s.XAxis.Scale = "symlog"
+		if err := s.Validate(); err == nil || err.Error() != `spec: x_axis scale "symlog" must be linear or log` {
+			t.Fatalf("expected x_axis scale error, got %v", err)
+		}
+		s = base
+		s.YAxis.Scale = "Log"
+		if err := s.Validate(); err == nil || err.Error() != `spec: y_axis scale "Log" must be linear or log` {
+			t.Fatalf("expected y_axis scale error, got %v", err)
+		}
+	})
+
+	t.Run("axis scale accepts empty, linear and log", func(t *testing.T) {
+		for _, scale := range []string{"", ScaleLinear, ScaleLog} {
+			s := base
+			s.XAxis.Scale, s.YAxis.Scale = scale, scale
+			if err := s.Validate(); err != nil {
+				t.Fatalf("scale %q: expected valid, got %v", scale, err)
+			}
+		}
+	})
+
 	t.Run("bad series type", func(t *testing.T) {
 		s := base
 		s.Data.Series = []Series{{Name: "a", Type: "pie", Values: []DataPoint{{Y: 1}}}}
@@ -157,5 +180,38 @@ func TestFormatIsZero(t *testing.T) {
 	}
 	if (Format{Kind: "si"}).IsZero() {
 		t.Fatal("non-zero Format must not report IsZero")
+	}
+}
+
+func TestSpecJSONScaleRoundTrip(t *testing.T) {
+	in := Spec{
+		Type: ChartTypeScatter, Width: 40, Height: 10,
+		XAxis: XAxis{Scale: ScaleLog},
+		YAxis: YAxis{Scale: ScaleLog},
+		Data:  Data{Series: []Series{{Name: "a", Values: []DataPoint{{X: 1.0, Y: 1}}}}},
+	}
+	b, err := json.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(b); !strings.Contains(got, `"x_axis":{"scale":"log"}`) || !strings.Contains(got, `"y_axis":{"scale":"log"}`) {
+		t.Fatalf("scale missing from JSON: %s", got)
+	}
+	var out Spec
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.XAxis.Scale != ScaleLog || out.YAxis.Scale != ScaleLog {
+		t.Fatalf("round-trip mismatch: %+v / %+v", out.XAxis, out.YAxis)
+	}
+
+	// An empty scale is omitted, so linear specs serialize exactly as before.
+	in.XAxis.Scale, in.YAxis.Scale = "", ""
+	in.YAxis.Min = f64(1)
+	if b, err = json.Marshal(in); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "scale") {
+		t.Fatalf("empty scale must be omitted: %s", b)
 	}
 }

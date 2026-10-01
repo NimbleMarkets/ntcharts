@@ -73,6 +73,17 @@ const (
 	XAxisValue = "value"
 )
 
+// Axis scale constants used by XAxis.Scale and YAxis.Scale.
+const (
+	// ScaleLinear spaces values evenly along the axis. It is the default
+	// when Scale is empty.
+	ScaleLinear = "linear"
+	// ScaleLog spaces values by their base-10 logarithm, so each decade
+	// takes the same length of axis. Every value on the axis, including a
+	// pinned YAxis.Min / YAxis.Max, must be positive.
+	ScaleLog = "log"
+)
+
 // Orientation constants for Options.Orientation.
 const (
 	OrientationVertical   = "vertical"
@@ -127,6 +138,11 @@ type XAxis struct {
 	Labels []string `json:"labels,omitempty"`
 	// Format describes how axis labels render.
 	Format Format `json:"format,omitzero"`
+	// Scale is "" or ScaleLinear for a linear axis, or ScaleLog for a
+	// base-10 logarithmic one. Build honours ScaleLog for line and scatter
+	// charts (numeric X); it is a Build error on every other chart type,
+	// and for any X value <= 0. Unknown values fail Validate.
+	Scale string `json:"scale,omitempty"`
 }
 
 // YAxis describes the Y axis of a chart.
@@ -142,6 +158,13 @@ type YAxis struct {
 	Labels []string `json:"labels,omitempty"`
 	// Format describes how axis labels render.
 	Format Format `json:"format,omitzero"`
+	// Scale is "" or ScaleLinear for a linear axis, or ScaleLog for a
+	// base-10 logarithmic one. Build honours ScaleLog for line, scatter,
+	// timeseries, and OHLC charts; it is a Build error on bar, heatmap, and
+	// sparkline charts, and for any Y value or Min / Max pin <= 0. An
+	// unpinned bound widens to a whole decade; Min and Max stay in data
+	// units. Unknown values fail Validate.
+	Scale string `json:"scale,omitempty"`
 }
 
 // Spec is the top-level neutral description of a chart.
@@ -304,6 +327,16 @@ func validateFormat(name string, f Format) error {
 	return nil
 }
 
+// validateScale reports an error if scale is not a recognized axis scale.
+// name identifies the axis in the error message (e.g. "x_axis").
+func validateScale(name, scale string) error {
+	switch scale {
+	case "", ScaleLinear, ScaleLog:
+		return nil
+	}
+	return fmt.Errorf("spec: %s scale %q must be linear or log", name, scale)
+}
+
 // Validate reports the first structural error in the Spec, if any.
 //
 // Validate is intentionally lightweight: it catches the obvious mistakes
@@ -369,6 +402,12 @@ func (s Spec) Validate() error {
 		return err
 	}
 	if err := validateFormat("y_axis", s.YAxis.Format); err != nil {
+		return err
+	}
+	if err := validateScale("x_axis", s.XAxis.Scale); err != nil {
+		return err
+	}
+	if err := validateScale("y_axis", s.YAxis.Scale); err != nil {
 		return err
 	}
 

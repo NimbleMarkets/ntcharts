@@ -90,6 +90,7 @@ both:
 | --- | --- | --- |
 | `Options.Stacked` (bar) | honoured — required (else error) when a bar `Spec` has more than one `Series` | **ignored** — web stacking planned, not implemented |
 | `Options.Orientation` (bar) | honoured via `barchart.WithHorizontalBars()` | **ignored** — always renders vertical bars |
+| `XAxis.Scale` / `YAxis.Scale` = `"log"` | honoured — Y for line, scatter, timeseries, ohlc; X for line, scatter. A `Build` error for X on timeseries/ohlc (time axis), for either axis on bar, heatmap, sparkline, and for any value or pin `<= 0` — see "Logarithmic axes" below | **ignored** — `ToECharts()` does not read `scale` yet and draws a linear axis |
 | `YAxis.Min` / `YAxis.Max`, one-sided (line, scatter, timeseries, ohlc) | honoured — see "One-sided Y-axis pins" below | honoured — ECharts auto-scales the unset bound natively |
 | `Theme.Palette[0]` / `[1]` (ohlc) | honoured — slot 0 = up candles, slot 1 = down candles; defaults `#26a69a` / `#ef5350` when unset | N/A — `ToECharts()` is scaffold-only |
 | `Options.CandleStyle` (ohlc) | honoured — `""` or `CandleStyleLine` renders box-drawing line runes, `CandleStyleBlock` renders solid block bodies; unknown values error | N/A — `ToECharts()` is scaffold-only |
@@ -146,11 +147,65 @@ an error because they leave no drawable Y range. If a lone pin equals the
 data-derived opposite bound, only the unpinned side expands by one unit.
 Unpinned flat scatter/OHLC ranges expand by one unit on each side.
 
+On a log Y axis (`YAxis.Scale = "log"`) the same rule holds, evaluated on
+the real values: `Min` / `Max` are given in data units, a lone pin fixes that
+bound while the other comes from the data, equal pins and an inverted range
+are the same errors, and a pin `<= 0` is an error of its own. Only the
+unpinned bound differs — it widens to a whole decade instead of sitting on
+the data's extreme. See "Logarithmic axes" below.
+
 `ChartTypeBar` pins each bound directly on the model (`barchart.WithMinValue`
 / `WithMaxValue`), so a lone pin leaves the other bound to the model's own
 auto-scaling, which already tracks negative values below zero. Setting both
 with `Min > Max` is the same `Build` error as above. A positive bar `Min`
 clamps to zero because the native bar model always retains a zero baseline.
+
+#### Logarithmic axes
+
+`XAxis.Scale` and `YAxis.Scale` are `""` / `"linear"` (`ScaleLinear`, the
+default) or `"log"` (`ScaleLog`, base 10). `Validate` rejects anything else.
+Linear specs build exactly as they did before the field existed.
+
+| Chart type | `y_axis.scale: "log"` | `x_axis.scale: "log"` |
+| --- | --- | --- |
+| line, scatter | honoured | honoured |
+| timeseries, ohlc | honoured | `Build` error — the X axis is time |
+| bar, heatmap, sparkline | `Build` error | `Build` error |
+
+Bar, heatmap, and sparkline charts have no way to draw a log axis, so `Build`
+refuses rather than drawing a linear chart under a spec that asked for log.
+
+- **Values must be positive.** Any value `<= 0` (or NaN / infinite) on a log
+  axis is a `Build` error naming it, e.g. `spec: y_axis scale "log" requires
+  positive finite values; series "a" point 3 has y = 0`. That covers every
+  point's Y, each OHLC open/high/low/close, a pinned `YAxis.Min` / `Max`, and
+  on a log X axis every resolved X — including the index fallback, whose
+  first point is X = 0. Nothing is clamped, skipped, or substituted.
+- **Range.** An unpinned bound widens to a whole decade
+  (`floor(log10(min))` … `ceil(log10(max))`), so the axis ends on powers of
+  ten; a pinned bound is used exactly. When that leaves no range (all values
+  on one power of ten), each unpinned bound moves out one more decade. The X
+  axis has no pins and always uses whole decades.
+- **Labels.** `Format` applies to the value as on a linear axis, so
+  currency, SI, percent, and number formats work unchanged. With no
+  `Format`, labels are three significant digits with trailing zeros dropped
+  and a k/M/G/T suffix from 1000 up (`1`, `2.5`, `0.001`, `1k`, `3.16M`),
+  falling back to exponent notation below 0.0001 and from 1e15; the charts'
+  own default, a whole number, would label every tick below 1 as `0`.
+- **Ticks** sit on powers of ten, on the row or column where each one
+  falls, whatever the chart's size. Labels keep the models' usual minimum
+  spacing (two rows; two columns for line and scatter), so when decades are
+  closer than that every second (third, ...) one is labelled. When a range
+  holds fewer than three powers of ten, 2× and 5× are added where they fit,
+  and a range too narrow for two round values falls back to evenly spaced
+  labels. A pinned bound that is not itself a round value is not labelled.
+- **How it is drawn.** `Build` sets the chart model's own scale
+  (`linechart.ScaleLog`), so the returned model's ranges (`ViewMinY()`,
+  `MaxX()`, …) are in data units and its zoom and pan work in decades.
+  `ChartTypeLine` draws columns without a point along the bottom of the
+  range, since a log axis has no zero for the wave to rest on.
+
+See `ExampleBuild_logScale` in [`example_test.go`](./example_test.go).
 
 ## Layout
 
@@ -160,10 +215,11 @@ spec/
 │                         HeatData, OHLCPoint, Options, Theme, Validate
 ├── helpers.go            X-value coercion (exported PointX / PointTime; pointFloat / pointString)
 ├── format.go              FormatValue + Format.labelFormatter (number/percent/currency/si/time)
+├── scale.go               log axis scale: supported chart types, value errors, decade ranges, default labels
 ├── gradient.go            Theme.Gradient hex-stop interpolation for heatmap colour scales
 ├── build.go               Build(s) -> ntcharts terminal model (includes buildOHLC, on timeserieslinechart.Model;
 │                         exported DeriveBarLabels shared with the web surface)
-├── example_test.go        runnable examples (bar, line, scatter, timeseries, heatmap, ohlc)
+├── example_test.go        runnable examples (bar, line, log scale, scatter, timeseries, heatmap, ohlc)
 ├── README.md              this file
 └── echarts/               separate module github.com/NimbleMarkets/ntcharts/spec/echarts/v2
     ├── go.mod
@@ -173,8 +229,10 @@ spec/
 
 ## Schema v1 overview
 
-- **`XAxis` / `YAxis`** describe each axis: `Title`, `Labels`, and `Format`
-  (label formatting). `XAxis.Type` is `XAxisCategory`, `XAxisTime`, or
+- **`XAxis` / `YAxis`** describe each axis: `Title`, `Labels`, `Format`
+  (label formatting), and `Scale` (`""` / `"linear"`, or `"log"` for a
+  base-10 logarithmic axis — see "Logarithmic axes" above for which chart
+  types honour it). `XAxis.Type` is `XAxisCategory`, `XAxisTime`, or
   `XAxisValue` (inferred from chart type when empty). `YAxis` adds
   `Min`/`Max` to pin the range: a lone `Min` or `Max` pins that bound while
   the other is data-derived, both pin an explicit range, and neither leaves
@@ -271,7 +329,8 @@ without it, `Build` returns an error rather than silently stacking series.
 For line, scatter, and heatmap examples see `ExampleBuild_line`,
 `ExampleBuild_scatter`, and `ExampleBuild_heatmap` in
 [`example_test.go`](./example_test.go). For a time-series example see
-`ExampleBuild_timeSeries`. For candlesticks see `ExampleBuild_ohlc`.
+`ExampleBuild_timeSeries`. For candlesticks see `ExampleBuild_ohlc`. For a
+logarithmic axis see `ExampleBuild_logScale`.
 
 Time-series specs can also mix line and bar series by setting
 `spec.Series.Type` per series. In terminal rendering, bar series are drawn as
@@ -288,8 +347,8 @@ From the repository root:
 go build ./spec/
 
 # Vet + run the runnable examples (ExampleBuild_bar, ExampleBuild_line,
-# ExampleBuild_scatter, ExampleBuild_timeSeries, ExampleBuild_heatmap,
-# ExampleBuild_ohlc)
+# ExampleBuild_logScale, ExampleBuild_scatter, ExampleBuild_timeSeries,
+# ExampleBuild_heatmap, ExampleBuild_ohlc)
 go vet ./spec/
 go test ./spec/
 
@@ -324,8 +383,9 @@ the root module's dependency graph.
 ## Design notes
 
 - **`Spec.Validate()`** catches the obvious mistakes (missing `Type`, zero
-  dimensions, empty `Series`, invalid `Options.Orientation` or `Format.Kind`,
-  missing `Heat`/`OHLC` data for the chart types that require it). Both
+  dimensions, empty `Series`, invalid `Options.Orientation`, `Format.Kind`, or
+  axis `Scale`, missing `Heat`/`OHLC` data for the chart types that require
+  it). Both
   `Build` and `ToECharts` call it first.
 - **Time values** in `DataPoint.X` accept `time.Time`, RFC 3339 strings, or
   numeric milliseconds since epoch — see `PointTime` in `helpers.go`, which

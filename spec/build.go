@@ -36,9 +36,15 @@ import (
 // error rather than panicking, so future additions to ChartType do not break
 // existing callers.
 //
+// A log axis (XAxis.Scale / YAxis.Scale == ScaleLog) sets the model's own
+// scale to linechart.ScaleLog; its ranges stay in data units.
+//
 // Build does not mutate s.
 func Build(s Spec) (any, error) {
 	if err := s.Validate(); err != nil {
+		return nil, err
+	}
+	if err := checkScaleSupport(s); err != nil {
 		return nil, err
 	}
 	switch s.Type {
@@ -221,23 +227,59 @@ func checkGraphSize(m linechart.Model) error {
 // YAxis.Format carry a formatting directive, they are wired in before
 // DrawAll so terminal axis labels match the same Format used elsewhere
 // (e.g. ToECharts).
+//
+// On a log axis the range is set up front (whole decades around the data,
+// or the pinned bounds) and auto-ranging is switched off for it.
 func buildLine(s Spec) (*wavelinechart.Model, error) {
+	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
 	var opts []wavelinechart.Option
-	if s.YAxis.Min != nil || s.YAxis.Max != nil {
+	// scales go first, so the ranges that follow are taken on the right scale
+	if logX {
+		opts = append(opts, wavelinechart.WithXScale(linechart.ScaleLog))
+	}
+	if logY {
+		opts = append(opts, wavelinechart.WithYScale(linechart.ScaleLog))
+	}
+	if logY {
+		minY, maxY, ok, err := logYBounds(s.Data.Series)
+		if err != nil {
+			return nil, err
+		}
+		if minY, maxY, err = resolveLogYRange(s.YAxis, minY, maxY, ok); err != nil {
+			return nil, err
+		}
+		opts = append(opts, wavelinechart.WithYRange(minY, maxY))
+	} else if s.YAxis.Min != nil || s.YAxis.Max != nil {
 		minY, maxY, err := resolveYRange(s)
 		if err != nil {
 			return nil, err
 		}
 		opts = append(opts, wavelinechart.WithYRange(minY, maxY))
 	}
+	if logX {
+		minX, maxX, ok, err := logXBounds(s)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			minX, maxX = 1, 10
+		}
+		minX, maxX = logRange(minX, maxX, false, false)
+		opts = append(opts, wavelinechart.WithXRange(minX, maxX))
+	}
 	m := wavelinechart.New(s.Width, s.Height, opts...)
-	m.AutoMinY = s.YAxis.Min == nil
-	m.AutoMaxY = s.YAxis.Max == nil
+	// A log range already spans the data, and the model's own auto-ranging
+	// would not stop at whole decades.
+	m.AutoMinY = !logY && s.YAxis.Min == nil
+	m.AutoMaxY = !logY && s.YAxis.Max == nil
+	if logX {
+		m.AutoMinX, m.AutoMaxX = false, false
+	}
 
-	if xf := s.XAxis.Format.labelFormatter(); xf != nil {
+	if xf := axisLabelFormatter(s.XAxis.Format, s.XAxis.Scale); xf != nil {
 		m.XLabelFormatter = xf
 	}
-	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
+	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
 		m.YLabelFormatter = yf
 	}
 	m.UpdateGraphSizes()
@@ -267,6 +309,7 @@ func buildScatter(s Spec) (any, error) {
 		x, y  float64
 		style lipgloss.Style
 	}
+	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
 	var pts []styledPoint
 	minX, maxX := math.Inf(1), math.Inf(-1)
 	minY, maxY := math.Inf(1), math.Inf(-1)
@@ -274,6 +317,12 @@ func buildScatter(s Spec) (any, error) {
 		st := seriesStyle(ser, i, s.Theme)
 		for j, p := range ser.Values {
 			x := resolveXFloat(s, p, j)
+			if logX && !logOK(x) {
+				return nil, logValueError("x_axis", fmt.Sprintf("series %q point %d has x", ser.Name, j), x)
+			}
+			if logY && !logOK(p.Y) {
+				return nil, logValueError("y_axis", fmt.Sprintf("series %q point %d has y", ser.Name, j), p.Y)
+			}
 			pts = append(pts, styledPoint{x: x, y: p.Y, style: st})
 			minX, maxX = math.Min(minX, x), math.Max(maxX, x)
 			minY, maxY = math.Min(minY, p.Y), math.Max(maxY, p.Y)
@@ -282,18 +331,31 @@ func buildScatter(s Spec) (any, error) {
 	if len(pts) == 0 {
 		return nil, fmt.Errorf("spec: scatter requires at least one data point")
 	}
-	minY, maxY, err := resolvePinnedYRange(s.YAxis, minY, maxY)
+	var err error
+	if logY {
+		minY, maxY, err = resolveLogYRange(s.YAxis, minY, maxY, true)
+	} else {
+		minY, maxY, err = resolvePinnedYRange(s.YAxis, minY, maxY)
+	}
 	if err != nil {
 		return nil, err
 	}
-	if minX == maxX {
+	if logX {
+		minX, maxX = logRange(minX, maxX, false, false)
+	} else if minX == maxX {
 		minX, maxX = minX-1, maxX+1
 	}
 	var opts []linechart.Option
-	if xf := s.XAxis.Format.labelFormatter(); xf != nil {
+	if logX {
+		opts = append(opts, linechart.WithXScale(linechart.ScaleLog))
+	}
+	if logY {
+		opts = append(opts, linechart.WithYScale(linechart.ScaleLog))
+	}
+	if xf := axisLabelFormatter(s.XAxis.Format, s.XAxis.Scale); xf != nil {
 		opts = append(opts, linechart.WithXLabelFormatter(xf))
 	}
-	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
+	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
 		opts = append(opts, linechart.WithYLabelFormatter(yf))
 	}
 	m := linechart.New(s.Width, s.Height, minX, maxX, minY, maxY, opts...)
@@ -339,14 +401,26 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	opts := []timeserieslinechart.Option{
 		timeserieslinechart.WithTimeRange(tMin, tMax),
 	}
-	if s.YAxis.Min != nil || s.YAxis.Max != nil {
+	logY := s.YAxis.Scale == ScaleLog
+	if logY {
+		minY, maxY, ok, err := logYBounds(s.Data.Series)
+		if err != nil {
+			return nil, err
+		}
+		if minY, maxY, err = resolveLogYRange(s.YAxis, minY, maxY, ok); err != nil {
+			return nil, err
+		}
+		opts = append(opts,
+			timeserieslinechart.WithYScale(linechart.ScaleLog),
+			timeserieslinechart.WithYRange(minY, maxY))
+	} else if s.YAxis.Min != nil || s.YAxis.Max != nil {
 		minY, maxY, err := resolveYRange(s)
 		if err != nil {
 			return nil, err
 		}
 		opts = append(opts, timeserieslinechart.WithYRange(minY, maxY))
 	}
-	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
+	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
 		opts = append(opts, timeserieslinechart.WithYLabelFormatter(yf))
 	}
 	// Only kind == "time" X formats apply to a timeseries X axis; other
@@ -367,8 +441,8 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	}
 
 	m := timeserieslinechart.New(s.Width, s.Height, opts...)
-	m.AutoMinY = s.YAxis.Min == nil
-	m.AutoMaxY = s.YAxis.Max == nil
+	m.AutoMinY = !logY && s.YAxis.Min == nil
+	m.AutoMaxY = !logY && s.YAxis.Max == nil
 
 	for i, ser := range s.Data.Series {
 		name := ser.Name
@@ -603,21 +677,38 @@ func buildOHLC(s Spec) (any, error) {
 	}
 	tMin, tMax = drawableTimeRange(tMin, tMax)
 
+	logY := s.YAxis.Scale == ScaleLog
 	minP, maxP := math.Inf(1), math.Inf(-1)
-	for _, p := range pts {
+	for i, p := range pts {
+		if logY {
+			for _, f := range []struct {
+				name string
+				v    float64
+			}{{"open", p.O}, {"high", p.H}, {"low", p.L}, {"close", p.C}} {
+				if !logOK(f.v) {
+					return nil, logValueError("y_axis", fmt.Sprintf("ohlc point %d has %s", i, f.name), f.v)
+				}
+			}
+		}
 		minP = math.Min(minP, p.L)
 		maxP = math.Max(maxP, p.H)
 	}
-	minP, maxP, err := resolvePinnedYRange(s.YAxis, minP, maxP)
+	var err error
+	if logY {
+		minP, maxP, err = resolveLogYRange(s.YAxis, minP, maxP, true)
+	} else {
+		minP, maxP, err = resolvePinnedYRange(s.YAxis, minP, maxP)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	opts := []timeserieslinechart.Option{
-		timeserieslinechart.WithTimeRange(tMin, tMax),
-		timeserieslinechart.WithYRange(minP, maxP),
+	opts := []timeserieslinechart.Option{timeserieslinechart.WithTimeRange(tMin, tMax)}
+	if logY {
+		opts = append(opts, timeserieslinechart.WithYScale(linechart.ScaleLog))
 	}
-	if yf := s.YAxis.Format.labelFormatter(); yf != nil {
+	opts = append(opts, timeserieslinechart.WithYRange(minP, maxP))
+	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
 		opts = append(opts, timeserieslinechart.WithYLabelFormatter(yf))
 	}
 	if !s.XAxis.Format.IsZero() && s.XAxis.Format.Kind == "time" {
@@ -630,8 +721,8 @@ func buildOHLC(s Spec) (any, error) {
 	}
 
 	m := timeserieslinechart.New(s.Width, s.Height, opts...)
-	m.AutoMinY = s.YAxis.Min == nil
-	m.AutoMaxY = s.YAxis.Max == nil
+	m.AutoMinY = !logY && s.YAxis.Min == nil
+	m.AutoMaxY = !logY && s.YAxis.Max == nil
 	for i, p := range pts {
 		ts := times[i]
 		m.PushDataSet("open", timeserieslinechart.TimePoint{Time: ts, Value: p.O})

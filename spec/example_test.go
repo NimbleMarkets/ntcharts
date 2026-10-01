@@ -91,6 +91,49 @@ func ExampleBuild_line() {
 	//  0       1           2           3
 }
 
+// ExampleBuild_logScale shows a logarithmic Y axis: YAxis.Scale = ScaleLog
+// gives every decade the same height, so growth from 3 to 1,000,000 stays
+// readable. The unpinned range widens to whole decades (1 to 1M), and with
+// no YAxis.Format the labels use a short k/M suffix. Ticks sit on powers of
+// ten whatever the height: here six decades share eight rows, so every
+// second decade is labelled, on the row where it falls.
+func ExampleBuild_logScale() {
+	s := spec.Spec{
+		Type:   spec.ChartTypeLine,
+		Title:  "Signups",
+		Width:  40,
+		Height: 10,
+		YAxis:  spec.YAxis{Scale: spec.ScaleLog},
+		Data: spec.Data{
+			Series: []spec.Series{{Name: "signups", Values: []spec.DataPoint{
+				{X: 0.0, Y: 3}, {X: 1.0, Y: 40}, {X: 2.0, Y: 150},
+				{X: 3.0, Y: 2500}, {X: 4.0, Y: 30000}, {X: 5.0, Y: 1e6},
+			}}},
+		},
+	}
+
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*wavelinechart.Model)
+	for _, line := range strings.Split(m.View(), "\n") {
+		fmt.Println(strings.TrimRight(line, " "))
+	}
+	// Output:
+	//  1M│                                   ╭
+	//    │                                   │
+	//    │                            ╭╮     │
+	// 10k│                     ╭╮     ││     │
+	//    │                     ││     ││     │
+	// 100│             ╭╮      ││     ││     │
+	//    │      ╭╮     ││      ││     ││     │
+	//    ├╮     ││     ││      ││     ││     │
+	//   1└┴─────┴┴─────┴┴──────┴┴─────┴┴─────┴
+	//    0   1       2       3     4       5
+}
+
 // ExampleBuild_scatter shows describing a scatter chart and rendering it via
 // Build to a *linechart.Model; ntcharts has no dedicated scatter model, so
 // points are drawn directly onto a base linechart canvas.
