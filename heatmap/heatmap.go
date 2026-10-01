@@ -2,6 +2,11 @@
 
 // Package heatmap implements a canvas that displays a heatmap,
 // color-mapped data over a grid.
+//
+// Points are drawn as single canvas cells by default. For an index grid,
+// where X and Y are whole cell numbers, WithCellSize(1, 1) draws each point
+// as a block that fills its share of the plot so the blocks tile it, and
+// WithXLabels / WithYLabels name the columns and rows.
 package heatmap
 
 // File contains a Model using the BubbleTea framework
@@ -89,6 +94,10 @@ type Model struct {
 	AutoMaxValue bool    // AutoMaxValue true will automatically adjust minimum data value
 	minValue     float64 // minimum data value
 	maxValue     float64 // expected maximum data value
+
+	cellW, cellH float64  // data-unit size of one cell; > 0 draws cells as filled blocks
+	xLabels      []string // xLabels[i] names the cell column at X = i
+	yLabels      []string // yLabels[i] names the cell row at Y = i
 }
 
 // New returns a heatmap Model initialized with given width, height
@@ -205,7 +214,8 @@ func (m *Model) PushAllMatrixRow(dataRows [][]float64) {
 }
 
 // DrawPoint draws a HeatPoint on the heatmap Canvas.
-// It does so by adjusting the background.
+// It does so by adjusting the background: of one canvas cell, or, when a
+// cell size is set (see WithCellSize), of every canvas cell the data cell covers.
 func (m *Model) DrawPoint(pt HeatPoint) {
 	if len(m.ColorScale) == 0 {
 		return
@@ -216,6 +226,11 @@ func (m *Model) DrawPoint(pt HeatPoint) {
 	s := (pt.V - m.minValue) / rangeV
 	csi := clamp(int(s*float64(len(m.ColorScale))), 0, len(m.ColorScale)-1)
 	color := m.ColorScale[csi]
+
+	if m.cellW > 0 && m.cellH > 0 {
+		m.fillCell(pt, color)
+		return
+	}
 
 	// plot on canvas
 	sf := m.ScaleFloat64PointForLine(pt.AsFloat64Point())
@@ -230,8 +245,8 @@ func (m *Model) DrawPoint(pt HeatPoint) {
 	m.Model.Canvas.SetCellStyle(cp, newStyle)
 }
 
-// Draw will display the data on the canvas.
-// Columns representing the data will be displayed going from
+// Draw will display the data on the canvas, then any axis labels.
+// Rows representing the data will be displayed going from
 // from the bottom to the top and coming from the left to the right of the canvas.
 func (m *Model) Draw() {
 	for i, pt := range m.points {
@@ -244,6 +259,7 @@ func (m *Model) Draw() {
 			yieldToJS()
 		}
 	}
+	m.drawLabels()
 }
 
 ///////////////////////////////////////////////////////////////////////////////

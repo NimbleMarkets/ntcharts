@@ -76,3 +76,33 @@ func WithPoints(d []HeatPoint) Option {
 		m.PushAll(d)
 	}
 }
+
+// WithCellSize sets the size of one data cell in data units and draws each
+// point as a filled block of that size, centred on the point, instead of a
+// single canvas cell. For an index grid (points at whole X and Y) use 1, 1
+// together with ranges of -0.5..n-0.5 (see WithXLabels) and the cells tile
+// the graph. A size that is not positive restores single-cell points.
+func WithCellSize(w, h float64) Option {
+	return func(m *Model) {
+		m.cellW, m.cellH = w, h
+	}
+}
+
+// WithXLabels names the cell columns: labels[i] is drawn under the column at
+// X = i. The labels define the grid: the X range becomes -0.5..len(labels)-0.5
+// and is no longer auto-ranged. Draw draws them.
+func WithXLabels(labels []string) Option {
+	return func(m *Model) {
+		m.SetXLabels(labels)
+	}
+}
+
+// WithYLabels names the cell rows: labels[i] is drawn left of the row at
+// Y = i, counting up from the bottom. The labels define the grid: the Y range
+// becomes -0.5..len(labels)-0.5 and is no longer auto-ranged, and the margin
+// left of the graph grows to fit the longest label. Draw draws them.
+func WithYLabels(labels []string) Option {
+	return func(m *Model) {
+		m.SetYLabels(labels)
+	}
+}
