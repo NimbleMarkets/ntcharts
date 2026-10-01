@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 
 	"charm.land/lipgloss/v2"
@@ -28,6 +29,43 @@ func wantView(t *testing.T, got, want string) {
 }
 
 var day0 = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+func TestLogYAxisKeepsIsolatedPoints(t *testing.T) {
+	for name, draw := range map[string]func(*Model){
+		"runes":   (*Model).Draw,
+		"braille": (*Model).DrawBraille,
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := New(40, 10, WithYScale(linechart.ScaleLog), WithYRange(1, 1000),
+				WithTimeRange(day0, day0.Add(4*time.Hour)))
+			for i, v := range []float64{10, 0, 100} {
+				m.Push(TimePoint{Time: day0.Add(time.Duration(i+1) * time.Hour), Value: v})
+			}
+			draw(&m)
+			// Inspect only the plot, excluding axes. Each valid point should
+			// occupy its own column, with no connection across the zero.
+			left := m.Origin().X + 1
+			seenLeft, seenRight := false, false
+			middle := left + m.GraphWidth()/2
+			for y := 0; y < m.Origin().Y; y++ {
+				for x := left; x < m.Width(); x++ {
+					r := m.Canvas.Cell(canvas.Point{X: x, Y: y}).Rune
+					if r == 0 || r == ' ' || r == '\u2800' {
+						continue
+					}
+					if x == middle {
+						t.Fatal("line connected across the invalid point")
+					}
+					seenLeft = seenLeft || x < middle
+					seenRight = seenRight || x > middle
+				}
+			}
+			if !seenLeft || !seenRight {
+				t.Fatalf("isolated points missing: left=%v right=%v\n%s", seenLeft, seenRight, m.View())
+			}
+		})
+	}
+}
 
 // logSeries is ten days growing from 3 to a million, with a zero on day 3
 // and a negative value on day 7.

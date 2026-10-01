@@ -576,8 +576,13 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 				0, float64(m.GraphWidth()), // X values already scaled to graph
 				0, float64(m.GraphHeight())) // Y values already scaled to graph
 			for i := 0; i < dataLen; i++ {
+				if ok != nil && !ok[i] {
+					continue
+				}
 				j := i + 1
-				if j >= dataLen {
+				if j >= dataLen || (ok != nil && !ok[j]) {
+					// Keep a valid point at the end of a run, even when
+					// its next neighbour cannot sit on the log axis.
 					j = i
 				}
 				p1 := dataPoints[i]
@@ -586,10 +591,6 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 				bothBeforeMin := (p1.X < 0 && p2.X < 0)
 				bothAfterMax := (p1.X > float64(m.GraphWidth()) && p2.X > float64(m.GraphWidth()))
 				if bothBeforeMin || bothAfterMax {
-					continue
-				}
-				// a segment ending on a point with no place on a log Y axis is not drawn
-				if ok != nil && !(ok[i] && ok[j]) {
 					continue
 				}
 				// get braille grid points from two Float64Point data points
@@ -651,8 +652,12 @@ func (m *Model) getLineSequence(points []canvas.Float64Point, ok []bool) ([]int,
 	// that is mapped to that graph column.
 	buckets := make([]cAverage, width)
 	for i := 0; i < dataLen; i++ {
+		if ok != nil && !ok[i] {
+			continue
+		}
 		j := i + 1
-		if j >= dataLen {
+		if j >= dataLen || (ok != nil && !ok[j]) {
+			// A valid point before a gap still contributes its own column.
 			j = i
 		}
 		p1 := canvas.NewPointFromFloat64Point(points[i])
@@ -661,9 +666,6 @@ func (m *Model) getLineSequence(points []canvas.Float64Point, ok []bool) ([]int,
 		bothBeforeMin := (p1.X < 0 && p2.X < 0)
 		bothAfterMax := (p1.X > m.GraphWidth() && p2.X > m.GraphWidth())
 		if bothBeforeMin || bothAfterMax {
-			continue
-		}
-		if ok != nil && !(ok[i] && ok[j]) {
 			continue
 		}
 		// place all points between two points
