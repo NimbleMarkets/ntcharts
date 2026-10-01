@@ -583,9 +583,8 @@ func TestLogRejectedByChartsWithoutAValueAxis(t *testing.T) {
 	}
 }
 
-// TestLinearScaleUnchanged pins the linear renderings: an explicit "linear"
-// scale draws exactly what an empty one does, and the line chart still
-// matches the golden recorded before axes had a scale.
+// TestLinearScaleUnchanged checks that an explicit "linear" scale draws
+// exactly what an empty one does.
 func TestLinearScaleUnchanged(t *testing.T) {
 	for _, s := range []Spec{
 		lineSpec(), scatterSpec(), rangeSpec(ChartTypeTimeSeries), ohlcSpec(),
@@ -598,19 +597,6 @@ func TestLinearScaleUnchanged(t *testing.T) {
 		}
 	}
 
-	const golden = `5│                                     ╭
- │                                     │
-4├╮                       ╭╮           │
- ││           ╭╮          ││           │
-2││           ││          ││           │
- ││           ├┤          ├┤           │
-1├┤           ││          ││           ├
- ││           ││          ││           │
-0└┴───────────┴┴──────────┴┴───────────┴
- 0       1           2           3      `
-	if got := viewOf(t, lineSpec()); got != golden {
-		t.Fatalf("linear line chart changed:\n%s", got)
-	}
 }
 
 func TestLogBuildDoesNotMutateSpec(t *testing.T) {

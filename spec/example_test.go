@@ -4,15 +4,15 @@ package spec_test
 
 import (
 	"fmt"
-	"github.com/charmbracelet/x/ansi"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
-	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/sparkline"
 	"github.com/NimbleMarkets/ntcharts/v2/spec"
 )
@@ -53,7 +53,7 @@ func ExampleBuild_bar() {
 }
 
 // ExampleBuild_line shows describing a numeric-X line chart and rendering it
-// via Build to a *wavelinechart.Model.
+// via Build to a *linechart.Model.
 func ExampleBuild_line() {
 	s := spec.Spec{
 		Type:   spec.ChartTypeLine,
@@ -77,18 +77,20 @@ func ExampleBuild_line() {
 		fmt.Println("build error:", err)
 		return
 	}
-	m := term.(*wavelinechart.Model)
-	fmt.Println(m.View())
+	m := term.(*linechart.Model)
+	for _, line := range strings.Split(m.View(), "\n") {
+		fmt.Println(strings.TrimRight(line, " "))
+	}
 	// Output:
-	// 5│                                     ╭
-	//  │                                     │
-	// 4├╮                       ╭╮           │
-	//  ││           ╭╮          ││           │
-	// 2││           ││          ││           │
-	//  ││           ├┤          ├┤           │
-	// 1├┤           ││          ││           ├
-	//  ││           ││          ││           │
-	// 0└┴───────────┴┴──────────┴┴───────────┴
+	// 5│                                   ⢀⠤⠊
+	//  │⢄⡀                      ⣀⢄       ⡠⠒⠁
+	// 4│ ⠈⠑⠢⢄⡀              ⣀⠤⠒⠉  ⠉⠢⣀ ⣀⠔⠉
+	//  │     ⠈⠑⠢⢄⣀⡠⠔⠊⠑⠒⠢⣤⣤⣒⠉       ⢀⠤⠛⠤⡀
+	// 2│     ⢀⡠⠔⠊⠉⠑⠢⢄⠤⠒⠉   ⠉⠉⠒⠢⠤⢄⡠⠒⠁   ⠈⠒⢄
+	//  │ ⢀⡠⠔⠊⠁                            ⠉⠢⣀
+	// 1│⠊⠁                                   ⠑
+	//  │
+	// 0└──────────────────────────────────────
 	//  0       1           2           3
 }
 
@@ -118,20 +120,20 @@ func ExampleBuild_logScale() {
 		fmt.Println("build error:", err)
 		return
 	}
-	m := term.(*wavelinechart.Model)
+	m := term.(*linechart.Model)
 	for _, line := range strings.Split(m.View(), "\n") {
 		fmt.Println(strings.TrimRight(line, " "))
 	}
 	// Output:
-	//  1M│                                   ╭
-	//    │                                   │
-	//    │                            ╭╮     │
-	// 10k│                     ╭╮     ││     │
-	//    │                     ││     ││     │
-	// 100│             ╭╮      ││     ││     │
-	//    │      ╭╮     ││      ││     ││     │
-	//    ├╮     ││     ││      ││     ││     │
-	//   1└┴─────┴┴─────┴┴──────┴┴─────┴┴─────┴
+	//  1M│                                ⢀⡠⠔⠊
+	//    │                             ⣀⠤⠒⠁
+	//    │                        ⣀⡠⠔⠒⠉
+	// 10k│                   ⣀⠤⠒⠊⠉
+	//    │               ⣀⠤⠒⠉
+	// 100│      ⢀⣀⡠⠤⠤⠒⠒⠉⠉
+	//    │  ⣀⠤⠔⠊⠁
+	//    │⠒⠉
+	//   1└────────────────────────────────────
 	//    0   1       2       3     4       5
 }
 

@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas"
+	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 )
 
 func lineSpec() Spec {
@@ -28,9 +29,9 @@ func TestBuildLine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build(line): %v", err)
 	}
-	m, ok := got.(*wavelinechart.Model)
+	m, ok := got.(*linechart.Model)
 	if !ok {
-		t.Fatalf("Build(line) returned %T, want *wavelinechart.Model", got)
+		t.Fatalf("Build(line) returned %T, want *linechart.Model", got)
 	}
 	view := m.View()
 	if strings.TrimSpace(view) == "" {
@@ -88,5 +89,76 @@ func TestBuildLineInvertedYPinErrors(t *testing.T) {
 	_, err := Build(s)
 	if err == nil || !strings.Contains(err.Error(), "exceeds") {
 		t.Fatalf("expected inverted y_axis range error, got %v", err)
+	}
+}
+
+// Constant series must form horizontal lines across the plot, with neither
+// baseline spikes nor a connection from the end of one series to the next.
+func TestBuildLineConnectsPointsWithinEachSeries(t *testing.T) {
+	s := Spec{
+		Type: ChartTypeLine, Width: 40, Height: 12,
+		YAxis: YAxis{Min: f64(0), Max: f64(10)},
+		Data: Data{Series: []Series{
+			{Name: "low", Color: "#ff0000", Values: []DataPoint{{X: 0.0, Y: 2}, {X: 9.0, Y: 2}}},
+			{Name: "high", Color: "#0000ff", Values: []DataPoint{{X: 0.0, Y: 8}, {X: 9.0, Y: 8}}},
+		}},
+	}
+	got, err := Build(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := got.(*linechart.Model)
+	rows := map[int]int{}
+	for y := 0; y < m.Origin().Y; y++ {
+		for x := m.Origin().X + 1; x < m.Width(); x++ {
+			c := m.Canvas.Cell(canvas.Point{X: x, Y: y})
+			if c.Rune > '\u2800' && c.Rune <= '\u28ff' {
+				rows[y]++
+				want := seriesStyle(s.Data.Series[0], 0, s.Theme).GetForeground()
+				if y < m.GraphHeight()/2 {
+					want = seriesStyle(s.Data.Series[1], 1, s.Theme).GetForeground()
+				}
+				if c.Style.GetForeground() != want {
+					t.Fatalf("wrong series colour at (%d,%d)", x, y)
+				}
+			}
+		}
+	}
+	if len(rows) != 2 {
+		t.Fatalf("wanted two horizontal lines, got %d occupied rows:\n%s", len(rows), m.View())
+	}
+	for y, count := range rows {
+		if count != m.GraphWidth() {
+			t.Fatalf("line on row %d covers %d columns, want %d:\n%s", y, count, m.GraphWidth(), m.View())
+		}
+	}
+}
+
+func TestBuildLineSingletonAndDuplicateX(t *testing.T) {
+	for _, values := range [][]DataPoint{
+		{{X: 2.0, Y: 5}},
+		{{X: 2.0, Y: 2}, {X: 2.0, Y: 8}},
+	} {
+		s := Spec{Type: ChartTypeLine, Width: 40, Height: 12,
+			YAxis: YAxis{Min: f64(0), Max: f64(10)},
+			Data:  Data{Series: []Series{{Name: "a", Values: values}}},
+		}
+		got, err := Build(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := got.(*linechart.Model)
+		columns := map[int]bool{}
+		for y := 0; y < m.Origin().Y; y++ {
+			for x := m.Origin().X + 1; x < m.Width(); x++ {
+				r := m.Canvas.Cell(canvas.Point{X: x, Y: y}).Rune
+				if r > '\u2800' && r <= '\u28ff' {
+					columns[x] = true
+				}
+			}
+		}
+		if len(columns) != 1 {
+			t.Fatalf("points at one X occupy %d columns, want 1:\n%s", len(columns), m.View())
+		}
 	}
 }

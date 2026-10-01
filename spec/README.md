@@ -6,7 +6,7 @@ theme) and can be rendered to multiple surfaces from the same source of
 truth:
 
 - **Terminal** — via `spec.Build(s)` → an ntcharts model (`*barchart.Model`,
-  `*wavelinechart.Model`, `*linechart.Model`, `*timeserieslinechart.Model`,
+  `*linechart.Model`, `*timeserieslinechart.Model`,
   `*heatmap.Model`, …)
 - **Web** — via `echarts.ToECharts(s)` → a go-echarts/v2 chart (`*charts.Bar`,
   `*charts.Line`, …). This surface lives in its own module,
@@ -28,7 +28,7 @@ non-nil slice), including OHLC series whose points live in `ohlc`.
 | ---------------------- | ------------------------------------------------------------------ | :------------------: |
 | `ChartTypeBar`         | full — stacked + horizontal; grouped (side-by-side) bars are **not** supported by the terminal surface | full |
 | `ChartTypeTimeSeries`  | full                                                                | full |
-| `ChartTypeLine`        | full                                                                | scaffold |
+| `ChartTypeLine`        | full — connected braille lines on `*linechart.Model`                  | scaffold |
 | `ChartTypeScatter`     | full                                                                | scaffold |
 | `ChartTypeHeatmap`     | full                                                                | scaffold |
 | `ChartTypeStreamline`  | scaffold                                                            | scaffold |
@@ -202,8 +202,9 @@ refuses rather than drawing a linear chart under a spec that asked for log.
 - **How it is drawn.** `Build` sets the chart model's own scale
   (`linechart.ScaleLog`), so the returned model's ranges (`ViewMinY()`,
   `MaxX()`, …) are in data units and its zoom and pan work in decades.
-  `ChartTypeLine` draws columns without a point along the bottom of the
-  range, since a log axis has no zero for the wave to rest on.
+  `ChartTypeLine` joins each series' points with braille lines in input
+  order, using the same scale mapping as scatter. Single points draw as
+  braille dots; separate series are never joined.
 
 See `ExampleBuild_logScale` in [`example_test.go`](./example_test.go).
 

@@ -10,11 +10,9 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
-	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/v2/heatmap"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
-	"github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
 	"github.com/NimbleMarkets/ntcharts/v2/sparkline"
 
 	"charm.land/lipgloss/v2"
@@ -25,7 +23,7 @@ import (
 // The concrete return type depends on Spec.Type:
 //
 //   - ChartTypeBar         -> *barchart.Model
-//   - ChartTypeLine        -> *wavelinechart.Model
+//   - ChartTypeLine        -> *linechart.Model
 //   - ChartTypeTimeSeries  -> *timeserieslinechart.Model
 //   - ChartTypeScatter     -> *linechart.Model
 //   - ChartTypeHeatmap     -> *heatmap.Model
@@ -210,91 +208,77 @@ func checkGraphSize(m linechart.Model) error {
 	return nil
 }
 
-// buildLine constructs a *wavelinechart.Model from s.
-//
-// Each spec.Series becomes a named data set (see PlotDataSet /
-// SetDataSetStyles). DataPoint.X is resolved via resolveXFloat: the point's
-// own numeric X, else the shared Data.XAxisData at that index, else the
-// point's index — so callers may omit X entirely and rely on index-as-X.
-// YAxis.Min / YAxis.Max pin the Y axis via WithYRange following the
-// one-sided pin rule: a lone Min or Max pins that bound while the missing
-// bound is derived from the series' Y values (see yBounds); when neither is
-// set the chart auto-scales. It is an error for the resulting min to exceed
-// the resulting max.
-//
-// wavelinechart.Model embeds linechart.Model, which exposes the
-// XLabelFormatter / YLabelFormatter fields publicly; when XAxis.Format /
-// YAxis.Format carry a formatting directive, they are wired in before
-// DrawAll so terminal axis labels match the same Format used elsewhere
-// (e.g. ToECharts).
-//
-// On a log axis the range is set up front (whole decades around the data,
-// or the pinned bounds) and auto-ranging is switched off for it.
-func buildLine(s Spec) (*wavelinechart.Model, error) {
+// buildLine joins each series' points in input order on a base linechart.
+// Numeric X comes from the point, shared X data, or the point's index.
+// Linear ranges retain the native defaults (0..1), expanded around the data;
+// Y pins follow resolveYRange. Log ranges widen to whole decades.
+// Ranges and formatters are resolved before drawing so every segment shares
+// the same mapping and series colours, including singleton points.
+func buildLine(s Spec) (*linechart.Model, error) {
 	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
-	var opts []wavelinechart.Option
-	// scales go first, so the ranges that follow are taken on the right scale
-	if logX {
-		opts = append(opts, wavelinechart.WithXScale(linechart.ScaleLog))
-	}
+	minX, maxX, minY, maxY := 0.0, 1.0, 0.0, 1.0
+	var err error
 	if logY {
-		opts = append(opts, wavelinechart.WithYScale(linechart.ScaleLog))
-	}
-	if logY {
-		minY, maxY, ok, err := logYBounds(s.Data.Series)
-		if err != nil {
-			return nil, err
+		lo, hi, ok, e := logYBounds(s.Data.Series)
+		if e != nil {
+			return nil, e
 		}
-		if minY, maxY, err = resolveLogYRange(s.YAxis, minY, maxY, ok); err != nil {
-			return nil, err
-		}
-		opts = append(opts, wavelinechart.WithYRange(minY, maxY))
+		minY, maxY, err = resolveLogYRange(s.YAxis, lo, hi, ok)
 	} else if s.YAxis.Min != nil || s.YAxis.Max != nil {
-		minY, maxY, err := resolveYRange(s)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, wavelinechart.WithYRange(minY, maxY))
+		minY, maxY, err = resolveYRange(s)
+	} else if lo, hi, ok := yBounds(s.Data.Series); ok {
+		minY, maxY = math.Min(minY, lo), math.Max(maxY, hi)
 	}
-	if logX {
-		minX, maxX, ok, err := logXBounds(s)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			minX, maxX = 1, 10
-		}
-		minX, maxX = logRange(minX, maxX, false, false)
-		opts = append(opts, wavelinechart.WithXRange(minX, maxX))
-	}
-	m := wavelinechart.New(s.Width, s.Height, opts...)
-	// A log range already spans the data, and the model's own auto-ranging
-	// would not stop at whole decades.
-	m.AutoMinY = !logY && s.YAxis.Min == nil
-	m.AutoMaxY = !logY && s.YAxis.Max == nil
-	if logX {
-		m.AutoMinX, m.AutoMaxX = false, false
-	}
-
-	if xf := axisLabelFormatter(s.XAxis.Format, s.XAxis.Scale); xf != nil {
-		m.XLabelFormatter = xf
-	}
-	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
-		m.YLabelFormatter = yf
-	}
-	m.UpdateGraphSizes()
-
-	for i, ser := range s.Data.Series {
-		name := ser.Name
-		m.SetDataSetStyles(name, runes.ArcLineStyle, seriesStyle(ser, i, s.Theme))
-		for j, p := range ser.Values {
-			m.PlotDataSet(name, canvas.Float64Point{X: resolveXFloat(s, p, j), Y: p.Y})
-		}
-	}
-	if err := checkGraphSize(m.Model); err != nil {
+	if err != nil {
 		return nil, err
 	}
-	m.DrawAll()
+	if logX {
+		lo, hi, ok, e := logXBounds(s)
+		if e != nil {
+			return nil, e
+		}
+		if !ok {
+			lo, hi = 1, 10
+		}
+		minX, maxX = logRange(lo, hi, false, false)
+	} else {
+		for _, ser := range s.Data.Series {
+			for j, p := range ser.Values {
+				x := resolveXFloat(s, p, j)
+				minX, maxX = math.Min(minX, x), math.Max(maxX, x)
+			}
+		}
+	}
+	var opts []linechart.Option
+	if logX {
+		opts = append(opts, linechart.WithXScale(linechart.ScaleLog))
+	}
+	if logY {
+		opts = append(opts, linechart.WithYScale(linechart.ScaleLog))
+	}
+	if xf := axisLabelFormatter(s.XAxis.Format, s.XAxis.Scale); xf != nil {
+		opts = append(opts, linechart.WithXLabelFormatter(xf))
+	}
+	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
+		opts = append(opts, linechart.WithYLabelFormatter(yf))
+	}
+	m := linechart.New(s.Width, s.Height, minX, maxX, minY, maxY, opts...)
+	if err := checkGraphSize(m); err != nil {
+		return nil, err
+	}
+	m.DrawXYAxisAndLabel()
+	for i, ser := range s.Data.Series {
+		style := seriesStyle(ser, i, s.Theme)
+		for j, p := range ser.Values {
+			from := canvas.Float64Point{X: resolveXFloat(s, p, j), Y: p.Y}
+			to := from // a singleton or final point still gets a braille dot
+			if j+1 < len(ser.Values) {
+				next := ser.Values[j+1]
+				to = canvas.Float64Point{X: resolveXFloat(s, next, j+1), Y: next.Y}
+			}
+			m.DrawBrailleLineWithStyle(from, to, style)
+		}
+	}
 	return &m, nil
 }
 
