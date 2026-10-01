@@ -37,6 +37,10 @@ groups:
         title: Time Series
         blurb: Time-series line chart with a date axis.
         source: ./examples/linechart/timeseries
+      - name: linechart-logscale
+        title: Log Scale
+        blurb: Exponential data on a log Y axis; press l to compare with a linear axis.
+        source: ./examples/linechart/logscale
   - title: Bars & Sparks
     demos:
       - name: barchart-vertical

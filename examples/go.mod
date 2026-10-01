@@ -12,6 +12,7 @@ require (
 	github.com/NimbleMarkets/ntcharts/v2 v2.6.0
 	github.com/aquilax/go-perlin v1.1.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260928045949-bbf040aedf25
+	github.com/charmbracelet/x/ansi v0.11.8
 	github.com/go-analyze/charts v0.6.1
 	github.com/go-echarts/go-echarts/v2 v2.7.2
 	github.com/lrstanley/bubblezone/v2 v2.0.0
@@ -21,7 +22,6 @@ require (
 require (
 	github.com/NimbleMarkets/pixterm v0.0.0-20260501211346-dc18ac6c1a0f // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/x/ansi v0.11.8 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect

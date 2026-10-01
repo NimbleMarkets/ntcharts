@@ -130,6 +130,13 @@ Time series charts have values on the Y axis and time values on the X axis.
 `ntcharts-linechart-timeseries` [(source)](./linechart/timeseries/main.go)<br>
 <img src="linechart/timeseries/demo.gif" alt="timeseries linechart gif"/>
 
+### Log Scale
+
+A time series chart can use a logarithmic Y axis (`linechart.ScaleLog`). Labels fall on powers of ten and equal ratios are equal distances, so data that grows by orders of magnitude stays readable. Press `l` to switch the same chart between a linear and a log axis, and `+` / `-` to zoom the Y axis.
+
+`ntcharts-linechart-logscale` [(source)](./linechart/logscale/main.go)<br>
+<img src="linechart/logscale/demo.gif" alt="log scale linechart gif"/>
+
 ### Wave Line
 
 Wave line charts display a continuous a line going across the line chart.

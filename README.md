@@ -283,6 +283,8 @@ This example produces the following waveline chart:
 
 #### Log scales
 
+The [`logscale` example](./examples/README.md#log-scale) shows it live.
+
 The line charts can space either axis logarithmically (base 10), so each
 decade takes the same length of axis. Set `linechart.ScaleLog` with
 `WithXScale` / `WithYScale` (or `SetXScale` / `SetYScale`) on `linechart` and

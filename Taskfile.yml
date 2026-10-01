@@ -263,6 +263,7 @@ tasks:
       - go build -o bin/ntcharts-linechart-scatter ./examples/linechart/scatter
       - go build -o bin/ntcharts-linechart-streaming ./examples/linechart/streaming
       - go build -o bin/ntcharts-linechart-timeseries ./examples/linechart/timeseries
+      - go build -o bin/ntcharts-linechart-logscale ./examples/linechart/logscale
       - go build -o bin/ntcharts-linechart-wavelines ./examples/linechart/wavelines
     sources:
       - canvas/**/*.go
@@ -274,6 +275,7 @@ tasks:
       - bin/ntcharts-linechart-scatter
       - bin/ntcharts-linechart-streaming
       - bin/ntcharts-linechart-timeseries
+      - bin/ntcharts-linechart-logscale
       - bin/ntcharts-linechart-wavelines
 
   build-ex-picture:
@@ -352,7 +354,7 @@ tasks:
       - rm -f bin/ntcharts-canvas-logo
       - rm -f bin/ntcharts-heatmap-aoc2024 bin/ntcharts-heatmap-functor bin/ntcharts-heatmap-perlin bin/ntcharts-heatmap-simple bin/ntcharts-heatpicture-perlin
       - rm -f bin/ntcharts-graph-braille bin/ntcharts-graph-candlesticks bin/ntcharts-graph-circles bin/ntcharts-graph-columns bin/ntcharts-graph-lines bin/ntcharts-graph-rows
-      - rm -f bin/ntcharts-linechart-circles bin/ntcharts-linechart-lines bin/ntcharts-linechart-scatter bin/ntcharts-linechart-streaming bin/ntcharts-linechart-timeseries bin/ntcharts-linechart-wavelines
+      - rm -f bin/ntcharts-linechart-circles bin/ntcharts-linechart-lines bin/ntcharts-linechart-scatter bin/ntcharts-linechart-streaming bin/ntcharts-linechart-timeseries bin/ntcharts-linechart-logscale bin/ntcharts-linechart-wavelines
       - rm -f bin/ntcharts-chartpicture bin/ntcharts-picture bin/ntcharts-picture-grid bin/ntcharts-picture-simple
       - rm -f bin/ntcharts-quickstart
       - rm -f bin/ntcharts-sparkline
@@ -417,6 +419,7 @@ tasks:
       - vhs validate ./examples/linechart/scatter/demo.tape
       - vhs validate ./examples/linechart/streaming/demo.tape
       - vhs validate ./examples/linechart/timeseries/demo.tape
+      - vhs validate ./examples/linechart/logscale/demo.tape
       - vhs validate ./examples/linechart/wavelines/demo.tape
       - vhs validate ./examples/picture/demo.tape
       - vhs validate ./examples/quickstart/demo.tape
@@ -445,6 +448,7 @@ tasks:
       - vhs --output ./examples/linechart/scatter/demo.gif ./examples/linechart/scatter/demo.tape
       - vhs --output ./examples/linechart/streaming/demo.gif ./examples/linechart/streaming/demo.tape
       - vhs --output ./examples/linechart/timeseries/demo.gif ./examples/linechart/timeseries/demo.tape
+      - vhs --output ./examples/linechart/logscale/demo.gif ./examples/linechart/logscale/demo.tape
       - vhs --output ./examples/linechart/wavelines/demo.gif ./examples/linechart/wavelines/demo.tape
       - vhs --output ./examples/picture/demo.gif ./examples/picture/demo.tape
       - vhs --output ./examples/quickstart/demo.gif ./examples/quickstart/demo.tape
@@ -469,6 +473,7 @@ tasks:
       - ./examples/linechart/scatter/demo.gif
       - ./examples/linechart/streaming/demo.gif
       - ./examples/linechart/timeseries/demo.gif
+      - ./examples/linechart/logscale/demo.gif
       - ./examples/linechart/wavelines/demo.gif
       - ./examples/picture/demo.gif
       - ./examples/quickstart/demo.gif
@@ -494,6 +499,7 @@ tasks:
       - rm -f ./examples/linechart/scatter/demo.gif
       - rm -f ./examples/linechart/streaming/demo.gif
       - rm -f ./examples/linechart/timeseries/demo.gif
+      - rm -f ./examples/linechart/logscale/demo.gif
       - rm -f ./examples/linechart/wavelines/demo.gif
       - rm -f ./examples/picture/demo.gif
       - rm -f ./examples/quickstart/demo.gif
