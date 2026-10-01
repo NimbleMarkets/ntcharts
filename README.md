@@ -281,6 +281,67 @@ This example produces the following waveline chart:
   0 2 4 6    
 ```
 
+#### Log scales
+
+The line charts can space either axis logarithmically (base 10), so each
+decade takes the same length of axis. Set `linechart.ScaleLog` with
+`WithXScale` / `WithYScale` (or `SetXScale` / `SetYScale`) on `linechart` and
+`wavelinechart`, and with `WithYScale` on `timeserieslinechart` and
+`streamlinechart`:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/NimbleMarkets/ntcharts/v2/canvas"
+    "github.com/NimbleMarkets/ntcharts/v2/linechart"
+    "github.com/NimbleMarkets/ntcharts/v2/linechart/wavelinechart"
+)
+
+func main() {
+    wlc := wavelinechart.New(24, 10,
+        wavelinechart.WithYScale(linechart.ScaleLog),
+        wavelinechart.WithXYRange(0, 5, 1, 10000))
+    for i, v := range []float64{3, 40, 500, 6000} {
+        wlc.Plot(canvas.Float64Point{X: float64(i + 1), Y: v})
+    }
+    wlc.Draw()
+
+    fmt.Println(wlc.View())
+}
+```
+
+This example produces the following chart:
+```
+10000│             ╭╮   
+     │             ││   
+ 1000│             ││   
+     │          ╭╮ ││   
+  100│          ││ ││   
+     │      ╭╮  ││ ││   
+   10│      ││  ││ ││   
+     │   ╭╮ ││  ││ ││   
+    1└───┴┴─┴┴──┴┴─┴┴───
+     0 1   2   3   4  5 
+```
+
+ * Ranges, data points, and the values passed to label formatters stay in
+   data units; only the mapping to rows and columns changes.
+ * Labels sit on powers of ten, on the row or column where each one falls,
+   whatever the chart's size. When a range holds fewer than three of them,
+   2× and 5× are added where they fit; a range too narrow for two round
+   values falls back to evenly spaced labels. The X and Y steps still hide an
+   axis at 0, and otherwise set the minimum spacing between labels.
+ * Only values greater than zero have a place on a log axis. A point at or
+   below zero is not drawn (a line breaks around it), auto-ranging ignores
+   it, and a non-positive range bound is replaced: the minimum becomes a
+   tenth of the maximum, or the range becomes 1..10 if neither is positive.
+ * Zoom and pan steps are measured in decades, so a zoom multiplies the
+   bounds and a pan shifts them by a constant ratio.
+ * The default label formatter prints whole numbers. Set your own with
+   `WithYLabelFormatter` / `WithXLabelFormatter` for ranges below 1.
+
 #### Sparkline
 
 ```go

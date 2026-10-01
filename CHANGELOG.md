@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.6.0 (unreleased)
+
+ * feat(linechart): Add logarithmic axes. `linechart.Scale` is `ScaleLinear` (the default) or `ScaleLog` (base 10), set with `WithXScale` / `WithYScale` or `SetXScale` / `SetYScale` and read with `XScale` / `YScale`; `wavelinechart` exposes both options, `timeserieslinechart` and `streamlinechart` expose `WithYScale`. Ranges, data points, and label formatter values stay in data units. A log axis labels powers of ten on the rows and columns where they fall (adding 2× and 5× when a range holds fewer than three, and falling back to even spacing in a range too narrow for two round values), with the axis steps as the minimum label spacing. Points at or below zero are not drawn and are ignored by auto-ranging, non-positive range bounds are replaced (minimum = maximum/10, or 1..10), and zoom and pan steps are measured in decades. On a log Y axis a `wavelinechart` rests on the bottom of the view range. Linear axes are unchanged.
+
 ## v2.5.0 (2026-09-30)
 
  * fix(wasm-build): build TinyGo demos with `-gc=boehm`, fixing the slow "GPU Shaders (TinyGo)" gallery demo.

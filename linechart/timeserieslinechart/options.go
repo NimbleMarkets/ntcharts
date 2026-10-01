@@ -74,6 +74,15 @@ func WithXYSteps(x, y int) Option {
 	}
 }
 
+// WithYScale sets the scale of the Y axis: linechart.ScaleLinear (the
+// default) or linechart.ScaleLog. See Model.SetYScale.
+// The X axis is time and is always linear.
+func WithYScale(s linechart.Scale) Option {
+	return func(m *Model) {
+		m.SetYScale(s)
+	}
+}
+
 // WithYRange sets expected and displayed
 // minimum and maximum Y value range.
 func WithYRange(min, max float64) Option {

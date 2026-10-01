@@ -154,6 +154,33 @@ func (m *Model) rescaleData() {
 	}
 }
 
+// graphPoints returns the data set's points scaled to the graphing area.
+// On a log Y axis, ok[i] is false for a point with no place on it, which
+// must not be drawn; ok is nil when every point can be.
+func (m *Model) graphPoints(ds *dataSet) (points []canvas.Float64Point, ok []bool) {
+	if m.YScale() != linechart.ScaleLog {
+		return ds.tBuf.ReadAll(), nil
+	}
+	// the buffer scales linearly, so scale its raw data points instead
+	raw := ds.tBuf.ReadAllRaw()
+	points = make([]canvas.Float64Point, len(raw))
+	ok = make([]bool, len(raw))
+	for i, p := range raw {
+		points[i] = m.ScaleFloat64PointForLine(p)
+		ok[i] = m.YScale().Valid(p.Y)
+	}
+	return points, ok
+}
+
+// SetYScale sets the scale of the Y axis. See linechart.Model.SetYScale.
+// On a log Y axis, values that are not greater than zero are not drawn:
+// lines break around them and their candles are left out.
+// Existing data will be rescaled.
+func (m *Model) SetYScale(s linechart.Scale) {
+	m.Model.SetYScale(s)
+	m.rescaleData()
+}
+
 // ClearAllData will reset stored data values in all data sets.
 func (m *Model) ClearAllData() {
 	for _, ds := range m.dSets {
@@ -294,13 +321,13 @@ func (m *Model) DrawDataSets(names []string) {
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
-			dataPoints := ds.tBuf.ReadAll()
+			dataPoints, ok := m.graphPoints(ds)
 			dataLen := len(dataPoints)
 			if dataLen == 0 {
 				return
 			}
 			// get sequence of line values for graphing
-			seqY := m.getLineSequence(dataPoints)
+			seqY, filled := m.getLineSequence(dataPoints, ok)
 			// convert to canvas coordinates and avoid drawing below X axis
 			yCoords := canvas.CanvasYCoordinates(m.Origin().Y, seqY)
 			if m.XStep() > 0 {
@@ -311,6 +338,27 @@ func (m *Model) DrawDataSets(names []string) {
 				}
 			}
 			startX := m.Canvas.Width() - len(yCoords)
+			if m.YScale() == linechart.ScaleLog {
+				// A column without data has no value to rest on: a log
+				// axis has no zero. Draw each run of filled columns alone.
+				for from := 0; from < len(yCoords); from++ {
+					if !filled[from] {
+						continue
+					}
+					to := from
+					for to < len(yCoords) && filled[to] {
+						to++
+					}
+					graph.DrawLineSequence(&m.Canvas,
+						(startX+from == m.Origin().X),
+						startX+from,
+						yCoords[from:to],
+						ds.LineStyle,
+						ds.Style)
+					from = to
+				}
+				continue
+			}
 			graph.DrawLineSequence(&m.Canvas,
 				(startX == m.Origin().X),
 				startX,
@@ -388,10 +436,10 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 	}
 	// only draws up to the number of candles of the data sets with the lowest
 	// amount of data values if length if data is not the same across all data sets
-	oData := m.dSets[openName].tBuf.ReadAll()
-	hData := m.dSets[highName].tBuf.ReadAll()
-	lData := m.dSets[lowName].tBuf.ReadAll()
-	cData := m.dSets[closeName].tBuf.ReadAll()
+	oData, oOK := m.graphPoints(m.dSets[openName])
+	hData, hOK := m.graphPoints(m.dSets[highName])
+	lData, lOK := m.graphPoints(m.dSets[lowName])
+	cData, cOK := m.graphPoints(m.dSets[closeName])
 	limit := len(oData)
 	if len(hData) < limit {
 		limit = len(hData)
@@ -409,6 +457,10 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 		// assuming all time values are the same, can just any of the values to check
 		// if data point is outside of the current graph view to ignore
 		if oData[i].X < 0 || oData[i].X > float64(m.GraphWidth()) {
+			continue
+		}
+		// a candle with a value that has no place on a log Y axis is not drawn
+		if oOK != nil && !(oOK[i] && hOK[i] && lOK[i] && cOK[i]) {
 			continue
 		}
 		var s lipgloss.Style
@@ -514,7 +566,7 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
-			dataPoints := ds.tBuf.ReadAll()
+			dataPoints, ok := m.graphPoints(ds)
 			dataLen := len(dataPoints)
 			if dataLen == 0 {
 				return
@@ -534,6 +586,10 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 				bothBeforeMin := (p1.X < 0 && p2.X < 0)
 				bothAfterMax := (p1.X > float64(m.GraphWidth()) && p2.X > float64(m.GraphWidth()))
 				if bothBeforeMin || bothAfterMax {
+					continue
+				}
+				// a segment ending on a point with no place on a log Y axis is not drawn
+				if ok != nil && !(ok[i] && ok[j]) {
 					continue
 				}
 				// get braille grid points from two Float64Point data points
@@ -581,11 +637,13 @@ func (m *Model) SetColumnBackgroundStyle(ts time.Time, s lipgloss.Style) {
 }
 
 // getLineSequence returns a sequence of Y values
-// to draw line runes from a given set of scaled []FloatPoint64.
-func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
+// to draw line runes from a given set of scaled []FloatPoint64,
+// and whether each column of the sequence holds any data.
+// A non-nil ok marks the points that can be drawn (see graphPoints).
+func (m *Model) getLineSequence(points []canvas.Float64Point, ok []bool) ([]int, []bool) {
 	width := m.Width() - m.Origin().X // line runes can draw on axes
 	if width <= 0 {
-		return []int{}
+		return []int{}, []bool{}
 	}
 	dataLen := len(points)
 	// each index of the bucket corresponds to a graph column.
@@ -605,6 +663,9 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 		if bothBeforeMin || bothAfterMax {
 			continue
 		}
+		if ok != nil && !(ok[i] && ok[j]) {
+			continue
+		}
 		// place all points between two points
 		// that approximates a line into buckets
 		points := graph.GetLinePointsWithLimit(p1, p2, m.MaxInterpolationPoints)
@@ -616,10 +677,12 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 	}
 	// populate sequence of Y values for drawing lines
 	r := make([]int, width)
+	filled := make([]bool, width)
 	for i, v := range buckets {
 		r[i] = int(math.Round(v.Avg))
+		filled[i] = v.Count > 0
 	}
-	return r
+	return r, filled
 }
 
 // Update processes bubbletea Msg by invoking

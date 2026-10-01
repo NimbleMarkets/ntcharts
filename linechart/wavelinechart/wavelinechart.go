@@ -93,7 +93,9 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) (seqY []int) {
 	seqY = make([]int, width, width)
 
 	// initialize every index to the value such that
-	// a horizontal line at Y = 0 will be drawn
+	// a horizontal line at Y = 0 will be drawn.
+	// A log Y axis has no zero: Y = 0 scales to 0 there,
+	// which puts the line along the bottom of the view range.
 	f := m.ScaleFloat64Point(canvas.Float64Point{X: 0.0, Y: 0.0})
 	for i := range seqY {
 		seqY[i] = canvas.CanvasYCoordinate(m.Origin().Y, int(math.Round(f.Y)))
@@ -135,6 +137,38 @@ func (m *Model) rescaleData() {
 		ds.pBuf.SetOffset(canvas.Float64Point{X: m.ViewMinX(), Y: m.ViewMinY()})
 		ds.pBuf.SetScale(canvas.Float64Point{X: xs, Y: ys}) // buffer rescales all raw data points
 	}
+}
+
+// graphPoints returns the data set's points scaled to the graphing area.
+// On a log axis, points with no place on it are left out.
+func (m *Model) graphPoints(ds *dataSet) []canvas.Float64Point {
+	if m.XScale() != linechart.ScaleLog && m.YScale() != linechart.ScaleLog {
+		return ds.pBuf.ReadAll()
+	}
+	// the buffer scales linearly, so scale its raw data points instead
+	raw := ds.pBuf.ReadAllRaw()
+	points := make([]canvas.Float64Point, 0, len(raw))
+	for _, p := range raw {
+		if m.XScale().Valid(p.X) && m.YScale().Valid(p.Y) {
+			points = append(points, m.ScaleFloat64PointForLine(p))
+		}
+	}
+	return points
+}
+
+// SetXScale sets the scale of the X axis. See linechart.Model.SetXScale.
+// Existing data will be rescaled.
+func (m *Model) SetXScale(s linechart.Scale) {
+	m.Model.SetXScale(s)
+	m.rescaleData()
+}
+
+// SetYScale sets the scale of the Y axis. See linechart.Model.SetYScale.
+// On a log Y axis, columns without a data point rest on the bottom of the
+// displayed range instead of on Y = 0. Existing data will be rescaled.
+func (m *Model) SetYScale(s linechart.Scale) {
+	m.Model.SetYScale(s)
+	m.rescaleData()
 }
 
 // ClearAllData will reset stored data values in all data sets.
@@ -250,7 +284,7 @@ func (m *Model) DrawDataSets(names []string) {
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
 			startX := m.Origin().X
-			seqY := m.getLineSequence(ds.pBuf.ReadAll())
+			seqY := m.getLineSequence(m.graphPoints(ds))
 			graph.DrawLineSequence(&m.Canvas,
 				true,
 				startX,

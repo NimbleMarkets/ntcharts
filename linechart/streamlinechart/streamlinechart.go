@@ -111,6 +111,14 @@ func (m *Model) ClearDataSet(n string) {
 	}
 }
 
+// SetYScale sets the scale of the Y axis. See linechart.Model.SetYScale.
+// On a log Y axis, values that are not greater than zero are not drawn:
+// the line breaks around them. Existing data will be rescaled.
+func (m *Model) SetYScale(s linechart.Scale) {
+	m.Model.SetYScale(s)
+	m.rescaleData()
+}
+
 // SetXRange updates the minimum and maximum expected X values.
 // Existing data will be rescaled.
 func (m *Model) SetXRange(min, max float64) {
@@ -221,6 +229,10 @@ func (m *Model) DrawDataSets(names []string) {
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
+			if m.YScale() == linechart.ScaleLog {
+				m.drawLogDataSet(ds)
+				continue
+			}
 			s := ds.sBuf.ReadAll()
 			startX := m.Canvas.Width() - len(s)
 			// round float64 data value to nearest integer to fit onto the canvas
@@ -244,6 +256,37 @@ func (m *Model) DrawDataSets(names []string) {
 				ds.LineStyle,
 				ds.Style)
 		}
+	}
+}
+
+// drawLogDataSet draws the data set's line on a log Y axis. The buffer
+// scales linearly, so its raw values are scaled here instead. A value with
+// no place on the axis breaks the line: each run of drawable values is
+// drawn on its own.
+func (m *Model) drawLogDataSet(ds *dataSet) {
+	raw := ds.sBuf.ReadAllRaw()
+	startX := m.Canvas.Width() - len(raw)
+	for from := 0; from < len(raw); from++ {
+		var yCoords []int
+		to := from
+		for ; to < len(raw) && m.YScale().Valid(raw[to]); to++ {
+			f := m.ScaleFloat64PointForLine(canvas.Float64Point{X: m.ViewMinX(), Y: raw[to]})
+			// convert to canvas coordinates and avoid drawing below X axis
+			y := canvas.CanvasYCoordinate(m.Origin().Y, int(math.Round(f.Y)))
+			if m.XStep() > 0 && y > m.Origin().Y {
+				y = m.Origin().Y
+			}
+			yCoords = append(yCoords, y)
+		}
+		if len(yCoords) > 0 {
+			graph.DrawLineSequence(&m.Canvas,
+				(startX+from == m.Origin().X),
+				startX+from,
+				yCoords,
+				ds.LineStyle,
+				ds.Style)
+		}
+		from = to
 	}
 }
 
