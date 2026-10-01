@@ -211,3 +211,61 @@ func TestLabelsDefineTheGridRange(t *testing.T) {
 		t.Fatalf("Y range %v..%v, want -0.5..1.5", min, max)
 	}
 }
+
+func TestFilledCellsOutsideViewAreNotDrawn(t *testing.T) {
+	for _, pt := range []HeatPoint{
+		NewHeatPoint(-100, 1, 1), NewHeatPoint(100, 1, 1),
+		NewHeatPoint(1, -100, 1), NewHeatPoint(1, 100, 1),
+		NewHeatPoint(-1, 1, 1), NewHeatPoint(3, 1, 1),
+	} {
+		m := New(20, 8, WithCellSize(1, 1), WithColorScale(testScale),
+			WithValueRange(0, 1), WithXLabels([]string{"A", "B", "C"}),
+			WithYLabels([]string{"a", "b", "c"}))
+		m.DrawPoint(pt)
+		for y := 0; y < m.Height(); y++ {
+			for x := 0; x < m.Width(); x++ {
+				if bg(&m, x, y) != nil {
+					t.Fatalf("offscreen point %v painted cell (%d,%d)", pt, x, y)
+				}
+			}
+		}
+	}
+}
+
+func TestPartiallyVisibleFilledCellIsClipped(t *testing.T) {
+	m := New(20, 8, WithCellSize(1, 1), WithColorScale(testScale),
+		WithValueRange(0, 1), WithXLabels([]string{"A", "B", "C"}),
+		WithYLabels([]string{"a", "b", "c"}))
+	m.DrawPoint(NewHeatPoint(-0.75, 1, 1))
+	left, bottom := m.graphBox()
+	coloured := 0
+	for y := 0; y < m.Height(); y++ {
+		for x := 0; x < m.Width(); x++ {
+			if bg(&m, x, y) == nil {
+				continue
+			}
+			coloured++
+			// A quarter data unit remains visible: at this chart size it
+			// rounds to the first two canvas columns.
+			if x < left || x >= left+2 || y > bottom || y <= bottom-m.GraphHeight() {
+				t.Fatalf("partially visible cell painted outside its clipped columns: (%d,%d)", x, y)
+			}
+		}
+	}
+	if coloured == 0 {
+		t.Fatal("partially visible cell was discarded")
+	}
+}
+
+func TestShortHeatmapReservesLongestRowLabel(t *testing.T) {
+	m := New(30, 12, WithCellSize(1, 1), WithXLabels([]string{"A"}),
+		WithYLabels([]string{"a", "Tuesday", "c"}))
+	m.Resize(30, 5)
+	m.Draw()
+	if got := m.Origin().X; got != len("Tuesday") {
+		t.Fatalf("margin = %d, want %d", got, len("Tuesday"))
+	}
+	if !strings.Contains(rowText(&m, 1), "Tuesday") {
+		t.Fatalf("middle row label missing: %q", rowText(&m, 1))
+	}
+}

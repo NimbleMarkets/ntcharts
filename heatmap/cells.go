@@ -33,7 +33,7 @@ func (m *Model) graphBox() (left, bottom int) {
 // edges round to the nearest cell boundary, so adjacent data cells tile with
 // neither gap nor overlap, and every data cell covers at least one cell.
 func span(lo, hi, min, max float64, n int) (from, to int) {
-	if max <= min || n <= 0 {
+	if max <= min || n <= 0 || hi <= min || lo >= max {
 		return 0, 0
 	}
 	f := func(v float64) int {
@@ -107,6 +107,9 @@ func (m *Model) drawLabels() {
 			continue
 		}
 		_, _, r0, r1 := m.cellSpans(0, float64(i), w, h)
+		if r0 == r1 {
+			continue
+		}
 		row := bottom - (r0+r1-1)/2
 		x := m.Origin().X - len(label)
 		if used[row] || x < 0 || row < 0 {
@@ -126,7 +129,10 @@ func (m *Model) drawLabels() {
 		if label == "" {
 			continue
 		}
-		c0, _, _, _ := m.cellSpans(float64(i), 0, w, h)
+		c0, c1, _, _ := m.cellSpans(float64(i), 0, w, h)
+		if c0 == c1 {
+			continue
+		}
 		x := left + c0
 		if x <= end || x+len(label) > m.Width() {
 			continue
@@ -157,14 +163,16 @@ func (m *Model) SetYLabels(labels []string) {
 	m.AutoMinY, m.AutoMaxY = false, false
 	m.SetYRange(-0.5, float64(len(labels))-0.5)
 	m.Model.SetViewYRange(-0.5, float64(len(labels))-0.5)
-	// the margin is sized from the labels the formatter returns over the range
-	m.YLabelFormatter = func(_ int, v float64) string {
-		i := int(math.Floor(v + 0.5))
-		if i < 0 || i >= len(labels) {
-			return ""
+	// The linechart samples its formatter to size the margin. Heatmap row
+	// labels are placed independently of numeric ticks, so reserve the longest
+	// label at every sample, including after resizing or changing axis steps.
+	longest := ""
+	for _, label := range labels {
+		if len(label) > len(longest) {
+			longest = label
 		}
-		return labels[i]
 	}
+	m.YLabelFormatter = func(_ int, _ float64) string { return longest }
 	m.UpdateGraphSizes()
 }
 
