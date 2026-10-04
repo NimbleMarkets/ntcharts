@@ -3,7 +3,7 @@ module github.com/NimbleMarkets/ntcharts/spec/echarts/v2
 go 1.26.8
 
 require (
-	github.com/NimbleMarkets/ntcharts/v2 v2.6.0
+	github.com/NimbleMarkets/ntcharts/v2 v2.7.0
 	github.com/go-echarts/go-echarts/v2 v2.7.2
 )
 

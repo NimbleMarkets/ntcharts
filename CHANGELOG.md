@@ -1,10 +1,9 @@
 # CHANGELOG
 
-## Unreleased
+## v2.7.0 (unreleased)
 
  * feat(timeserieslinechart): Add `FitYToView` and `FitYToViewWithOpts` to fit the Y viewport to points in the current time window, with dataset selection and an optional zero baseline. Add `TrimBefore` to remove old samples from all datasets and release their storage without changing ranges. Existing auto-ranging remains unchanged. The `linechart/throughput` example demonstrates bounded retention and a Y range that shrinks after a spike expires (#9).
  * fix(buffer): `Float64PointScaleBuffer.Offset` now returns its offset instead of its scale, avoiding redundant rescaling of time-series data.
-
  * feat(picture): `Toggle` into Kitty mode still no-ops until support is confirmed, but the reason is now available. `picture.KittyUnavailable()` and `ToggleBlocked()` on `picture`, `chartpicture`, `heatpicture`, and `pictureurl` models return `ErrKittyProbePending`, `ErrKittyNotDetected`, or `ErrKittyProbeTimeout` (nil when Kitty is usable). `ForceKittyCapability` is now documented as supported API for terminals the probe can't recognize. The `chartpicture` example shows the reason in a status line when `g` is blocked.
 
 ## v2.6.0 (2026-10-01)
