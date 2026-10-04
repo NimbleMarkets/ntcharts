@@ -43,6 +43,7 @@ type model struct {
 	themeIdx      int
 	mode          string // "line" or "bar"
 	series        []float64
+	note          string // transient status, e.g. why g did nothing
 	initCmd       tea.Cmd
 }
 
@@ -89,6 +90,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "g":
+			m.note = ""
+			if err := m.chart.ToggleBlocked(); err != nil {
+				m.note = err.Error()
+			}
 			if c := m.chart.Toggle(); c != nil {
 				cmds = append(cmds, c)
 			}
@@ -168,6 +173,9 @@ func (m model) View() tea.View {
 	if err := m.chart.Err(); err != nil {
 		errBar := lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render(err.Error())
 		parts = []string{title, pane, errBar, footer}
+	} else if m.note != "" {
+		noteBar := lipgloss.NewStyle().Width(m.width).Foreground(lipgloss.Color("11")).Render(m.note)
+		parts = []string{title, pane, noteBar, footer}
 	}
 	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left, parts...))
 	v.AltScreen = true

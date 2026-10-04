@@ -147,7 +147,8 @@ NTCHARTS_TMUX_PASSTHROUGH=true ./your-tui-app
 If you need to manually toggle or override tmux passthrough in your code:
 
 - Call `picture.SetTmuxPassthrough(true)` to enable wrapping.
-- Call `picture.ForceKittyCapability(picture.KittyCapabilitySupported)` to manually force Kitty graphics support.
+- Call `picture.ForceKittyCapability(picture.KittyCapabilitySupported)` to manually force Kitty graphics support, for example when the terminal's environment isn't recognized. It is supported API; call it before the first `Init`, or set `NTCHARTS_KITTY=supported`.
+- `Toggle` into Kitty mode does nothing until support is confirmed. Call `ToggleBlocked()` on a `picture`, `chartpicture`, `heatpicture`, or `pictureurl` model (or `picture.KittyUnavailable()`) to get the reason: `ErrKittyProbePending`, `ErrKittyNotDetected`, or `ErrKittyProbeTimeout`.
 
 ## PNG compression
 

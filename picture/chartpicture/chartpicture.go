@@ -127,6 +127,9 @@ func (m *Model) KittySupported() picture.KittyCapability { return m.pic.KittySup
 // rectangle without letterboxing.
 func (m *Model) Init() tea.Cmd { return m.pic.Init() }
 
+// ToggleBlocked forwards to the embedded picture.Model.
+func (m *Model) ToggleBlocked() error { return m.pic.ToggleBlocked() }
+
 // Toggle forwards to the embedded picture.Model.
 func (m *Model) Toggle() tea.Cmd { return m.pic.Toggle() }
 

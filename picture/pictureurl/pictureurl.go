@@ -242,6 +242,9 @@ func (m *Model) Init() tea.Cmd { return m.pic.Init() }
 // SetSize forwards to the embedded picture.Model.
 func (m *Model) SetSize(cols, rows int) tea.Cmd { return m.pic.SetSize(cols, rows) }
 
+// ToggleBlocked forwards to the embedded picture.Model.
+func (m *Model) ToggleBlocked() error { return m.pic.ToggleBlocked() }
+
 // Toggle forwards to the embedded picture.Model.
 func (m *Model) Toggle() tea.Cmd { return m.pic.Toggle() }
 

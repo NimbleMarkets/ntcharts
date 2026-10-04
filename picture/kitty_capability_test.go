@@ -1,6 +1,7 @@
 package picture
 
 import (
+	"errors"
 	"image/color"
 	"os"
 	"testing"
@@ -338,5 +339,61 @@ func TestRecordKittyTimeout_SharedMemory(t *testing.T) {
 	recordKittyResponse(sharedProbeReply("OK"))
 	if got := sharedCap(); got != KittyCapabilitySupported {
 		t.Fatalf("late OK: shared-memory capability = %v, want Supported", got)
+	}
+}
+
+func TestKittyUnavailable_Reasons(t *testing.T) {
+	resetKittyCapability(t)
+	prevEnv := kittyEnvSignalled.Load()
+	t.Cleanup(func() { kittyEnvSignalled.Store(prevEnv) })
+
+	cases := []struct {
+		name     string
+		cap      KittyCapability
+		signaled bool
+		want     error
+	}{
+		{"unknown", KittyCapabilityUnknown, false, ErrKittyProbePending},
+		{"supported", KittyCapabilitySupported, false, nil},
+		{"unsupported, env not signalled", KittyCapabilityUnsupported, false, ErrKittyNotDetected},
+		{"unsupported, probe timed out", KittyCapabilityUnsupported, true, ErrKittyProbeTimeout},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ForceKittyCapability(tc.cap)
+			kittyEnvSignalled.Store(tc.signaled)
+			if got := KittyUnavailable(); !errors.Is(got, tc.want) {
+				t.Fatalf("KittyUnavailable() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestModel_ToggleBlocked(t *testing.T) {
+	resetKittyCapability(t)
+	m := New()
+
+	ForceKittyCapability(KittyCapabilityUnknown)
+	if err := m.ToggleBlocked(); !errors.Is(err, ErrKittyProbePending) {
+		t.Fatalf("Glyph mode, probe pending: ToggleBlocked = %v, want ErrKittyProbePending", err)
+	}
+	m.Toggle()
+	if m.Mode() != PictureGlyph {
+		t.Fatal("blocked Toggle must stay in Glyph mode")
+	}
+
+	ForceKittyCapability(KittyCapabilitySupported)
+	if err := m.ToggleBlocked(); err != nil {
+		t.Fatalf("Glyph mode, supported: ToggleBlocked = %v, want nil", err)
+	}
+	m.Toggle()
+	if m.Mode() != PictureKitty {
+		t.Fatal("Toggle should enter Kitty mode once supported")
+	}
+
+	// Leaving Kitty is never blocked, whatever the capability says.
+	ForceKittyCapability(KittyCapabilityUnsupported)
+	if err := m.ToggleBlocked(); err != nil {
+		t.Fatalf("Kitty mode: ToggleBlocked = %v, want nil", err)
 	}
 }

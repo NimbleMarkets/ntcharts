@@ -333,6 +333,9 @@ func (m *Model) SetSize(cols, rows int) tea.Cmd {
 	return tea.Batch(picCmd, heatCmd)
 }
 
+// ToggleBlocked forwards to the embedded picture.Model.
+func (m *Model) ToggleBlocked() error { return m.pic.ToggleBlocked() }
+
 // Toggle switches between Glyph and Kitty modes. Forwards to picture.Model
 // and also re-samples at the new mode's preferred resolution (Kitty wants
 // full terminal-pixel resolution; Glyph only needs one pixel per
