@@ -244,6 +244,24 @@ This example produces the following time series chart using braille runes starti
    '24 03/27   03/31   04/03   04/05     
 ```
 
+For a rolling time window, trim old samples and fit Y after adding each batch:
+
+```go
+start := now.Add(-60 * time.Second)
+tslc.TrimBefore(start) // removes older samples from every data set
+tslc.SetViewTimeRange(start, now)
+tslc.FitYToViewWithOpts(timeserieslinechart.FitYOpts{IncludeZero: true})
+tslc.DrawBrailleAll()
+```
+
+`FitYToView()` fits all data sets to the stored values inside the time viewport.
+`FitYToViewWithOpts` can select `DataSets` and include a zero baseline on linear
+axes. Both can shrink the displayed Y range when a spike leaves the window;
+neither changes the existing auto-range flags. Empty windows leave Y unchanged.
+`TrimBefore` releases discarded storage and leaves ranges unchanged. Keep a
+sample before the viewport if you need interpolation at its left edge.
+See the [rolling throughput example](./examples/linechart/throughput).
+
 #### Waveline Chart
 ```go
 package main

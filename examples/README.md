@@ -130,6 +130,16 @@ Time series charts have values on the Y axis and time values on the X axis.
 `ntcharts-linechart-timeseries` [(source)](./linechart/timeseries/main.go)<br>
 <img src="linechart/timeseries/demo.gif" alt="timeseries linechart gif"/>
 
+### Rolling Throughput
+
+Two transfer-speed series retain the last minute plus one sample for edge
+interpolation. `TrimBefore` bounds storage, and `FitYToViewWithOpts` fits the
+visible data with a zero baseline. Watch the Y range shrink when the initial
+3.5 GB/s spike leaves the window about ten seconds after startup.
+
+Run `go run ./linechart/throughput` from the examples directory.
+[(source)](./linechart/throughput/main.go)
+
 ### Log Scale
 
 A time series chart can use a logarithmic Y axis (`linechart.ScaleLog`). Labels fall on powers of ten and equal ratios are equal distances, so data that grows by orders of magnitude stays readable. Press `l` to switch the same chart between a linear and a log axis, and `+` / `-` to zoom the Y axis.
