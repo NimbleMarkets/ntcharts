@@ -426,6 +426,20 @@ func TestFloat64PointScaleBufferRescale(t *testing.T) {
 	}
 }
 
+func TestFloat64PointScaleBufferOffset(t *testing.T) {
+	offset := canvas.Float64Point{X: 10, Y: 20}
+	scale := canvas.Float64Point{X: 2, Y: 3}
+	b := NewFloat64PointScaleBuffer(offset, scale)
+	if b.Offset() != offset {
+		t.Fatalf("Offset() = %v, want %v", b.Offset(), offset)
+	}
+	offset.X = 15
+	b.SetOffset(offset)
+	if b.Offset() != offset || b.Scale() != scale {
+		t.Fatal("updated offset or scale is incorrect")
+	}
+}
+
 const tolerance = 1e-9
 
 // floatEquals checks if two float64 values are equal within tolerance tolerance

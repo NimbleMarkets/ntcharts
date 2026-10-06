@@ -304,7 +304,7 @@ func (b *Float64PointScaleBuffer) SetScale(sc canvas.Float64Point) {
 
 // Offset returns Float64Point used to subtract data points from.
 func (b *Float64PointScaleBuffer) Offset() canvas.Float64Point {
-	return b.scale
+	return b.offsetP
 }
 
 // SetOffset updates offsets and recomputes all scaled data.
