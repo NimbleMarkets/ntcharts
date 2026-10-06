@@ -3,6 +3,7 @@
 package linechart
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/NimbleMarkets/ntcharts/canvas"
@@ -95,5 +96,83 @@ func TestDrawXLabelDrawsRightmostLabelWhenGraphWidthNotDivisibleByStep(t *testin
 	rightmost := canvas.Point{X: lc.origin.X + last, Y: lc.origin.Y + 1}
 	if got := lc.Canvas.Cell(rightmost).Rune; got != 'R' {
 		t.Fatalf("rightmost X label missing: got %q at %+v", got, rightmost)
+	}
+}
+
+// TestDrawXLabelFinalTickUsesTrueAxisMaximum guards the final tick's value,
+// not just its position. The per-column interpolation drawXLabel uses for
+// every column (v = viewMinX + increment*i) is always exactly one increment
+// short of viewMaxX at i == last, because the rightmost data point is
+// actually plotted using graphWidth-1 as its denominator (one less than the
+// denominator behind that per-column increment). When the resulting short
+// label is small enough to fit left-anchored (the common case for a
+// single-digit axis), drawXLabel must still print the true axis maximum
+// (viewMaxX) rather than silently rendering a value one increment low.
+func TestDrawXLabelFinalTickUsesTrueAxisMaximum(t *testing.T) {
+	lc := New(19, 10, 0, 9, 0, 10,
+		WithXYSteps(2, 2),
+		WithYLabelFormatter(func(i int, v float64) string {
+			return "_"
+		}),
+	)
+
+	last := lc.GraphWidth() - 1
+	if last <= 0 {
+		t.Fatalf("unexpected graph width: %d", lc.GraphWidth())
+	}
+
+	lc.DrawXYAxisAndLabel()
+
+	want := fmt.Sprintf("%.0f", lc.ViewMaxX())
+	rightmost := canvas.Point{X: lc.origin.X + last, Y: lc.origin.Y + 1}
+	if got := string(lc.Canvas.Cell(rightmost).Rune); got != want {
+		t.Fatalf("final X label (left-anchored fits path) = %q, want axis maximum %q (viewMaxX=%v)", got, want, lc.ViewMaxX())
+	}
+}
+
+func TestDrawXLabelFallbackPreservesEarlierLabels(t *testing.T) {
+	m := New(20, 5, 0, 100, 0, 10, WithXYSteps(4, 0),
+		WithXLabelFormatter(func(i int, v float64) string {
+			if v == 100 {
+				return "FINAL_MAXIMUM"
+			}
+			return fmt.Sprint(i)
+		}))
+	m.DrawXYAxisAndLabel()
+	for _, x := range []int{8, 12, 16} {
+		if got := m.Canvas.Cell(canvas.Point{X: x, Y: 4}).Rune; got != rune(fmt.Sprint(x)[0]) {
+			t.Fatalf("fallback overwrote label at %d: %q", x, got)
+		}
+	}
+}
+
+func TestDrawXLabelEdgeCases(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		width    int
+		min, max float64
+		format   LabelFormatter
+		want     string
+	}{
+		{"one column", 1, 0, 9, DefaultLabelFormatter(), "9"},
+		{"negative maximum", 10, -100, -10, DefaultLabelFormatter(), "-100   -10"},
+		{"repeat", 10, 0, 10, func(int, float64) string { return "same" }, "same      "},
+		{"too wide", 3, 0, 10, func(int, float64) string { return "oversized" }, "   "},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := New(tc.width, 5, tc.min, tc.max, 0, 10, WithXYSteps(100, 0), WithXLabelFormatter(tc.format))
+			m.DrawXYAxisAndLabel()
+			var row []rune
+			for x := 0; x < tc.width; x++ {
+				r := m.Canvas.Cell(canvas.Point{X: x, Y: 4}).Rune
+				if r == 0 {
+					r = ' '
+				}
+				row = append(row, r)
+			}
+			if string(row) != tc.want {
+				t.Fatalf("got %q, want %q", string(row), tc.want)
+			}
+		})
 	}
 }
