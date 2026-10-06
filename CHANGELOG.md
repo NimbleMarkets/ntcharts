@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.7.2 (unreleased)
+
+ * fix(linechart): `DefaultLabelFormatter` no longer labels values that round to zero (such as `-0.3`) as `-0`, so an axis can't show both `-0` and `0` (#7).
+
 ## v2.7.1 (2026-10-06)
 
  * fix(license): `LICENSE.txt` is now `LICENSE` with only the MIT text, so pkg.go.dev shows our documentation again. The image exceptions moved to `NOTICE.md`.
