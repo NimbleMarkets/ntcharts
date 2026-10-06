@@ -2,7 +2,7 @@
 
 **BubbleTea `v2` NOTE:** See the [ntcharts/v2](https://github.com/NimbleMarkets/ntcharts/tree/v2) branch and its [CHANGELOG](https://github.com/NimbleMarkets/ntcharts/blob/v2/CHANGELOG.md).  `v2` is now the default development branch.
 
-## v0.5.2 (unreleased)
+## v0.5.2 (2026-10-06)
 
 Fixes backported from the `v2` branch:
 
