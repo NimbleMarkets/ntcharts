@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.7.1 (2026-10-06)
+
+ * fix(license): `LICENSE.txt` is now `LICENSE` with only the MIT text, so pkg.go.dev shows our documentation again. The image exceptions moved to `NOTICE.md`.
+
 ## v2.7.0 (2026-10-05)
 
  * feat(timeserieslinechart): Add `FitYToView` and `FitYToViewWithOpts` to fit the Y viewport to points in the current time window, with dataset selection and an optional zero baseline. Add `TrimBefore` to remove old samples from all datasets and release their storage without changing ranges. Existing auto-ranging remains unchanged. The `linechart/throughput` example demonstrates bounded retention and a Y range that shrinks after a spike expires (#9).

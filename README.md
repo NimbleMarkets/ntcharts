@@ -432,7 +432,7 @@ Thanks also to [asciigraph](https://github.com/guptarohit/asciigraph), [ratatui]
 
 ## License
 
-This project is released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt), **except** for the following files:
+This project is released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE](./LICENSE), **except** for the following files (also listed in [NOTICE.md](./NOTICE.md)):
 
   * The *Nimby Flame* image, [`./web/_assets/NimbyFlame.svg`](./web/_assets/NimbyFlame.svg) remains **All Rights Reserved** by Neomantra Corp.  You may use it only in unmodified form and only as part of this project (e.g., in forks or distributions of the project).  You may **not** extract it for unrelated use, modify it, or redistribute it separately without explicit permission.
 
