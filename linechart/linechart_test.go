@@ -4,6 +4,7 @@ package linechart
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/NimbleMarkets/ntcharts/canvas"
@@ -174,5 +175,27 @@ func TestDrawXLabelEdgeCases(t *testing.T) {
 				t.Fatalf("got %q, want %q", string(row), tc.want)
 			}
 		})
+	}
+}
+
+func TestDefaultLabelFormatterNoNegativeZero(t *testing.T) {
+	f := DefaultLabelFormatter()
+	tests := []struct {
+		v    float64
+		want string
+	}{
+		{0, "0"},
+		{math.Copysign(0, -1), "0"},
+		{-0.3, "0"},
+		{-0.5, "0"},
+		{0.3, "0"},
+		{-0.6, "-1"},
+		{-2, "-2"},
+		{2.4, "2"},
+	}
+	for _, tt := range tests {
+		if got := f(0, tt.v); got != tt.want {
+			t.Errorf("DefaultLabelFormatter()(%v) = %q, want %q", tt.v, got, tt.want)
+		}
 	}
 }
