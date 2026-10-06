@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.7.1 (2026-10-06)
+## v2.7.1 (unreleased)
 
  * fix(license): `LICENSE.txt` is now `LICENSE` with only the MIT text, so pkg.go.dev shows our documentation again. The image exceptions moved to `NOTICE.md`.
 

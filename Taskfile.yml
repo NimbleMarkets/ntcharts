@@ -33,7 +33,9 @@ tasks:
       - ./scripts/check-release.sh {{.VERSION}}
 
   release:
-    desc: 'Cut a release: bump nested modules, date the changelog, commit, and tag (task release VERSION=v2.X.Y)'
+    desc: 'Cut a release: bump nested modules, date the changelog, commit, and tag (task release VERSION=v2.X.Y [SKIP_CHANGELOG=1])'
+    env:
+      SKIP_CHANGELOG: '{{.SKIP_CHANGELOG}}'
     cmds:
       - ./scripts/release.sh {{.VERSION}}
 

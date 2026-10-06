@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # release.sh - cut an ntcharts release across the root and nested modules.
 #
-# Usage: task release VERSION=v2.X.Y
+# Usage: task release VERSION=v2.X.Y [SKIP_CHANGELOG=1]
+#
+# The changelog must have a '## v2.X.Y (unreleased)' heading, which is dated
+# here. SKIP_CHANGELOG=1 accepts any '## v2.X.Y' heading and leaves it as is.
 #
 # Published modules share one version, with directory-prefixed tags. cmd is
 # internal tooling: it follows the root dependency but gets no release tag.
@@ -33,8 +36,13 @@ for tag in "$VERSION" "${NESTED_TAGS[@]}"; do
 		exit 1
 	fi
 done
-if ! grep -q "^## ${VERSION} (unreleased)" CHANGELOG.md; then
-	echo "release: CHANGELOG.md has no '## ${VERSION} (unreleased)' heading" >&2
+if [[ -n "${SKIP_CHANGELOG:-}" ]]; then
+	if ! grep -q "^## ${VERSION}\( \|$\)" CHANGELOG.md; then
+		echo "release: CHANGELOG.md has no '## ${VERSION}' heading" >&2
+		exit 1
+	fi
+elif ! grep -q "^## ${VERSION} (unreleased)" CHANGELOG.md; then
+	echo "release: CHANGELOG.md has no '## ${VERSION} (unreleased)' heading (SKIP_CHANGELOG=1 accepts a dated one)" >&2
 	exit 1
 fi
 
@@ -57,9 +65,11 @@ for workfile in go.work wasm.work; do
 done
 task go-tidy
 
-DATE=$(date +%Y-%m-%d)
-sed -i.bak "s|^## ${VERSION} (unreleased)|## ${VERSION} (${DATE})|" CHANGELOG.md
-rm -f CHANGELOG.md.bak
+if [[ -z "${SKIP_CHANGELOG:-}" ]]; then
+	DATE=$(date +%Y-%m-%d)
+	sed -i.bak "s|^## ${VERSION} (unreleased)|## ${VERSION} (${DATE})|" CHANGELOG.md
+	rm -f CHANGELOG.md.bak
+fi
 
 echo "release: running tests"
 task test

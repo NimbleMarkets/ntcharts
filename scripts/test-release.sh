@@ -101,6 +101,27 @@ check() {
 		return 1
 	fi
 }
+# A dated heading needs SKIP_CHANGELOG=1, and no heading is never accepted.
+# Both are rejected before release.sh changes anything. release.sh needs a
+# clean tree, so each fixture is committed and then dropped.
+FIXTURE_COMMIT=$(git rev-parse HEAD)
+printf '# Changelog\n\n## %s (2026-01-01)\n' "$RELEASE" > CHANGELOG.md
+git commit -qam 'Dated changelog fixture'
+if ./scripts/release.sh $RELEASE > "$SCRATCH/dated.log" 2>&1; then
+	echo 'FAIL: dated changelog heading accepted without SKIP_CHANGELOG' >&2
+	exit 1
+fi
+grep -q "no '## $RELEASE (unreleased)' heading" "$SCRATCH/dated.log"
+printf '# Changelog\n\n## %s (unreleased)\n' "$NEXT" > CHANGELOG.md
+git commit -qam 'Missing changelog fixture'
+if SKIP_CHANGELOG=1 ./scripts/release.sh $RELEASE > "$SCRATCH/absent.log" 2>&1; then
+	echo 'FAIL: SKIP_CHANGELOG accepted a missing changelog heading' >&2
+	exit 1
+fi
+grep -q "no '## $RELEASE' heading" "$SCRATCH/absent.log"
+git reset -q --hard "$FIXTURE_COMMIT"
+echo 'PASS: release rejects dated or missing changelog headings unless skipped'
+
 check release.log ./scripts/release.sh $RELEASE
 for dir in picture/chartpicture spec/echarts examples examples/shaders cmd; do
 	[[ $(grep -c "^$MODULE/v2 $RELEASE" "$dir/go.sum") == 2 ]]
