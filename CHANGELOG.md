@@ -2,6 +2,16 @@
 
 **BubbleTea `v2` NOTE:** See the [ntcharts/v2](https://github.com/NimbleMarkets/ntcharts/tree/v2) branch and its [CHANGELOG](https://github.com/NimbleMarkets/ntcharts/blob/v2/CHANGELOG.md).  `v2` is now the default development branch.
 
+## v0.5.2 (unreleased)
+
+Fixes backported from the `v2` branch:
+
+ * Fix Y scaling in wavelinechart and timeserieslinechart so values line up with the Y-axis ticks when the X axis is hidden, as streamlinechart was fixed in v0.5.0 (#7)
+ * Never label an axis value as `-0` with `DefaultLabelFormatter` (#7)
+ * Fix missing or misplaced final axis labels when the label step doesn't divide the axis evenly (#16)
+ * Label the final X-axis tick with the true axis maximum
+ * `Float64PointScaleBuffer.Offset` now returns the offset instead of the scale
+
 ## v0.5.1 (2026-03-20)
 
  * Fix CI/CD of v1 tags
