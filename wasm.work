@@ -16,8 +16,8 @@ use (
 
 replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20260928192001-1b36865b418a
 
-replace github.com/NimbleMarkets/ntcharts/v2 v2.7.1 => .
+replace github.com/NimbleMarkets/ntcharts/v2 v2.7.2 => .
 
-replace github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.7.1 => ./picture/chartpicture
+replace github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.7.2 => ./picture/chartpicture
 
-replace github.com/NimbleMarkets/ntcharts/spec/echarts/v2 v2.7.1 => ./spec/echarts
+replace github.com/NimbleMarkets/ntcharts/spec/echarts/v2 v2.7.2 => ./spec/echarts
