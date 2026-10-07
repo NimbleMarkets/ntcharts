@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.7.2 (unreleased)
+## v2.7.2 (2026-10-07)
 
  * feat(sparkline): Add `DrawQuadrants` and `DrawQuadrantsColumnsOnly`, which draw two values per column with quadrant block elements (`▖ ▗ ▄ ▌ ▐ ▙ ▟ █`), doubling horizontal resolution at half-row vertical resolution. Sparklines now keep the latest twice-width values; `Draw`, `DrawColumnsOnly`, and `DrawBraille` still show the latest width values and are unchanged. Add `runes.QuadrantBlock` and the quadrant block constants. The `sparkline` example shows the new mode (#8).
  * fix(linechart): `DefaultLabelFormatter` no longer labels values that round to zero (such as `-0.3`) as `-0`, so an axis can't show both `-0` and `0` (#7).
