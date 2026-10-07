@@ -14,6 +14,7 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/buffer"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/graph"
+	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -28,7 +29,7 @@ type Model struct {
 	MaxInterpolationPoints int // maximum points to interpolate for lines
 
 	max float64                        // expected maximum data value
-	buf *buffer.Float64ScaleRingBuffer // buffer with size as width of canvas
+	buf *buffer.Float64ScaleRingBuffer // buffer with size of twice the canvas width
 }
 
 // New returns a sparkline Model initialized with given width, height
@@ -40,7 +41,7 @@ func New(w, h int, opts ...Option) Model {
 		Style:        lipgloss.NewStyle(),
 		Canvas:       canvas.New(w, h),
 		max:          1,
-		buf:          buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/1),
+		buf:          buffer.NewFloat64ScaleRingBuffer(2*w, 0, float64(h)/1),
 	}
 	for _, opt := range opts {
 		opt(&m)
@@ -83,8 +84,8 @@ func (m *Model) Resize(w, h int) {
 	m.Canvas.Resize(w, h)
 	m.Canvas.ViewWidth = w
 	m.Canvas.ViewHeight = h
-	if m.buf.Size() != w {
-		buf := buffer.NewFloat64ScaleRingBuffer(w, 0, float64(h)/m.max)
+	if m.buf.Size() != 2*w {
+		buf := buffer.NewFloat64ScaleRingBuffer(2*w, 0, float64(h)/m.max)
 		for _, f := range m.buf.ReadAllRaw() {
 			buf.Push(f)
 		}
@@ -120,6 +121,15 @@ func (m *Model) PushAll(f []float64) {
 	}
 }
 
+// latest returns up to the n most recent scaled data values.
+func (m *Model) latest(n int) []float64 {
+	d := m.buf.ReadAll()
+	if len(d) > n {
+		d = d[len(d)-n:]
+	}
+	return d
+}
+
 // Draw will display the the scaled data values on to the sparkline canvas
 // using columns.
 // Sparkline style will be applied across entire canvas.
@@ -134,7 +144,7 @@ func (m *Model) Draw() {
 // to the columns and not to the entire canvas.
 func (m *Model) DrawColumnsOnly() {
 	m.Canvas.Clear()
-	d := m.buf.ReadAll()
+	d := m.latest(m.Width())
 	graph.DrawColumns(&m.Canvas,
 		canvas.Point{X: m.Canvas.Width() - len(d), Y: m.Canvas.Height() - 1},
 		d,
@@ -148,7 +158,7 @@ func (m *Model) DrawColumnsOnly() {
 // from the bottom to the top and coming from the left to the right of the canvas.
 func (m *Model) DrawBraille() {
 	m.Canvas.Clear()
-	d := m.buf.ReadAll()
+	d := m.latest(m.Width())
 	dLen := len(d)
 	grid := graph.NewBrailleGrid(m.Width(), m.Height(),
 		0, float64(m.Width()),
@@ -169,6 +179,40 @@ func (m *Model) DrawBraille() {
 	graph.DrawBraillePatterns(&m.Canvas,
 		canvas.Point{X: 0, Y: 0}, grid.BraillePatterns(), m.Style)
 	m.Canvas.SetStyle(m.Style)
+}
+
+// DrawQuadrants will display the scaled data values on to the sparkline canvas
+// using columns of quadrant block elements, two data values per column.
+// Each value fills the left or right half of a column in steps of half a row.
+// Sparkline style will be applied across entire canvas.
+// Columns representing the data will be displayed going from
+// from the bottom to the top and coming from the left to the right of the canvas.
+func (m *Model) DrawQuadrants() {
+	m.DrawQuadrantsColumnsOnly()
+	m.Canvas.SetStyle(m.Style)
+}
+
+// DrawQuadrantsColumnsOnly is the same as DrawQuadrants except the style
+// will only be applied to the columns and not to the entire canvas.
+func (m *Model) DrawQuadrantsColumnsOnly() {
+	m.Canvas.Clear()
+	w, h := m.Width(), m.Height()
+	d := m.latest(2 * w)
+	// half rows filled by each half column, with the latest value on the right
+	n := make([]int, 2*w)
+	for i, f := range d {
+		n[2*w-len(d)+i] = min(int(math.Round(f*2)), 2*h)
+	}
+	for x := 0; x < w; x++ {
+		l, r := n[2*x], n[2*x+1]
+		for row := 0; row < h; row++ { // row 0 is the bottom row
+			q := runes.QuadrantBlock(l > 2*row+1, r > 2*row+1, l > 2*row, r > 2*row)
+			if q == runes.Null {
+				continue
+			}
+			m.Canvas.SetCell(canvas.Point{X: x, Y: h - 1 - row}, canvas.NewCellWithStyle(q, m.Style))
+		}
+	}
 }
 
 func (m Model) Init() tea.Cmd {

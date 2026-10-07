@@ -386,6 +386,22 @@ This example produces the following sparkline:
 
 <img src="examples/usage/sparkline.png" alt="sparkline png" width='100'/>
 
+`DrawQuadrants()` fits two values in each column using quadrant block elements, doubling the horizontal resolution at half-row vertical resolution.  The same 10 values in a sparkline half as wide:
+
+```go
+sl := sparkline.New(5, 5)
+sl.PushAll([]float64{7.81, 3.82, 8.39, 2.06, 4.19, 4.34, 6.83, 2.51, 9.21, 1.3})
+sl.DrawQuadrants()
+```
+
+```
+ ▖  ▌
+▌▌ ▖▌
+▌▌▄▌▌
+█▌█▙▌
+████▙
+```
+
 #### Heat Map
 
 Heat Maps map values to colors on a 2D grid.  The following example creates a heatmap of the function `sin(sqrt(x^2 + y^2))`.   There are more examples in the [`examples` README](./examples/README.md#heatmap).

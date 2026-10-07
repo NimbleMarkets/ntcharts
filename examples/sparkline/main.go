@@ -43,6 +43,7 @@ type model struct {
 	s3  sparkline.Model
 	s4  sparkline.Model
 	s5  sparkline.Model
+	s6  sparkline.Model
 	max float64
 }
 
@@ -66,6 +67,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.s3.Push(randomFloat64)
 	m.s4.Push(randomFloat64)
 	m.s5.Push(randomFloat64)
+	m.s6.Push(randomFloat64)
 
 	// call different Draw functions with different Style combinations
 	m.s1.Draw()
@@ -73,6 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.s3.Draw()
 	m.s4.Draw()
 	m.s5.DrawBraille()
+	m.s6.DrawQuadrants()
 	return m, nil
 }
 
@@ -83,7 +86,7 @@ func (m model) View() tea.View {
 		defaultStyle.Render(titleStyle.Render("style w/ background")+"\nDrawColumnsOnly()\n"+m.s2.View()+"\nDraw()\n"+m.s3.View()),
 		lipgloss.JoinVertical(lipgloss.Left,
 			defaultStyle.Render(fmt.Sprintf("Max: %.0f, Random: %.2f", m.max, randomFloat64)),
-			defaultStyle.Render("Draw() w/ background\n"+m.s4.View()+"\nDrawBraille()\n"+m.s5.View()),
+			defaultStyle.Render("Draw() w/ background\n"+m.s4.View()+"\nDrawBraille()\n"+m.s5.View()+"\nDrawQuadrants()\n"+m.s6.View()),
 		),
 	) + "\n"
 	return tea.NewView(s)
@@ -100,12 +103,14 @@ func main() {
 	// sparkline3 calls Draw with background style (same style as sparkline2)
 	// sparkline4 calls Draw with background style
 	// sparkline5 calls DrawBraille with no background style
+	// sparkline6 calls DrawQuadrants with no background style, showing two values per column
 
 	m := model{
 		sparkline.New(width, height, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle)),
 		sparkline.New(width, (height/2)-1, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle2)),
 		sparkline.New(width, (height/2)-1, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle2)),
 		sparkline.New(width, height/4, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle3)),
+		sparkline.New(width, height/4, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle4)),
 		sparkline.New(width, height/4, sparkline.WithMaxValue(max), sparkline.WithStyle(blockStyle4)),
 		max}
 	// booba.Run is a tea.Program substitute that dispatches to native Bubble Tea

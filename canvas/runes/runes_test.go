@@ -35,3 +35,17 @@ func TestInverseLeftBlockElement(t *testing.T) {
 		}
 	}
 }
+
+func TestQuadrantBlock(t *testing.T) {
+	// index bits: upper-left=8, upper-right=4, lower-left=2, lower-right=1
+	want := []rune{' ', '▗', '▖', '▄', '▝', '▐', '▞', '▟', '▘', '▚', '▌', '▙', '▀', '▜', '▛', '█'}
+	for i, w := range want {
+		if w == ' ' {
+			w = Null
+		}
+		ul, ur, ll, lr := i&8 != 0, i&4 != 0, i&2 != 0, i&1 != 0
+		if got := QuadrantBlock(ul, ur, ll, lr); got != w {
+			t.Errorf("QuadrantBlock(%v, %v, %v, %v) = %q, want %q", ul, ur, ll, lr, got, w)
+		}
+	}
+}
