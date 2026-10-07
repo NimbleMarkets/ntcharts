@@ -42,6 +42,7 @@ These sibling Bubble Tea widgets build on `ntcharts/v2/picture` — half-block g
 | [`ntcharts-pdf`](https://github.com/NimbleMarkets/ntcharts-pdf) | Terminal PDF viewer — pure-Go text extraction plus PDFium-via-WASM page rasterization.  [Live WASM demo](https://nimblemarkets.github.io/ntcharts-pdf). |
 | [`ntcharts-svg`](https://github.com/NimbleMarkets/ntcharts-svg) | Terminal SVG viewer and vector canvas — pure-Go rasterization, immediate-mode drawing, and SVG/PNG export.  [Live WASM demo](https://nimblemarkets.github.io/ntcharts-svg). |
 | [`ntcharts-osm`](https://github.com/NimbleMarkets/ntcharts-osm) | Terminal OpenStreetMap widget — renders map tiles with markers and paths. |
+| [`ntcharts3d`](https://github.com/NimbleMarkets/ntcharts3d) | 3D charts — scatter, surface, bar, line, and vector-field series with an orbit/pan/zoom camera, picking, and legends.  [Live WASM demo](https://nimblemarkets.github.io/ntcharts3d). |
 
 ## Quickstart Tutorial
 
