@@ -8,7 +8,7 @@ Set Framerate 60
 Set PlaybackSpeed 4.0
 Set FontSize 24
 Set Width 1300
-Set Height 500
+Set Height 600
 
 Hide
 Type "./bin/ntcharts-sparkline"
