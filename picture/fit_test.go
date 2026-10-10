@@ -1,6 +1,7 @@
 package picture
 
 import (
+	"golang.org/x/image/draw"
 	"image"
 	"image/color"
 	"testing"
@@ -319,5 +320,68 @@ func TestPrepareSource_Fill_FastPath_OpaqueBgComposites(t *testing.T) {
 	c := out.(*image.RGBA).RGBAAt(0, 0)
 	if c != red {
 		t.Errorf("expected composited red pixel, got %+v", c)
+	}
+}
+
+// A source already at its destination size is copied, not resampled: the
+// result is pixel-identical to compositing it over bg, and an opaque source
+// at exactly target size comes back as itself, whatever the background.
+func TestPrepareSource_SameSize_CopiesWithoutResample(t *testing.T) {
+	src := image.NewNRGBA(image.Rect(0, 0, 80, 160))
+	for y := 0; y < 160; y++ {
+		for x := 0; x < 80; x++ {
+			src.SetNRGBA(x, y, color.NRGBA{uint8(x * 3), uint8(y), 200, uint8(255 - y)})
+		}
+	}
+	red := color.RGBA{255, 0, 0, 255}
+	for name, tc := range map[string]struct {
+		fit        FitMode
+		cols, rows int
+		at         image.Point
+	}{
+		"fill":              {FitFill, 10, 10, image.Pt(0, 0)},
+		"contain":           {FitContain, 10, 10, image.Pt(0, 0)},
+		"cover":             {FitCover, 10, 10, image.Pt(0, 0)},
+		"contain letterbox": {FitContain, 20, 10, image.Pt(40, 0)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			out := prepareSource(src, tc.fit, tc.cols, tc.rows, 8, 16, red, AnchorCenter)
+			want := image.NewRGBA(image.Rect(0, 0, tc.cols*8, tc.rows*16))
+			draw.Draw(want, want.Bounds(), image.NewUniform(red), image.Point{}, draw.Src)
+			draw.Draw(want, src.Bounds().Add(tc.at), src, image.Point{}, draw.Over)
+			if out.Bounds() != want.Bounds() {
+				t.Fatalf("bounds %v, want %v", out.Bounds(), want.Bounds())
+			}
+			for y := 0; y < want.Bounds().Dy(); y++ {
+				for x := 0; x < want.Bounds().Dx(); x++ {
+					if out.At(x, y) != want.At(x, y) {
+						t.Fatalf("pixel %d,%d = %v, want %v", x, y, out.At(x, y), want.At(x, y))
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestPrepareSource_SameSize_OpaqueSourceReturnedAsIs(t *testing.T) {
+	src := solidImage(80, 160, color.RGBA{0, 0, 255, 255})
+	red := color.RGBA{255, 0, 0, 255}
+	for _, fit := range []FitMode{FitFill, FitContain, FitCover} {
+		if out := prepareSource(src, fit, 10, 10, 8, 16, red, AnchorCenter); out != image.Image(src) {
+			t.Errorf("fit %v: opaque source at target size was copied", fit)
+		}
+	}
+	translucent := solidImage(80, 160, color.RGBA{0, 0, 128, 128})
+	if out := prepareSource(translucent, FitContain, 10, 10, 8, 16, red, AnchorCenter); out == image.Image(translucent) {
+		t.Error("translucent source returned without compositing over bg")
+	}
+}
+
+func BenchmarkPrepareSource_SameSize(b *testing.B) {
+	src := solidImage(2000, 1000, color.RGBA{30, 30, 30, 255})
+	src.Set(5, 5, color.RGBA{1, 2, 3, 254}) // not opaque: the copy path, not the identity path
+	b.ReportAllocs()
+	for b.Loop() {
+		prepareSource(src, FitContain, 200, 50, 10, 20, color.White, AnchorCenter)
 	}
 }

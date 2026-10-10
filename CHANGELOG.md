@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Unreleased
+
+ * fix(picture): A source already at its fitted size is copied, not resampled, in all fit modes. An opaque source at exactly target size is returned as is, whatever the background. This removes the largest per-frame cost of a same-size picture.
+
 ## v2.7.2 (2026-10-07)
 
  * feat(sparkline): Add `DrawQuadrants` and `DrawQuadrantsColumnsOnly`, which draw two values per column with quadrant block elements (`▖ ▗ ▄ ▌ ▐ ▙ ▟ █`), doubling horizontal resolution at half-row vertical resolution. Sparklines now keep the latest twice-width values; `Draw`, `DrawColumnsOnly`, and `DrawBraille` still show the latest width values and are unchanged. Add `runes.QuadrantBlock` and the quadrant block constants. The `sparkline` example shows the new mode (#8).
