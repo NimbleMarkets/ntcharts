@@ -55,7 +55,7 @@ func toEChartsBar(s spec.Spec) (*charts.Bar, error) {
 		initOpt(s),
 		legendOpt(s),
 		gridOpt(s),
-		yAxisOpt(s),
+		charts.WithYAxisOpts(yAxisOpt(s.YAxis, "")),
 		charts.WithColorsOpts(s.Theme.Palette),
 		charts.WithXAxisOpts(opts.XAxis{
 			Type: defaultStr(s.XAxis.Type, spec.XAxisCategory),
@@ -101,13 +101,17 @@ func toEChartsBar(s spec.Spec) (*charts.Bar, error) {
 //     ECharts uses its own default time-axis labels.
 //  3. Series Color is passed through via LineStyleOpts. Theme.Palette is
 //     wired into the chart's Colors global option.
-//  4. YAxis.Min / YAxis.Max pin the Y axis. Nil leaves auto-ranging in place.
+//  4. YAxis.Min / YAxis.Max pin the Y axis; YAxis.Title is its name.
+//     Spec.Y2Axis adds a right-hand axis the same way, and series with
+//     YAxis == spec.YAxisRight (lines or bars) are drawn against it. A bar
+//     series without it shares the left axis.
 func toEChartsTimeSeries(s spec.Spec) (*charts.Line, error) {
 	line := charts.NewLine()
 
-	// Combo support: if any series sets Type == "bar", overlay a Bar chart on
-	// top of the Line chart and give the bar series its own Y axis (index 1),
-	// so wildly different magnitudes (e.g. price vs volume) coexist cleanly.
+	// A series on the right-hand axis (Series.YAxis == spec.YAxisRight) is
+	// drawn against the extended axis (index 1) built from Spec.Y2Axis.
+	// Bar series are overlaid on the Line chart as real bars, on whichever
+	// axis their YAxis names.
 	hasBar := false
 	for _, ser := range s.Data.Series {
 		if ser.Type == "bar" {
@@ -121,15 +125,15 @@ func toEChartsTimeSeries(s spec.Spec) (*charts.Line, error) {
 		initOpt(s),
 		legendOpt(s),
 		gridOpt(s),
-		yAxisOpt(s),
+		charts.WithYAxisOpts(yAxisOpt(s.YAxis, "")),
 		charts.WithColorsOpts(s.Theme.Palette),
 		charts.WithXAxisOpts(opts.XAxis{
 			Type:      spec.XAxisTime,
 			AxisLabel: xAxisTimeLabelOpt(s.XAxis.Format.Layout),
 		}),
 	)
-	if hasBar {
-		line.ExtendYAxis(opts.YAxis{Type: spec.XAxisValue})
+	if s.Y2Axis != nil {
+		line.ExtendYAxis(yAxisOpt(*s.Y2Axis, "right"))
 	}
 
 	// ECharts requires an X axis to be set on a Line chart before adding series;
@@ -152,6 +156,9 @@ func toEChartsTimeSeries(s spec.Spec) (*charts.Line, error) {
 			items = append(items, opts.LineData{Value: []any{t.Format(time.RFC3339Nano), p.Y}})
 		}
 		seriesOpts := []charts.SeriesOpts{}
+		if ser.YAxis == spec.YAxisRight {
+			seriesOpts = append(seriesOpts, charts.WithLineChartOpts(opts.LineChart{YAxisIndex: 1}))
+		}
 		if ser.Color != "" {
 			seriesOpts = append(seriesOpts,
 				charts.WithLineStyleOpts(opts.LineStyle{Color: ser.Color}),
@@ -176,8 +183,9 @@ func toEChartsTimeSeries(s spec.Spec) (*charts.Line, error) {
 				}
 				items = append(items, opts.BarData{Value: []any{t.Format(time.RFC3339Nano), p.Y}})
 			}
-			seriesOpts := []charts.SeriesOpts{
-				charts.WithBarChartOpts(opts.BarChart{YAxisIndex: 1}),
+			seriesOpts := []charts.SeriesOpts{}
+			if ser.YAxis == spec.YAxisRight {
+				seriesOpts = append(seriesOpts, charts.WithBarChartOpts(opts.BarChart{YAxisIndex: 1}))
 			}
 			if ser.Color != "" {
 				seriesOpts = append(seriesOpts, charts.WithItemStyleOpts(opts.ItemStyle{Color: ser.Color}))
@@ -226,16 +234,18 @@ func gridOpt(s spec.Spec) charts.GlobalOpts {
 	return charts.WithGridOpts(opts.Grid{Show: opts.Bool(s.Options.ShowGrid)})
 }
 
-// yAxisOpt pins the Y axis if YAxis.Min / YAxis.Max are non-nil.
-func yAxisOpt(s spec.Spec) charts.GlobalOpts {
-	y := opts.YAxis{Type: spec.XAxisValue}
-	if s.YAxis.Min != nil {
-		y.Min = *s.YAxis.Min
+// yAxisOpt describes one Y axis: its title as the ECharts axis name, Min /
+// Max pins when they are non-nil, and its position ("" for the default
+// left, "right" for a second axis).
+func yAxisOpt(a spec.YAxis, position string) opts.YAxis {
+	y := opts.YAxis{Type: spec.XAxisValue, Name: a.Title, Position: position}
+	if a.Min != nil {
+		y.Min = *a.Min
 	}
-	if s.YAxis.Max != nil {
-		y.Max = *s.YAxis.Max
+	if a.Max != nil {
+		y.Max = *a.Max
 	}
-	return charts.WithYAxisOpts(y)
+	return y
 }
 
 // goLayoutReplacer best-effort-translates the common Go time-layout tokens

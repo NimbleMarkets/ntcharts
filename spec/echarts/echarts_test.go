@@ -16,6 +16,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/types"
 )
 
+func f64(v float64) *float64 { return &v }
+
 func TestToEChartsSharedXAndPalette(t *testing.T) {
 	t.Run("bar", func(t *testing.T) {
 		s := spec.Spec{Type: spec.ChartTypeBar, Width: 40, Height: 10,
@@ -136,11 +138,12 @@ func TestToEChartsTimeSeriesComboLineBar(t *testing.T) {
 		Width:  80,
 		Height: 24,
 		XAxis:  spec.XAxis{Type: spec.XAxisTime},
+		Y2Axis: &spec.YAxis{Title: "Volume", Min: f64(0)},
 		Data: spec.Data{
 			Series: []spec.Series{
 				{Name: "Close", Type: "line", Color: "#ff0000", Values: points},
 				{Name: "Average", Color: "#0000ff", Values: points},
-				{Name: "Volume", Type: "bar", Color: "#00ff00", Values: points},
+				{Name: "Volume", Type: "bar", Color: "#00ff00", YAxis: spec.YAxisRight, Values: points},
 			},
 		},
 	})
@@ -158,6 +161,15 @@ func TestToEChartsTimeSeriesComboLineBar(t *testing.T) {
 	if got, want := line.YAxisList[1].Type, spec.XAxisValue; got != want {
 		t.Fatalf("secondary y-axis type = %q, want %q", got, want)
 	}
+	if got, want := line.YAxisList[1].Position, "right"; got != want {
+		t.Fatalf("secondary y-axis position = %q, want %q", got, want)
+	}
+	if got, want := line.YAxisList[1].Name, "Volume"; got != want {
+		t.Fatalf("secondary y-axis name = %q, want %q", got, want)
+	}
+	if got := line.YAxisList[1].Min; got != 0.0 {
+		t.Fatalf("secondary y-axis min = %v, want 0", got)
+	}
 	if got, want := len(line.MultiSeries), 3; got != want {
 		t.Fatalf("len(MultiSeries) = %d, want %d", got, want)
 	}
@@ -165,6 +177,9 @@ func TestToEChartsTimeSeriesComboLineBar(t *testing.T) {
 	closeSeries := line.MultiSeries[0]
 	if got, want := closeSeries.Type, string(types.ChartLine); got != want {
 		t.Fatalf("Close type = %q, want %q", got, want)
+	}
+	if got := closeSeries.YAxisIndex; got != 0 {
+		t.Fatalf("Close YAxisIndex = %d, want 0", got)
 	}
 	if closeSeries.LineStyle == nil || closeSeries.LineStyle.Color != "#ff0000" {
 		t.Fatalf("Close LineStyle = %#v, want color #ff0000", closeSeries.LineStyle)
@@ -232,7 +247,7 @@ func TestToEChartsTimeSeriesXAxisLabelFormatter(t *testing.T) {
 	})
 }
 
-func TestToEChartsTimeSeriesDoesNotAddSecondaryAxisWithoutBars(t *testing.T) {
+func TestToEChartsTimeSeriesSingleAxisWithoutY2Axis(t *testing.T) {
 	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	chart, err := echarts.ToECharts(spec.Spec{
@@ -262,5 +277,65 @@ func TestToEChartsTimeSeriesDoesNotAddSecondaryAxisWithoutBars(t *testing.T) {
 	}
 	if got, want := line.MultiSeries[0].Type, string(types.ChartLine); got != want {
 		t.Fatalf("series type = %q, want %q", got, want)
+	}
+}
+
+func TestToEChartsTimeSeriesBarWithoutY2StaysOnLeftAxis(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	points := []spec.DataPoint{{X: start, Y: 10}}
+	chart, err := echarts.ToECharts(spec.Spec{
+		Type: spec.ChartTypeTimeSeries, Width: 80, Height: 24,
+		XAxis: spec.XAxis{Type: spec.XAxisTime},
+		Data: spec.Data{Series: []spec.Series{
+			{Name: "Close", Values: points},
+			{Name: "Volume", Type: "bar", Values: points},
+			{Name: "Left", YAxis: spec.YAxisLeft, Values: points},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("ToECharts() error = %v", err)
+	}
+	line := chart.(*charts.Line)
+	if got, want := len(line.YAxisList), 1; got != want {
+		t.Fatalf("len(YAxisList) = %d, want %d", got, want)
+	}
+	for _, ser := range line.MultiSeries {
+		if ser.YAxisIndex != 0 {
+			t.Fatalf("series %q YAxisIndex = %d, want 0", ser.Name, ser.YAxisIndex)
+		}
+	}
+}
+
+func TestToEChartsTimeSeriesRightLineSeries(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	points := []spec.DataPoint{{X: start, Y: 10}}
+	chart, err := echarts.ToECharts(spec.Spec{
+		Type: spec.ChartTypeTimeSeries, Width: 80, Height: 24,
+		XAxis:  spec.XAxis{Type: spec.XAxisTime},
+		YAxis:  spec.YAxis{Title: "Load"},
+		Y2Axis: &spec.YAxis{Max: f64(20)},
+		Data: spec.Data{Series: []spec.Series{
+			{Name: "load", Values: points},
+			{Name: "temp", YAxis: spec.YAxisRight, Values: points},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("ToECharts() error = %v", err)
+	}
+	line := chart.(*charts.Line)
+	if got, want := len(line.YAxisList), 2; got != want {
+		t.Fatalf("len(YAxisList) = %d, want %d", got, want)
+	}
+	if got, want := line.YAxisList[0].Name, "Load"; got != want {
+		t.Fatalf("left axis name = %q, want %q", got, want)
+	}
+	if got := line.YAxisList[1].Max; got != 20.0 {
+		t.Fatalf("right axis max = %v, want 20", got)
+	}
+	if got, want := line.MultiSeries[1].YAxisIndex, 1; got != want {
+		t.Fatalf("temp YAxisIndex = %d, want %d", got, want)
+	}
+	if got, want := line.MultiSeries[1].Type, string(types.ChartLine); got != want {
+		t.Fatalf("temp type = %q, want %q", got, want)
 	}
 }

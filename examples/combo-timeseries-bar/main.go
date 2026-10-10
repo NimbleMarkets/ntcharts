@@ -194,9 +194,9 @@ func aggregateMonthly(daily []dailyRow) []monthlyPoint {
 }
 
 // buildSpec turns the aggregated monthly points into a neutral Spec with
-// two series: a line (Close) and a bar (Volume in millions). ECharts will
-// render the bar series on a secondary Y axis; the terminal will draw both
-// as lines (with a distinct style on the bar series).
+// two series: a line (Close) on the left axis and a bar (Volume in millions)
+// on the right axis. ECharts renders the bar series as real bars on the right
+// axis; the terminal draws both as lines, the volume against the right axis.
 func buildSpec(monthly []monthlyPoint) spec.Spec {
 	closePts := make([]spec.DataPoint, len(monthly))
 	volumePts := make([]spec.DataPoint, len(monthly))
@@ -214,6 +214,7 @@ func buildSpec(monthly []monthlyPoint) spec.Spec {
 			Type:   spec.XAxisTime,
 			Format: spec.Format{Kind: "time", Layout: "2006-01"},
 		},
+		Y2Axis: &spec.YAxis{Title: "Volume (M)"},
 		Data: spec.Data{
 			Series: []spec.Series{
 				{
@@ -226,6 +227,7 @@ func buildSpec(monthly []monthlyPoint) spec.Spec {
 					Name:   "Volume (M)",
 					Type:   "bar",
 					Color:  "#ff9e64",
+					YAxis:  spec.YAxisRight,
 					Values: volumePts,
 				},
 			},
