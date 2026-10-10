@@ -153,7 +153,10 @@ func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int, yScal
 					}
 					lastVal = s
 				}
-				i += yStep
+				if i == gHeight {
+					break
+				}
+				i = min(i+yStep, gHeight)
 			}
 		}
 		origin.X += valueLen

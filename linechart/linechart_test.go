@@ -199,3 +199,26 @@ func TestDefaultLabelFormatterNoNegativeZero(t *testing.T) {
 		}
 	}
 }
+
+// The top tick is drawn even when it falls between steps. Its label must
+// participate in layout too, especially at small terminal heights.
+func TestTopYLabelReservesWidthBetweenSteps(t *testing.T) {
+	lc := New(44, 15, 0, 6, 0, 1,
+		WithXYSteps(1, 2),
+		WithYLabelFormatter(func(i int, v float64) string {
+			if i == 13 {
+				return "100%"
+			}
+			return "0%"
+		}),
+	)
+	lc.DrawXYAxisAndLabel()
+	if lc.origin.X != 4 {
+		t.Fatalf("left margin = %d, want 4 for top tick", lc.origin.X)
+	}
+	for x, want := range "100%" {
+		if got := lc.Canvas.Cell(canvas.Point{X: x, Y: 0}).Rune; got != want {
+			t.Fatalf("top label at x=%d: got %q, want %q", x, got, want)
+		}
+	}
+}
