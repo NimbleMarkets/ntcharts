@@ -5,6 +5,7 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
+	"github.com/go-analyze/charts"
 )
 
 func TestBarChartOptionFromNT(t *testing.T) {
@@ -153,5 +154,75 @@ func TestBarChartOptionFromNTStacksMultiValueBars(t *testing.T) {
 	single.Push(barchart.BarData{Label: "Q1", Values: []barchart.BarValue{{Name: "rev", Value: 100}}})
 	if opt := BarChartOptionFromNT(&single); opt.StackSeries != nil {
 		t.Fatal("single-value bars should not request stacking")
+	}
+}
+
+func TestLineChartOptionFromNTAxes(t *testing.T) {
+	series := [][]float64{{1, 5, 10}, {200, 400, 300}}
+	names := []string{"load", "temp"}
+	sides := []linechart.YAxisSide{linechart.YAxisLeft, linechart.YAxisRight}
+
+	t.Run("two axes", func(t *testing.T) {
+		lc := linechart.New(40, 12, 0, 10, 0, 100, linechart.WithY2Axis(linechart.Axis{Min: 100, Max: 500}))
+		opt := LineChartOptionFromNTAxes(&lc, series, names, sides)
+		if len(opt.YAxis) != 2 {
+			t.Fatalf("YAxis len = %d, want 2", len(opt.YAxis))
+		}
+		if *opt.YAxis[0].Min != 0 || *opt.YAxis[0].Max != 100 {
+			t.Errorf("left axis = %v..%v, want 0..100", *opt.YAxis[0].Min, *opt.YAxis[0].Max)
+		}
+		if *opt.YAxis[1].Min != 100 || *opt.YAxis[1].Max != 500 || opt.YAxis[1].Position != charts.PositionRight {
+			t.Errorf("right axis = %v..%v at %q, want 100..500 at right", *opt.YAxis[1].Min, *opt.YAxis[1].Max, opt.YAxis[1].Position)
+		}
+		if opt.SeriesList[0].YAxisIndex != 0 || opt.SeriesList[1].YAxisIndex != 1 {
+			t.Errorf("series axis indices = %d, %d; want 0, 1", opt.SeriesList[0].YAxisIndex, opt.SeriesList[1].YAxisIndex)
+		}
+
+		// Longer sides slice is ignored safely
+		longSides := append([]linechart.YAxisSide{}, sides...)
+		longSides = append(longSides, linechart.YAxisRight)
+		opt2 := LineChartOptionFromNTAxes(&lc, series, names, longSides)
+		if opt2.SeriesList[0].YAxisIndex != 0 || opt2.SeriesList[1].YAxisIndex != 1 {
+			t.Errorf("longer sides: series axis indices = %d, %d; want 0, 1", opt2.SeriesList[0].YAxisIndex, opt2.SeriesList[1].YAxisIndex)
+		}
+	})
+	t.Run("sides ignored without a right axis", func(t *testing.T) {
+		lc := linechart.New(40, 12, 0, 10, 0, 100)
+		opt := LineChartOptionFromNTAxes(&lc, series, names, sides)
+		if len(opt.YAxis) != 1 || opt.SeriesList[1].YAxisIndex != 0 {
+			t.Fatalf("YAxis len = %d, series[1] index = %d; want 1, 0", len(opt.YAxis), opt.SeriesList[1].YAxisIndex)
+		}
+	})
+	t.Run("missing sides mean left", func(t *testing.T) {
+		lc := linechart.New(40, 12, 0, 10, 0, 100, linechart.WithY2Axis(linechart.Axis{Min: 100, Max: 500}))
+		opt := LineChartOptionFromNTAxes(&lc, series, names, nil)
+		if opt.SeriesList[0].YAxisIndex != 0 || opt.SeriesList[1].YAxisIndex != 0 {
+			t.Fatalf("series axis indices = %d, %d; want 0, 0", opt.SeriesList[0].YAxisIndex, opt.SeriesList[1].YAxisIndex)
+		}
+	})
+	t.Run("nil model", func(t *testing.T) {
+		opt := LineChartOptionFromNTAxes(nil, series, names, sides)
+		if len(opt.SeriesList) != 2 {
+			t.Fatalf("series = %d, want 2", len(opt.SeriesList))
+		}
+		if len(opt.YAxis) > 1 {
+			t.Errorf("YAxis len = %d, want <= 1 (go-chart default, no right axis)", len(opt.YAxis))
+		}
+		if opt.SeriesList[1].YAxisIndex != 0 {
+			t.Errorf("series[1] YAxisIndex = %d, want 0 (default left axis)", opt.SeriesList[1].YAxisIndex)
+		}
+	})
+}
+
+func TestLineChartOptionFromNTKeepsOneAxisWithDualAxisModel(t *testing.T) {
+	lc := linechart.New(40, 12, 0, 10, 0, 100, linechart.WithY2Axis(linechart.Axis{Min: 100, Max: 500}))
+	opt := LineChartOptionFromNT(&lc, [][]float64{{1, 5, 10}, {200, 400, 300}}, []string{"load", "temp"})
+	if len(opt.YAxis) != 1 {
+		t.Fatalf("YAxis len = %d, want 1 (the legacy adapter never adds a second axis)", len(opt.YAxis))
+	}
+	for i, s := range opt.SeriesList {
+		if s.YAxisIndex != 0 {
+			t.Fatalf("series[%d] YAxisIndex = %d, want 0", i, s.YAxisIndex)
+		}
 	}
 }

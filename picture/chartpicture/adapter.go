@@ -88,8 +88,23 @@ func buildBarSeriesList(bd []barchart.BarData) charts.BarSeriesList {
 // LineChartOptionFromNT builds a charts.LineChartOption from an ntcharts
 // linechart.Model plus parallel series data and names. linechart.Model is a
 // drawing canvas — it does not store the underlying series — so callers must
-// supply data alongside.
+// supply data alongside. The option has one Y axis, the chart's left one,
+// whether or not the model has a right axis; see LineChartOptionFromNTAxes
+// for a right-hand axis.
 func LineChartOptionFromNT(lc *linechart.Model, series [][]float64, names []string) charts.LineChartOption {
+	opt := charts.NewLineChartOptionWithSeries(lineSeriesList(series, names))
+	if lc != nil {
+		opt.YAxis = []charts.YAxisOption{{
+			Min: charts.Ptr(lc.MinY()),
+			Max: charts.Ptr(lc.MaxY()),
+		}}
+	}
+	return opt
+}
+
+// lineSeriesList copies parallel series data and names into go-chart's
+// series list.
+func lineSeriesList(series [][]float64, names []string) charts.LineSeriesList {
 	sl := make(charts.LineSeriesList, len(series))
 	for i, vals := range series {
 		sl[i].Values = append([]float64(nil), vals...)
@@ -97,12 +112,32 @@ func LineChartOptionFromNT(lc *linechart.Model, series [][]float64, names []stri
 			sl[i].Name = names[i]
 		}
 	}
-	opt := charts.NewLineChartOptionWithSeries(sl)
-	if lc != nil {
-		opt.YAxis = []charts.YAxisOption{{
-			Min: charts.Ptr(lc.MinY()),
-			Max: charts.Ptr(lc.MaxY()),
-		}}
+	return sl
+}
+
+// LineChartOptionFromNTAxes is LineChartOptionFromNT with each series
+// assigned to the chart's left or right Y axis. sides[i] selects the axis
+// of series[i]; a missing entry means the left axis. When lc has a right
+// axis (lc.Y2Axis()), a second go-chart Y axis carries its range and
+// right-side series use YAxisIndex 1; otherwise sides is ignored.
+func LineChartOptionFromNTAxes(lc *linechart.Model, series [][]float64, names []string, sides []linechart.YAxisSide) charts.LineChartOption {
+	opt := LineChartOptionFromNT(lc, series, names)
+	if lc == nil {
+		return opt
+	}
+	a, ok := lc.Y2Axis()
+	if !ok {
+		return opt
+	}
+	opt.YAxis = append(opt.YAxis, charts.YAxisOption{
+		Min:      charts.Ptr(a.Min),
+		Max:      charts.Ptr(a.Max),
+		Position: charts.PositionRight,
+	})
+	for i := range opt.SeriesList {
+		if i < len(sides) && sides[i] == linechart.YAxisRight {
+			opt.SeriesList[i].YAxisIndex = 1
+		}
 	}
 	return opt
 }
