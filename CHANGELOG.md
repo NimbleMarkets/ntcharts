@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+ * feat(picture): Add `KittyFormatZlib`, which sends raw pixels compressed with zlib (`o=z`): RGB for an opaque frame, RGBA otherwise. It encodes about three times faster than PNG for a comparable payload, since PNG tries every filter on every row. PNG remains the default.
  * fix(picture): A source already at its fitted size is copied, not resampled, in all fit modes. An opaque source at exactly target size is returned as is, whatever the background. This removes the largest per-frame cost of a same-size picture.
 
 ## v2.7.2 (2026-10-07)

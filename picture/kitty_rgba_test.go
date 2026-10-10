@@ -2,11 +2,13 @@ package picture
 
 import (
 	"bytes"
+	"compress/zlib"
 	"encoding/base64"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
+	"io"
 	"math/rand/v2"
 	"strings"
 	"testing"
@@ -229,5 +231,66 @@ func BenchmarkKittyFormats(b *testing.B) {
 				b.ReportMetric(float64(n), "APC-bytes/op")
 			})
 		}
+	}
+}
+
+// Zlib frames carry raw pixels compressed with zlib (o=z): RGB for an opaque
+// image, RGBA for one with translucency. Skipping PNG's per-row filter trials
+// makes the encode about three times faster for a comparable payload.
+func TestKittyZlibRoundTrip(t *testing.T) {
+	opaque := image.NewRGBA(image.Rect(0, 0, 5, 3))
+	for i := 0; i < len(opaque.Pix); i += 4 {
+		opaque.Pix[i], opaque.Pix[i+1], opaque.Pix[i+2], opaque.Pix[i+3] = byte(i), byte(i*7), byte(i*13), 255
+	}
+	apc := buildKittyAPC(opaque, 7, 5, 3, KittyFormatZlib)
+	data := decodeKittyRaw(t, apc, "o=z", "f=24", "s=5", "v=3", "i=7")
+	r, err := zlib.NewReader(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := io.ReadAll(r)
+	want := make([]byte, 0, 45)
+	for i := 0; i < len(opaque.Pix); i += 4 {
+		want = append(want, opaque.Pix[i], opaque.Pix[i+1], opaque.Pix[i+2])
+	}
+	if !bytes.Equal(raw, want) {
+		t.Fatalf("opaque payload %v, want RGB %v", raw, want)
+	}
+	translucent := randomNRGBA(4, 2)
+	apc = buildKittyAPC(translucent, 8, 4, 2, KittyFormatZlib)
+	if strings.Contains(apc, "f=24") {
+		t.Fatal("translucent frame sent as RGB")
+	}
+	data = decodeKittyRaw(t, apc, "o=z", "s=4", "v=2") // RGBA is the protocol default: no f= key.
+	r, _ = zlib.NewReader(bytes.NewReader(data))
+	raw, _ = io.ReadAll(r)
+	if !bytes.Equal(raw, translucent.Pix) {
+		t.Fatal("translucent payload is not the straight-alpha RGBA rows")
+	}
+	if KittyFormatZlib.String() != "zlib" || normalizeKittyFormat(KittyFormatZlib) != KittyFormatZlib || normalizeKittyFormat(KittyFormat(9)) != KittyFormatPNG {
+		t.Fatal("format naming or normalization")
+	}
+}
+
+func BenchmarkKittyFrameFormats(b *testing.B) {
+	page := image.NewRGBA(image.Rect(0, 0, 2000, 1000))
+	for y := 0; y < 1000; y++ {
+		for x := 0; x < 2000; x++ {
+			c := color.RGBA{255, 255, 255, 255}
+			if (x*7+y*13)%23 < 4 {
+				c = color.RGBA{30, 30, 30, 255}
+			}
+			page.SetRGBA(x, y, c)
+		}
+	}
+	for _, f := range []KittyFormat{KittyFormatPNG, KittyFormatZlib, KittyFormatRGBA} {
+		b.Run(f.String(), func(b *testing.B) {
+			var n int
+			b.ReportAllocs()
+			for b.Loop() {
+				n = len(buildKittyAPC(page, 1, 200, 50, f))
+			}
+			b.ReportMetric(float64(n)/1e6, "MB/frame")
+		})
 	}
 }
