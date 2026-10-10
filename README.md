@@ -363,6 +363,129 @@ This example produces the following chart:
  * The default label formatter prints whole numbers. Set your own with
    `WithYLabelFormatter` / `WithXLabelFormatter` for ranges below 1.
 
+#### Dual Y axes
+
+The [`dualaxis` example](./examples/README.md#dual-y-axes) shows it live.
+
+A line chart can show a second Y axis on the right, with its own range,
+scale (linear or log), label formatter, and label style, so two series on
+very different scales can share one X axis. Describe an axis with
+`linechart.Axis` and add it with `WithY2Axis` / `SetY2Axis`. `YAxis` /
+`SetYAxis` read and set the left axis the same way. The right axis has no
+view of its own: it follows the left axis when you zoom or pan.
+
+`timeserieslinechart`, `wavelinechart`, and `streamlinechart` put a data set
+on the right axis with `WithDataSetYAxis` / `SetDataSetYAxis`. With a plain
+`linechart`, map right-axis values with `Y2ToY` before drawing them, and
+auto-range them with `AutoAdjustY2Range`.
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+
+    "github.com/NimbleMarkets/ntcharts/v2/linechart"
+    tslc "github.com/NimbleMarkets/ntcharts/v2/linechart/timeserieslinechart"
+)
+
+func main() {
+    start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+    chart := tslc.New(40, 10,
+        tslc.WithTimeRange(start, start.Add(6*time.Hour)),
+        tslc.WithXLabelFormatter(tslc.HourTimeLabelFormatter()),
+        tslc.WithXYSteps(12, 2),
+        tslc.WithYRange(0, 1),
+        tslc.WithYLabelFormatter(func(_ int, v float64) string { return fmt.Sprintf("%.1f", v) }),
+        tslc.WithY2Axis(linechart.Axis{Min: 5, Max: 20}),
+        tslc.WithDataSetYAxis("temp", linechart.YAxisRight),
+    )
+    load := []float64{0.2, 0.5, 0.4, 0.9, 0.7, 0.3, 0.6}
+    temp := []float64{8, 9, 12, 15, 19, 17, 14}
+    for i := range load {
+        t := start.Add(time.Duration(i) * time.Hour)
+        chart.PushDataSet("load", tslc.TimePoint{Time: t, Value: load[i]})
+        chart.PushDataSet("temp", tslc.TimePoint{Time: t, Value: temp[i]})
+    }
+    chart.DrawAll()
+    fmt.Println(chart.View())
+}
+```
+
+This example produces the following chart:
+```
+1.0│                                 │20
+   │                ╭──╮╭────╮       │  
+0.8│              ╭─╯ ╭┴┴─╮  ╰────╮  │16
+   │             ╭┼───╯   ╰─╮     ╰─┬│  
+0.5│    ╭───╮╭─┬─┴╯         ╰╮    ╭─╯│12
+   │ ╭──╯  ╭┴┴─╯             ╰─╮╭─╯  │  
+0.2├─┴─────╯                   ╰╯    │9 
+   │                                 │  
+0.0└─────────────────────────────────┘5 
+   00:00:00    02:10:54    04:21:49
+```
+
+With a plain `linechart`, draw right-axis values like this:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/NimbleMarkets/ntcharts/v2/canvas"
+    "github.com/NimbleMarkets/ntcharts/v2/linechart"
+)
+
+func main() {
+    lc := linechart.New(30, 8, 0, 5, 0, 1,
+        linechart.WithXYSteps(2, 2),
+        linechart.WithY2Axis(linechart.Axis{Min: 5, Max: 20, AutoMin: true, AutoMax: true}))
+    temps := []float64{8, 12, 25, 14}
+
+    // widen the right axis for every point first, then draw
+    for i, v := range temps {
+        lc.AutoAdjustY2Range(canvas.Float64Point{X: float64(i + 1), Y: v})
+    }
+    lc.DrawXYAxisAndLabel()
+    for i, v := range temps {
+        if y := lc.Y2ToY(v); y == y { // skip a NaN
+            lc.DrawRune(canvas.Float64Point{X: float64(i + 1), Y: y}, '*')
+        }
+    }
+    fmt.Println(lc.View())
+}
+```
+
+This example produces the following chart:
+```
+ │              *          │25
+ │                         │  
+1│                         │18
+ │          *        *     │  
+ │     *                   │12
+ │                         │  
+0└─────────────────────────┘5 
+ 0   1   2     3   4     5    
+```
+
+ * Call `AutoAdjustY2Range` on the raw right-axis point before `Y2ToY`. The
+   `Draw*` methods auto-range the left axis with the value they are given,
+   so a right value outside the right range would otherwise widen the left
+   axis. `AutoAdjustY2Range` widens the right axis instead, if its `AutoMin`
+   or `AutoMax` is set, and the mapped value is then in range.
+ * `Y2ToY` returns NaN for a value with no place on a log right axis (zero
+   or below). Skip it: on a linear left axis the `Draw*` methods accept NaN
+   and draw a stray stroke at the baseline instead of a break.
+ * After any range change, redraw. Earlier `Y2ToY` mappings were made against
+   the old view.
+ * With a Y step of 0 (`WithXYSteps(x, 0)`) the right axis is not drawn and
+   reserves no space, but right-axis data still maps through `Y2ToY`, and
+   right-assigned data sets still draw against its range.
+ * In the data-set charts, give `WithDataSetYAxis` and `WithY2Axis` before the
+   data, or the data auto-ranges the left axis instead.
+
 #### Sparkline
 
 ```go

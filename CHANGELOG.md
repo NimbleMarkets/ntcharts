@@ -1,8 +1,10 @@
 # CHANGELOG
 
-## Unreleased
+## v2.8.0 (unreleased)
 
  * feat(picture): Add `KittyFormatZlib`, which sends raw pixels compressed with zlib (`o=z`): RGB for an opaque frame, RGBA otherwise. It encodes about three times faster than PNG for a comparable payload, since PNG tries every filter on every row. PNG remains the default.
+ * feat(linechart): Dual Y axes (#6). A line chart can show a second, right-hand Y axis with its own range, scale (linear or log), label formatter, and label style, so two series on very different scales can share one X axis. Describe an axis with the new `linechart.Axis` value and add it with `SetY2Axis` / `WithY2Axis`; `YAxis` / `SetYAxis` read and set the left axis the same way, and `Y2Axis` / `ClearY2Axis` read and remove the right one. The right axis follows the left one when zooming or moving. `timeserieslinechart`, `wavelinechart`, and `streamlinechart` put a data set on the right axis with `SetDataSetYAxis` / `WithDataSetYAxis`; with a plain `linechart`, map right-axis values with `Y2ToY` and auto-range them with `AutoAdjustY2Range`. `GraphRight` returns the column where the graphing area ends. Charts without a right axis render as before.
+ * feat(examples): Add `linechart/dualaxis`, a load (0–1, left axis) and a temperature (5–20 C, right axis) on one time axis. It is in the WASM gallery as "Dual Y Axes".
  * fix(picture): A source already at its fitted size is copied, not resampled, in all fit modes. An opaque source at exactly target size is returned as is, whatever the background. This removes the largest per-frame cost of a same-size picture.
 
 ## v2.7.2 (2026-10-07)

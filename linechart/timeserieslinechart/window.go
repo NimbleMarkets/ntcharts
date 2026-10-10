@@ -12,7 +12,7 @@ import (
 
 // FitYOpts configures fitting the Y viewport to stored points in the time viewport.
 type FitYOpts struct {
-	// DataSets selects the data sets to fit. Nil selects all data sets;
+	// DataSets selects the data sets to fit. Nil selects all data sets on the left Y axis;
 	// an empty, non-nil slice selects none. Unknown names are ignored.
 	DataSets []string
 	// IncludeZero includes a zero baseline on a linear Y axis.
@@ -27,7 +27,8 @@ func (m *Model) FitYToView() bool {
 	return m.FitYToViewWithOpts(FitYOpts{})
 }
 
-// FitYToViewWithOpts fits the displayed Y range to the selected data sets.
+// FitYToViewWithOpts fits the displayed left Y range to the selected data sets.
+// Data sets drawn against the right Y axis are never fitted, even if selected.
 // It ignores non-finite values and values invalid on the Y scale. If there
 // are no eligible points, it returns false and leaves the ranges unchanged.
 // Constant values get a nonzero range (5% or at least 1 on a linear axis,
@@ -47,6 +48,9 @@ func (m *Model) FitYToViewWithOpts(opts FitYOpts) bool {
 	for _, name := range names {
 		ds, exists := m.dSets[name]
 		if !exists {
+			continue
+		}
+		if _, right := m.y2Scale(name); right {
 			continue
 		}
 		for _, p := range ds.tBuf.ReadAllRaw() {

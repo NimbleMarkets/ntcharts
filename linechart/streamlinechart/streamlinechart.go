@@ -38,6 +38,7 @@ type Model struct {
 	dLineStyle runes.LineStyle     // default data set LineStyletype
 	dStyle     lipgloss.Style      // default data set Style
 	dSets      map[string]*dataSet // maps names to data sets
+	y2Sets     map[string]bool     // names of data sets on the right Y axis; nil until used
 }
 
 // New returns a streamlinechart Model initialized from
@@ -72,7 +73,7 @@ func (m *Model) newDataSet() *dataSet {
 	return &dataSet{
 		LineStyle: m.dLineStyle,
 		Style:     m.dStyle,
-		sBuf:      buffer.NewFloat64ScaleRingBuffer(m.Width()-m.Origin().X, m.ViewMinY(), ys),
+		sBuf:      buffer.NewFloat64ScaleRingBuffer(m.GraphRight()-m.Origin().X, m.ViewMinY(), ys),
 	}
 }
 
@@ -81,7 +82,7 @@ func (m *Model) rescaleData() {
 	// rescale stream buffer
 	ys := float64(m.GraphHeight()) / (m.ViewMaxY() - m.ViewMinY()) // y scale factor
 	for _, ds := range m.dSets {
-		width := m.Width() - m.Origin().X // width of graphing area includes Y axis
+		width := m.GraphRight() - m.Origin().X // width of graphing area includes Y axis
 		// create new buffer with new size if the graphing area size has changed
 		if ds.sBuf.Size() != width {
 			buf := buffer.NewFloat64ScaleRingBuffer(width, m.ViewMinY(), ys)
@@ -117,6 +118,69 @@ func (m *Model) ClearDataSet(n string) {
 func (m *Model) SetYScale(s linechart.Scale) {
 	m.Model.SetYScale(s)
 	m.rescaleData()
+}
+
+// SetYAxis sets the left Y axis. See linechart.Model.SetYAxis.
+// Existing data will be rescaled.
+func (m *Model) SetYAxis(a linechart.Axis) {
+	m.Model.SetYAxis(a)
+	m.rescaleData()
+}
+
+// SetY2Axis adds a right Y axis, or replaces it. See
+// linechart.Model.SetY2Axis. Put data sets on it with SetDataSetYAxis.
+// Data pushed to right-assigned sets before this call was auto-ranged
+// against the left axis, and that left range is not undone.
+// Existing data will be rescaled.
+func (m *Model) SetY2Axis(a linechart.Axis) {
+	m.Model.SetY2Axis(a)
+	m.rescaleData()
+}
+
+// ClearY2Axis removes the right Y axis. Data sets keep their axis
+// assignment, and those on the right are drawn against the left axis until
+// a right axis is set again. Existing data will be rescaled.
+func (m *Model) ClearY2Axis() {
+	m.Model.ClearY2Axis()
+	m.rescaleData()
+}
+
+// SetDataSetYAxis puts the data set given by name string on the left or
+// right Y axis, creating the data set if needed. All data sets start on
+// the left axis. A data set on the right axis is drawn and auto-ranged as
+// a left one while the chart has no right axis (see SetY2Axis).
+func (m *Model) SetDataSetYAxis(n string, side linechart.YAxisSide) {
+	if _, ok := m.dSets[n]; !ok {
+		m.dSets[n] = m.newDataSet()
+	}
+	if side == linechart.YAxisRight {
+		if m.y2Sets == nil {
+			m.y2Sets = make(map[string]bool)
+		}
+		m.y2Sets[n] = true
+	} else {
+		delete(m.y2Sets, n)
+	}
+}
+
+// y2Scale returns the right Y axis's scale and true if the data set given
+// by name is drawn against the right axis: it is assigned to it and the
+// chart has one.
+func (m *Model) y2Scale(n string) (linechart.Scale, bool) {
+	if !m.y2Sets[n] {
+		return linechart.ScaleLinear, false
+	}
+	a, ok := m.Y2Axis()
+	return a.Scale, ok
+}
+
+// autoAdjustRange auto-ranges f against the Y axis the data set given by
+// name is drawn against.
+func (m *Model) autoAdjustRange(n string, f canvas.Float64Point) bool {
+	if _, right := m.y2Scale(n); right {
+		return m.AutoAdjustY2Range(f)
+	}
+	return m.AutoAdjustRange(f)
 }
 
 // SetXRange updates the minimum and maximum expected X values.
@@ -189,7 +253,7 @@ func (m *Model) Push(f float64) {
 // to be displayed with Draw. Using given data set by name string.
 func (m *Model) PushDataSet(n string, f float64) {
 	// auto adjust x and y ranges if enabled
-	if m.AutoAdjustRange(canvas.Float64Point{X: m.MinX(), Y: f}) {
+	if m.autoAdjustRange(n, canvas.Float64Point{X: m.MinX(), Y: f}) {
 		m.UpdateGraphSizes()
 		m.rescaleData()
 	}
@@ -229,12 +293,12 @@ func (m *Model) DrawDataSets(names []string) {
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
-			if m.YScale() == linechart.ScaleLog {
-				m.drawLogDataSet(ds)
+			if _, right := m.y2Scale(n); right || m.YScale() == linechart.ScaleLog {
+				m.drawRawDataSet(n, ds)
 				continue
 			}
 			s := ds.sBuf.ReadAll()
-			startX := m.Canvas.Width() - len(s)
+			startX := m.GraphRight() - len(s)
 			// round float64 data value to nearest integer to fit onto the canvas
 			l := make([]int, 0, len(s))
 			for _, v := range s {
@@ -259,24 +323,33 @@ func (m *Model) DrawDataSets(names []string) {
 	}
 }
 
-// drawLogDataSet draws the data set's line on a log Y axis. The buffer
-// scales linearly, so its raw values are scaled here instead. A value with
-// no place on the axis breaks the line: each run of drawable values is
-// drawn on its own.
-func (m *Model) drawLogDataSet(ds *dataSet) {
+// drawRawDataSet draws the data set's line from its raw values, for a log
+// Y axis or a data set on the right Y axis: the buffer scales linearly
+// against the left axis, so its raw values are scaled here instead. A
+// value with no place on its axis breaks the line: each run of drawable
+// values is drawn on its own.
+func (m *Model) drawRawDataSet(n string, ds *dataSet) {
+	scale, right := m.y2Scale(n)
+	if !right {
+		scale = m.YScale()
+	}
 	raw := ds.sBuf.ReadAllRaw()
-	startX := m.Canvas.Width() - len(raw)
+	startX := m.GraphRight() - len(raw)
 	for from := 0; from < len(raw); from++ {
 		var yCoords []int
 		to := from
-		for ; to < len(raw) && m.YScale().Valid(raw[to]); to++ {
-			f := m.ScaleFloat64PointForLine(canvas.Float64Point{X: m.ViewMinX(), Y: raw[to]})
-			// convert to canvas coordinates and avoid drawing below X axis
-			y := canvas.CanvasYCoordinate(m.Origin().Y, int(math.Round(f.Y)))
-			if m.XStep() > 0 && y > m.Origin().Y {
-				y = m.Origin().Y
+		for ; to < len(raw) && scale.Valid(raw[to]); to++ {
+			y := raw[to]
+			if right {
+				y = m.Y2ToY(y)
 			}
-			yCoords = append(yCoords, y)
+			f := m.ScaleFloat64PointForLine(canvas.Float64Point{X: m.ViewMinX(), Y: y})
+			// convert to canvas coordinates and avoid drawing below X axis
+			cy := canvas.CanvasYCoordinate(m.Origin().Y, int(math.Round(f.Y)))
+			if m.XStep() > 0 && cy > m.Origin().Y {
+				cy = m.Origin().Y
+			}
+			yCoords = append(yCoords, cy)
 		}
 		if len(yCoords) > 0 {
 			graph.DrawLineSequence(&m.Canvas,

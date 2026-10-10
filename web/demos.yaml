@@ -41,6 +41,10 @@ groups:
         title: Log Scale
         blurb: Exponential data on a log Y axis; press l to compare with a linear axis.
         source: ./examples/linechart/logscale
+      - name: linechart-dualaxis
+        title: Dual Y Axes
+        blurb: Two series on different scales; the right Y axis follows the left when zooming.
+        source: ./examples/linechart/dualaxis
   - title: Bars & Sparks
     demos:
       - name: barchart-vertical

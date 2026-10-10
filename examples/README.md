@@ -147,6 +147,13 @@ A time series chart can use a logarithmic Y axis (`linechart.ScaleLog`). Labels 
 `ntcharts-linechart-logscale` [(source)](./linechart/logscale/main.go)<br>
 <img src="linechart/logscale/demo.gif" alt="log scale linechart gif"/>
 
+### Dual Y Axes
+
+A line chart can show a second Y axis on the right with its own range, scale, and labels. Here a load between 0 and 1 (green, left axis) and a temperature between 5 and 20 C (red, right axis) share one time axis. Press `+` / `-` to zoom the Y axes; the right axis follows the left one.
+
+`ntcharts-linechart-dualaxis` [(source)](./linechart/dualaxis/main.go)<br>
+<img src="linechart/dualaxis/demo.gif" alt="dual Y axes linechart gif"/>
+
 ### Wave Line
 
 Wave line charts display a continuous a line going across the line chart.

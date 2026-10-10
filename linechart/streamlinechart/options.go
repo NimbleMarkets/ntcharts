@@ -126,3 +126,19 @@ func WithDataSetStream(n string, f []float64) Option {
 		}
 	}
 }
+
+// WithY2Axis adds a right Y axis. See Model.SetY2Axis.
+func WithY2Axis(a linechart.Axis) Option {
+	return func(m *Model) {
+		m.SetY2Axis(a)
+	}
+}
+
+// WithDataSetYAxis puts the data set given by name on the left or right Y
+// axis. See Model.SetDataSetYAxis. Give it and WithY2Axis before the data
+// set's data (WithDataSetStream) so that data auto-ranges the right axis.
+func WithDataSetYAxis(n string, side linechart.YAxisSide) Option {
+	return func(m *Model) {
+		m.SetDataSetYAxis(n, side)
+	}
+}

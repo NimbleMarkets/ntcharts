@@ -89,6 +89,7 @@ type Model struct {
 	dLineStyle runes.LineStyle     // default data set LineStyletype
 	dStyle     lipgloss.Style      // default data set Style
 	dSets      map[string]*dataSet // maps names to data sets
+	y2Sets     map[string]bool     // names of data sets on the right Y axis; nil until used
 }
 
 // New returns a timeserieslinechart Model initialized from
@@ -155,19 +156,37 @@ func (m *Model) rescaleData() {
 }
 
 // graphPoints returns the data set's points scaled to the graphing area.
-// On a log Y axis, ok[i] is false for a point with no place on it, which
-// must not be drawn; ok is nil when every point can be.
-func (m *Model) graphPoints(ds *dataSet) (points []canvas.Float64Point, ok []bool) {
-	if m.YScale() != linechart.ScaleLog {
-		return ds.tBuf.ReadAll(), nil
+// Points of a data set on the right Y axis are mapped onto the left axis
+// first. On a log Y axis, ok[i] is false for a point with no place on it,
+// which must not be drawn; ok is nil when every point can be.
+func (m *Model) graphPoints(n string, ds *dataSet) (points []canvas.Float64Point, ok []bool) {
+	scale, right := m.y2Scale(n)
+	if !right {
+		scale = m.YScale()
+		if scale != linechart.ScaleLog {
+			return ds.tBuf.ReadAll(), nil
+		}
 	}
-	// the buffer scales linearly, so scale its raw data points instead
+	// the buffer scales linearly against the left axis, so scale its raw
+	// data points instead
 	raw := ds.tBuf.ReadAllRaw()
 	points = make([]canvas.Float64Point, len(raw))
-	ok = make([]bool, len(raw))
+	if scale == linechart.ScaleLog {
+		ok = make([]bool, len(raw))
+	}
 	for i, p := range raw {
+		valid := scale.Valid(p.Y)
+		if right {
+			if valid {
+				p.Y = m.Y2ToY(p.Y)
+			} else {
+				p.Y = m.ViewMinY()
+			}
+		}
 		points[i] = m.ScaleFloat64PointForLine(p)
-		ok[i] = m.YScale().Valid(p.Y)
+		if ok != nil {
+			ok[i] = valid
+		}
 	}
 	return points, ok
 }
@@ -179,6 +198,70 @@ func (m *Model) graphPoints(ds *dataSet) (points []canvas.Float64Point, ok []boo
 func (m *Model) SetYScale(s linechart.Scale) {
 	m.Model.SetYScale(s)
 	m.rescaleData()
+}
+
+// SetYAxis sets the left Y axis. See linechart.Model.SetYAxis.
+// Existing data will be rescaled.
+func (m *Model) SetYAxis(a linechart.Axis) {
+	m.Model.SetYAxis(a)
+	m.rescaleData()
+}
+
+// SetY2Axis adds a right Y axis, or replaces it. See
+// linechart.Model.SetY2Axis. Put data sets on it with SetDataSetYAxis.
+// Data pushed to right-assigned sets before this call was auto-ranged
+// against the left axis, and that left range is not undone.
+// Existing data will be rescaled.
+func (m *Model) SetY2Axis(a linechart.Axis) {
+	m.Model.SetY2Axis(a)
+	m.rescaleData()
+}
+
+// ClearY2Axis removes the right Y axis. Data sets keep their axis
+// assignment, and those on the right are drawn against the left axis until
+// a right axis is set again. Existing data will be rescaled.
+func (m *Model) ClearY2Axis() {
+	m.Model.ClearY2Axis()
+	m.rescaleData()
+}
+
+// SetDataSetYAxis puts the data set given by name string on the left or
+// right Y axis, creating the data set if needed. All data sets start on
+// the left axis. A data set on the right axis is drawn, auto-ranged and
+// fitted as a left one while the chart has no right axis (see SetY2Axis).
+// Data sets drawn together by DrawCandle should share one axis.
+func (m *Model) SetDataSetYAxis(n string, side linechart.YAxisSide) {
+	if _, ok := m.dSets[n]; !ok {
+		m.dSets[n] = m.newDataSet()
+	}
+	if side == linechart.YAxisRight {
+		if m.y2Sets == nil {
+			m.y2Sets = make(map[string]bool)
+		}
+		m.y2Sets[n] = true
+	} else {
+		delete(m.y2Sets, n)
+	}
+}
+
+// y2Scale returns the right Y axis's scale and true if the data set given
+// by name is drawn against the right axis: it is assigned to it and the
+// chart has one.
+func (m *Model) y2Scale(n string) (linechart.Scale, bool) {
+	if !m.y2Sets[n] {
+		return linechart.ScaleLinear, false
+	}
+	a, ok := m.Y2Axis()
+	return a.Scale, ok
+}
+
+// autoAdjustRange auto-ranges f against the Y axis the data set given by
+// name is drawn against.
+func (m *Model) autoAdjustRange(n string, f canvas.Float64Point) bool {
+	if _, right := m.y2Scale(n); right {
+		return m.AutoAdjustY2Range(f)
+	}
+	return m.AutoAdjustRange(f)
 }
 
 // ClearAllData will reset stored data values in all data sets.
@@ -280,7 +363,7 @@ func (m *Model) Push(t TimePoint) {
 func (m *Model) PushDataSet(n string, t TimePoint) {
 	f := canvas.Float64Point{X: float64(t.Time.UnixMilli()) / 1e3, Y: t.Value}
 	// auto adjust x and y ranges if enabled
-	if m.AutoAdjustRange(f) {
+	if m.autoAdjustRange(n, f) {
 		m.UpdateGraphSizes()
 		m.rescaleData()
 	}
@@ -321,7 +404,7 @@ func (m *Model) DrawDataSets(names []string) {
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
-			dataPoints, ok := m.graphPoints(ds)
+			dataPoints, ok := m.graphPoints(n, ds)
 			dataLen := len(dataPoints)
 			if dataLen == 0 {
 				return
@@ -337,8 +420,8 @@ func (m *Model) DrawDataSets(names []string) {
 					}
 				}
 			}
-			startX := m.Canvas.Width() - len(yCoords)
-			if m.YScale() == linechart.ScaleLog {
+			startX := m.GraphRight() - len(yCoords)
+			if ok != nil {
 				// A column without data has no value to rest on: a log
 				// axis has no zero. Draw each run of filled columns alone.
 				for from := 0; from < len(yCoords); from++ {
@@ -436,10 +519,10 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 	}
 	// only draws up to the number of candles of the data sets with the lowest
 	// amount of data values if length if data is not the same across all data sets
-	oData, oOK := m.graphPoints(m.dSets[openName])
-	hData, hOK := m.graphPoints(m.dSets[highName])
-	lData, lOK := m.graphPoints(m.dSets[lowName])
-	cData, cOK := m.graphPoints(m.dSets[closeName])
+	oData, oOK := m.graphPoints(openName, m.dSets[openName])
+	hData, hOK := m.graphPoints(highName, m.dSets[highName])
+	lData, lOK := m.graphPoints(lowName, m.dSets[lowName])
+	cData, cOK := m.graphPoints(closeName, m.dSets[closeName])
 	limit := len(oData)
 	if len(hData) < limit {
 		limit = len(hData)
@@ -491,7 +574,7 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 		// GraphWidth(), one column past the last drawable graph column, so
 		// without this clamp the newest candle's center column lands off
 		// canvas and never renders. Clamp it into the drawable area instead.
-		if last := m.Canvas.Width() - 1; drawX > last {
+		if last := m.GraphRight() - 1; drawX > last {
 			drawX = last
 		}
 
@@ -518,7 +601,7 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 		// the safety net for that and for dense overlapping data.
 		half := (cw - 1) / 2
 		right := cw - 1 - half
-		if minCtr, maxCtr := minCol+half, m.Canvas.Width()-1-right; minCtr <= maxCtr {
+		if minCtr, maxCtr := minCol+half, m.GraphRight()-1-right; minCtr <= maxCtr {
 			if drawX < minCtr {
 				drawX = minCtr
 			}
@@ -529,7 +612,9 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 		left := drawX - half
 		y := m.Origin().Y - 1
 		for x := left; x < left+cw; x++ {
-			if x < minCol {
+			// a candle wider than the plot area is not clamped above, so
+			// also stop at the right Y axis
+			if x < minCol || x >= m.GraphRight() {
 				continue
 			}
 			q := canvas.Point{X: x, Y: y}
@@ -566,7 +651,7 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 	m.DrawXYAxisAndLabel()
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
-			dataPoints, ok := m.graphPoints(ds)
+			dataPoints, ok := m.graphPoints(n, ds)
 			dataLen := len(dataPoints)
 			if dataLen == 0 {
 				return
@@ -642,7 +727,7 @@ func (m *Model) SetColumnBackgroundStyle(ts time.Time, s lipgloss.Style) {
 // and whether each column of the sequence holds any data.
 // A non-nil ok marks the points that can be drawn (see graphPoints).
 func (m *Model) getLineSequence(points []canvas.Float64Point, ok []bool) ([]int, []bool) {
-	width := m.Width() - m.Origin().X // line runes can draw on axes
+	width := m.GraphRight() - m.Origin().X // line runes can draw on axes
 	if width <= 0 {
 		return []int{}, []bool{}
 	}
