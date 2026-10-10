@@ -215,3 +215,116 @@ func TestSpecJSONScaleRoundTrip(t *testing.T) {
 		t.Fatalf("empty scale must be omitted: %s", b)
 	}
 }
+
+func TestY2AxisJSONRoundTrip(t *testing.T) {
+	base := Spec{
+		Type: ChartTypeTimeSeries, Width: 40, Height: 10,
+		Data: Data{Series: []Series{{Name: "a", Values: []DataPoint{{Y: 1}}}}},
+	}
+	t.Run("omitted", func(t *testing.T) {
+		b, err := json.Marshal(base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), "y2_axis") || strings.Contains(string(b), `"y_axis":"`) {
+			t.Fatalf("nil Y2Axis / empty Series.YAxis must be omitted:\n%s", b)
+		}
+	})
+	t.Run("preserved", func(t *testing.T) {
+		s := base
+		s.Y2Axis = &YAxis{Min: f64(5), Max: f64(20), Format: Format{Kind: "si"}, Scale: ScaleLinear}
+		s.Data.Series = append(s.Data.Series, Series{Name: "r", YAxis: YAxisRight, Values: []DataPoint{{Y: 7}}})
+		b, err := json.Marshal(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var back Spec
+		if err := json.Unmarshal(b, &back); err != nil {
+			t.Fatal(err)
+		}
+		if back.Y2Axis == nil || *back.Y2Axis.Min != 5 || *back.Y2Axis.Max != 20 ||
+			back.Y2Axis.Format.Kind != "si" || back.Y2Axis.Scale != ScaleLinear {
+			t.Fatalf("y2_axis did not round-trip: %+v", back.Y2Axis)
+		}
+		if back.Data.Series[1].YAxis != YAxisRight || back.Data.Series[0].YAxis != "" {
+			t.Fatalf("series y_axis did not round-trip: %q, %q", back.Data.Series[0].YAxis, back.Data.Series[1].YAxis)
+		}
+		if !strings.Contains(string(b), `"y2_axis":{`) || !strings.Contains(string(b), `"y_axis":"right"`) {
+			t.Fatalf("json keys:\n%s", b)
+		}
+	})
+}
+
+func TestValidateY2Axis(t *testing.T) {
+	base := Spec{
+		Type: ChartTypeTimeSeries, Width: 40, Height: 10,
+		Data: Data{Series: []Series{{Name: "a", Values: []DataPoint{{Y: 1}}}}},
+	}
+	t.Run("bad series y_axis", func(t *testing.T) {
+		s := base
+		s.Data.Series = []Series{{Name: "a", YAxis: "middle", Values: []DataPoint{{Y: 1}}}}
+		if err := s.Validate(); err == nil || err.Error() != `spec: series[0] y_axis "middle" must be left or right` {
+			t.Fatalf("got %v", err)
+		}
+	})
+	t.Run("right requires y2_axis", func(t *testing.T) {
+		s := base
+		s.Data.Series = []Series{{Name: "a", YAxis: YAxisRight, Values: []DataPoint{{Y: 1}}}}
+		if err := s.Validate(); err == nil || err.Error() != `spec: series[0] y_axis "right" requires y2_axis` {
+			t.Fatalf("got %v", err)
+		}
+	})
+	t.Run("left and empty are valid; y2_axis without right series is valid", func(t *testing.T) {
+		s := base
+		s.Y2Axis = &YAxis{}
+		s.Data.Series = []Series{
+			{Name: "a", YAxis: YAxisLeft, Values: []DataPoint{{Y: 1}}},
+			{Name: "b", Values: []DataPoint{{Y: 1}}},
+		}
+		if err := s.Validate(); err != nil {
+			t.Fatalf("expected valid, got %v", err)
+		}
+	})
+	t.Run("right with y2_axis is valid", func(t *testing.T) {
+		s := base
+		s.Y2Axis = &YAxis{}
+		s.Data.Series = []Series{{Name: "a", YAxis: YAxisRight, Values: []DataPoint{{Y: 1}}}}
+		if err := s.Validate(); err != nil {
+			t.Fatalf("expected valid, got %v", err)
+		}
+	})
+	t.Run("bad y2_axis format", func(t *testing.T) {
+		s := base
+		s.Y2Axis = &YAxis{Format: Format{Kind: "roman-numerals"}}
+		if err := s.Validate(); err == nil || !strings.Contains(err.Error(), "y2_axis format kind") {
+			t.Fatalf("got %v", err)
+		}
+	})
+	t.Run("bad y2_axis scale", func(t *testing.T) {
+		s := base
+		s.Y2Axis = &YAxis{Scale: "symlog"}
+		if err := s.Validate(); err == nil || err.Error() != `spec: y2_axis scale "symlog" must be linear or log` {
+			t.Fatalf("got %v", err)
+		}
+	})
+}
+
+func TestValidateRejectsSameNameOnDifferentYAxes(t *testing.T) {
+	s := Spec{
+		Type: ChartTypeTimeSeries, Width: 40, Height: 10,
+		Y2Axis: &YAxis{},
+		Data: Data{Series: []Series{
+			{Name: "a", YAxis: YAxisRight, Values: []DataPoint{{Y: 100}}},
+			{Name: "b", Values: []DataPoint{{Y: 1}}},
+			{Name: "a", Values: []DataPoint{{Y: 2}}},
+		}},
+	}
+	if err := s.Validate(); err == nil || err.Error() != `spec: series[2] "a" is also series[0] but on a different y_axis` {
+		t.Fatalf("got %v", err)
+	}
+	// the same name on the same axis is still allowed (it merges)
+	s.Data.Series[2].YAxis = YAxisRight
+	if err := s.Validate(); err != nil {
+		t.Fatalf("same axis: expected valid, got %v", err)
+	}
+}

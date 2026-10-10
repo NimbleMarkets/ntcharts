@@ -363,3 +363,43 @@ func ExampleBuild_heatmapLabels() {
 	//     09    12    15    18|
 	// |
 }
+
+// ExampleBuild_dualAxes shows a second, right-hand Y axis: load (0..1) on the
+// left and temperature (5..20) on the right share one time axis.
+func ExampleBuild_dualAxes() {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	load := []float64{0.2, 0.5, 0.4, 0.9, 0.7, 0.3, 0.6}
+	temp := []float64{8, 9, 12, 15, 19, 17, 14}
+	var l, r []spec.DataPoint
+	for i := range load {
+		x := start.Add(time.Duration(i) * time.Hour)
+		l = append(l, spec.DataPoint{X: x, Y: load[i]})
+		r = append(r, spec.DataPoint{X: x, Y: temp[i]})
+	}
+
+	s := spec.Spec{
+		Type:   spec.ChartTypeTimeSeries,
+		Width:  60,
+		Height: 12,
+		YAxis:  spec.YAxis{Min: f64(0), Max: f64(1)},
+		// a second, right-hand Y axis with its own range; series choose it
+		// with YAxis: spec.YAxisRight
+		Y2Axis: &spec.YAxis{Min: f64(5), Max: f64(20), Title: "Temperature"},
+		Data: spec.Data{Series: []spec.Series{
+			{Name: "load", Values: l},
+			{Name: "temp", YAxis: spec.YAxisRight, Values: r},
+		}},
+	}
+
+	term, err := spec.Build(s)
+	if err != nil {
+		fmt.Println("build error:", err)
+		return
+	}
+	m := term.(*timeserieslinechart.Model)
+	axis, _ := m.Y2Axis()
+	fmt.Printf("left %v..%v, right %v..%v\n", m.MinY(), m.MaxY(), axis.Min, axis.Max)
+	// Output: left 0..1, right 5..20
+}
+
+func f64(v float64) *float64 { return &v }

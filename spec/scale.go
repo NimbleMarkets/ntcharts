@@ -18,31 +18,37 @@ import (
 // checkScaleSupport rejects a log axis on chart types that cannot draw one.
 // Drawing those charts linearly would misrepresent the data.
 func checkScaleSupport(s Spec) error {
-	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
-	if !logX && !logY {
-		return nil
+	axes := []struct {
+		name string
+		log  bool
+	}{
+		{"x_axis", s.XAxis.Scale == ScaleLog},
+		{"y_axis", s.YAxis.Scale == ScaleLog},
+		{"y2_axis", s.Y2Axis != nil && s.Y2Axis.Scale == ScaleLog},
 	}
-	axis := "y_axis"
-	if logX {
-		axis = "x_axis"
-	}
-	var why string
-	switch s.Type {
-	case ChartTypeBar:
-		why = "bars are measured linearly from a zero baseline"
-	case ChartTypeHeatmap:
-		why = "its axes are cell indices, not scaled values"
-	case ChartTypeSparkline:
-		why = "columns are measured linearly from zero and it draws no axis"
-	case ChartTypeTimeSeries, ChartTypeOHLC:
-		if !logX {
-			return nil
+	for _, axis := range axes {
+		if !axis.log {
+			continue
 		}
-		why = "its X axis is time"
-	default:
-		return nil
+		var why string
+		switch s.Type {
+		case ChartTypeBar:
+			why = "bars are measured linearly from a zero baseline"
+		case ChartTypeHeatmap:
+			why = "its axes are cell indices, not scaled values"
+		case ChartTypeSparkline:
+			why = "columns are measured linearly from zero and it draws no axis"
+		case ChartTypeTimeSeries, ChartTypeOHLC:
+			if axis.name != "x_axis" {
+				continue
+			}
+			why = "its X axis is time"
+		default:
+			continue
+		}
+		return fmt.Errorf("spec: %s chart cannot draw %s scale %q: %s", s.Type, axis.name, ScaleLog, why)
 	}
-	return fmt.Errorf("spec: %s chart cannot draw %s scale %q: %s", s.Type, axis, ScaleLog, why)
+	return nil
 }
 
 // logOK reports whether v can sit on a log axis.
@@ -57,16 +63,17 @@ func logValueError(axis, where string, v float64) error {
 }
 
 // logYBounds is yBounds for a log Y axis: it returns the observed minimum
-// and maximum Y, or an error naming the first value the axis cannot place.
-func logYBounds(series []Series) (min, max float64, ok bool, err error) {
-	for _, ser := range series {
+// and maximum Y of the axis's series, or an error naming the first value
+// the axis cannot place.
+func logYBounds(a yAxisRef) (min, max float64, ok bool, err error) {
+	for _, ser := range a.series {
 		for i, p := range ser.Values {
 			if !logOK(p.Y) {
-				return 0, 0, false, logValueError("y_axis", fmt.Sprintf("series %q point %d has y", ser.Name, i), p.Y)
+				return 0, 0, false, logValueError(a.name, fmt.Sprintf("series %q point %d has y", ser.Name, i), p.Y)
 			}
 		}
 	}
-	min, max, ok = yBounds(series)
+	min, max, ok = yBounds(a.series)
 	return min, max, ok, nil
 }
 
@@ -126,14 +133,15 @@ func logRange(min, max float64, pinMin, pinMax bool) (float64, float64) {
 // resolveLogYRange is resolvePinnedYRange for a log axis. min and max are
 // the data's extremes and the pins are data values, so the one-sided pin
 // rule and its errors are evaluated on real values, and so is the returned
-// range (see logRange). With no data (ok false) an unpinned bound sits one decade
-// from the pinned one, or the range is 1..10.
-func resolveLogYRange(axis YAxis, min, max float64, ok bool) (float64, float64, error) {
+// range (see logRange). With no data (ok false) an unpinned bound sits one
+// decade from the pinned one, or the range is 1..10.
+func resolveLogYRange(a yAxisRef, min, max float64, ok bool) (float64, float64, error) {
+	axis := a.axis
 	if axis.Min != nil && !logOK(*axis.Min) {
-		return 0, 0, fmt.Errorf("spec: y_axis scale %q requires a positive finite min; got %v", ScaleLog, *axis.Min)
+		return 0, 0, fmt.Errorf("spec: %s scale %q requires a positive finite min; got %v", a.name, ScaleLog, *axis.Min)
 	}
 	if axis.Max != nil && !logOK(*axis.Max) {
-		return 0, 0, fmt.Errorf("spec: y_axis scale %q requires a positive finite max; got %v", ScaleLog, *axis.Max)
+		return 0, 0, fmt.Errorf("spec: %s scale %q requires a positive finite max; got %v", a.name, ScaleLog, *axis.Max)
 	}
 	if !ok {
 		min, max = 1, 10
@@ -151,10 +159,10 @@ func resolveLogYRange(axis YAxis, min, max float64, ok bool) (float64, float64, 
 		max = *axis.Max
 	}
 	if min > max {
-		return 0, 0, fmt.Errorf("spec: y_axis min %v exceeds max %v", min, max)
+		return 0, 0, fmt.Errorf("spec: %s min %v exceeds max %v", a.name, min, max)
 	}
 	if min == max && axis.Min != nil && axis.Max != nil {
-		return 0, 0, fmt.Errorf("spec: y_axis min and max must differ")
+		return 0, 0, fmt.Errorf("spec: %s min and max must differ", a.name)
 	}
 	min, max = logRange(min, max, axis.Min != nil, axis.Max != nil)
 	return min, max, nil

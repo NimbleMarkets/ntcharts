@@ -37,9 +37,16 @@ import (
 // A log axis (XAxis.Scale / YAxis.Scale == ScaleLog) sets the model's own
 // scale to linechart.ScaleLog; its ranges stay in data units.
 //
+// Spec.Y2Axis adds a right-hand Y axis to line, scatter and timeseries
+// charts; series with YAxis == YAxisRight are plotted against it. It obeys
+// the same pin, scale and format rules as YAxis. Other chart types reject it.
+//
 // Build does not mutate s.
 func Build(s Spec) (any, error) {
 	if err := s.Validate(); err != nil {
+		return nil, err
+	}
+	if err := checkY2Support(s); err != nil {
 		return nil, err
 	}
 	if err := checkScaleSupport(s); err != nil {
@@ -160,23 +167,24 @@ func yBounds(series []Series) (min, max float64, ok bool) {
 	return min, max, !math.IsInf(min, 1)
 }
 
-// resolveYRange implements the spec-level one-sided Y-axis pin rule: a lone
-// YAxis.Min or YAxis.Max pins that bound; the missing bound falls back to
-// the data-derived extreme (via yBounds), or 0 when there is no data to
-// derive it from. It is an error for the resulting min to exceed the
-// resulting max — e.g. a Min pin above the data's actual max would silently
-// build an inverted range without this guard.
-func resolveYRange(s Spec) (min, max float64, err error) {
-	min, max, ok := yBounds(s.Data.Series)
+// resolveYRange implements the spec-level one-sided Y-axis pin rule for an
+// axis: a lone Min or Max pins that bound; the missing bound falls back to
+// the data-derived extreme of the axis's series (via yBounds), or 0 when
+// there is no data to derive it from. It is an error for the resulting min
+// to exceed the resulting max — e.g. a Min pin above the data's actual max
+// would silently build an inverted range without this guard.
+func resolveYRange(a yAxisRef) (min, max float64, err error) {
+	min, max, ok := yBounds(a.series)
 	if !ok {
 		min, max = 0, 0
 	}
-	return resolvePinnedYRange(s.YAxis, min, max)
+	return resolvePinnedYRange(a, min, max)
 }
 
 // resolvePinnedYRange preserves explicit bounds when widening a flat range.
 // Two equal pins cannot describe a drawable range and are rejected.
-func resolvePinnedYRange(axis YAxis, min, max float64) (float64, float64, error) {
+func resolvePinnedYRange(a yAxisRef, min, max float64) (float64, float64, error) {
+	axis := a.axis
 	if axis.Min != nil {
 		min = *axis.Min
 	}
@@ -184,11 +192,11 @@ func resolvePinnedYRange(axis YAxis, min, max float64) (float64, float64, error)
 		max = *axis.Max
 	}
 	if min > max {
-		return 0, 0, fmt.Errorf("spec: y_axis min %v exceeds max %v", min, max)
+		return 0, 0, fmt.Errorf("spec: %s min %v exceeds max %v", a.name, min, max)
 	}
 	if min == max {
 		if axis.Min != nil && axis.Max != nil {
-			return 0, 0, fmt.Errorf("spec: y_axis min and max must differ")
+			return 0, 0, fmt.Errorf("spec: %s min and max must differ", a.name)
 		}
 		if axis.Min == nil {
 			min--
@@ -208,29 +216,120 @@ func checkGraphSize(m linechart.Model) error {
 	return nil
 }
 
+// yAxisRef is one Y axis of a spec with the series plotted against it.
+// name is "y_axis" or "y2_axis" and prefixes every error about the axis,
+// so the left and right axes report the same mistakes in the same words.
+type yAxisRef struct {
+	name   string
+	axis   YAxis
+	series []Series
+}
+
+// splitYAxes returns the series on the left Y axis and on the right one.
+func splitYAxes(s Spec) (left, right []Series) {
+	for _, ser := range s.Data.Series {
+		if ser.YAxis == YAxisRight {
+			right = append(right, ser)
+		} else {
+			left = append(left, ser)
+		}
+	}
+	return left, right
+}
+
+// leftAxis returns the spec's left Y axis with its series.
+func leftAxis(s Spec) yAxisRef {
+	left, _ := splitYAxes(s)
+	return yAxisRef{name: "y_axis", axis: s.YAxis, series: left}
+}
+
+// rightAxis returns the spec's right Y axis with its series.
+// Requires s.Y2Axis != nil.
+func rightAxis(s Spec) yAxisRef {
+	_, right := splitYAxes(s)
+	return yAxisRef{name: "y2_axis", axis: *s.Y2Axis, series: right}
+}
+
+// checkY2Support rejects a right Y axis on chart types that cannot draw
+// one. A right-hand series without Y2Axis is already a Validate error.
+func checkY2Support(s Spec) error {
+	if s.Y2Axis == nil {
+		return nil
+	}
+	switch s.Type {
+	case ChartTypeLine, ChartTypeScatter, ChartTypeTimeSeries:
+		return nil
+	}
+	return fmt.Errorf("spec: y2_axis is not supported for chart type %q", s.Type)
+}
+
+// newY2Axis returns the right Y axis of a chart from its resolved range:
+// the spec axis's scale and label format, and the label style of the
+// first right-hand series, so the labels read as that series'.
+func newY2Axis(s Spec, a yAxisRef, min, max float64) linechart.Axis {
+	axis := linechart.Axis{
+		Min:            min,
+		Max:            max,
+		LabelFormatter: axisLabelFormatter(a.axis.Format, a.axis.Scale),
+	}
+	if a.axis.Scale == ScaleLog {
+		axis.Scale = linechart.ScaleLog
+	}
+	for i, ser := range s.Data.Series {
+		if ser.YAxis == YAxisRight {
+			axis.LabelStyle = seriesStyle(ser, i, s.Theme)
+			break
+		}
+	}
+	return axis
+}
+
 // buildLine joins each series' points in input order on a base linechart.
 // Numeric X comes from the point, shared X data, or the point's index.
 // Linear ranges retain the native defaults (0..1), expanded around the data;
 // Y pins follow resolveYRange. Log ranges widen to whole decades.
 // Ranges and formatters are resolved before drawing so every segment shares
 // the same mapping and series colours, including singleton points.
+// A right-hand series (`YAxis == YAxisRight`) is resolved against `Y2Axis`
+// with the same rules and drawn through `Y2ToY`.
 func buildLine(s Spec) (*linechart.Model, error) {
 	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
 	minX, maxX, minY, maxY := 0.0, 1.0, 0.0, 1.0
 	var err error
 	if logY {
-		lo, hi, ok, e := logYBounds(s.Data.Series)
+		lo, hi, ok, e := logYBounds(leftAxis(s))
 		if e != nil {
 			return nil, e
 		}
-		minY, maxY, err = resolveLogYRange(s.YAxis, lo, hi, ok)
+		minY, maxY, err = resolveLogYRange(leftAxis(s), lo, hi, ok)
 	} else if s.YAxis.Min != nil || s.YAxis.Max != nil {
-		minY, maxY, err = resolveYRange(s)
-	} else if lo, hi, ok := yBounds(s.Data.Series); ok {
+		minY, maxY, err = resolveYRange(leftAxis(s))
+	} else if lo, hi, ok := yBounds(leftAxis(s).series); ok {
 		minY, maxY = math.Min(minY, lo), math.Max(maxY, hi)
 	}
 	if err != nil {
 		return nil, err
+	}
+	var y2 *linechart.Axis
+	if s.Y2Axis != nil {
+		a := rightAxis(s)
+		minY2, maxY2 := 0.0, 1.0
+		if a.axis.Scale == ScaleLog {
+			lo, hi, ok, e := logYBounds(a)
+			if e != nil {
+				return nil, e
+			}
+			minY2, maxY2, err = resolveLogYRange(a, lo, hi, ok)
+		} else if a.axis.Min != nil || a.axis.Max != nil {
+			minY2, maxY2, err = resolveYRange(a)
+		} else if lo, hi, ok := yBounds(a.series); ok {
+			minY2, maxY2 = math.Min(minY2, lo), math.Max(maxY2, hi)
+		}
+		if err != nil {
+			return nil, err
+		}
+		axis := newY2Axis(s, a, minY2, maxY2)
+		y2 = &axis
 	}
 	if logX {
 		lo, hi, ok, e := logXBounds(s)
@@ -262,6 +361,9 @@ func buildLine(s Spec) (*linechart.Model, error) {
 	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
 		opts = append(opts, linechart.WithYLabelFormatter(yf))
 	}
+	if y2 != nil {
+		opts = append(opts, linechart.WithY2Axis(*y2))
+	}
 	m := linechart.New(s.Width, s.Height, minX, maxX, minY, maxY, opts...)
 	if err := checkGraphSize(m); err != nil {
 		return nil, err
@@ -269,12 +371,16 @@ func buildLine(s Spec) (*linechart.Model, error) {
 	m.DrawXYAxisAndLabel()
 	for i, ser := range s.Data.Series {
 		style := seriesStyle(ser, i, s.Theme)
+		y := func(v float64) float64 { return v }
+		if ser.YAxis == YAxisRight {
+			y = m.Y2ToY
+		}
 		for j, p := range ser.Values {
-			from := canvas.Float64Point{X: resolveXFloat(s, p, j), Y: p.Y}
+			from := canvas.Float64Point{X: resolveXFloat(s, p, j), Y: y(p.Y)}
 			to := from // a singleton or final point still gets a braille dot
 			if j+1 < len(ser.Values) {
 				next := ser.Values[j+1]
-				to = canvas.Float64Point{X: resolveXFloat(s, next, j+1), Y: next.Y}
+				to = canvas.Float64Point{X: resolveXFloat(s, next, j+1), Y: y(next.Y)}
 			}
 			m.DrawBrailleLineWithStyle(from, to, style)
 		}
@@ -287,42 +393,78 @@ func buildLine(s Spec) (*linechart.Model, error) {
 // DataPoint.Size is accepted in the schema but ignored by this surface.
 // YAxis.Min / YAxis.Max follow the one-sided pin rule (a lone bound pins;
 // the other is data-derived); it is an error for the resulting min to
-// exceed the resulting max.
+// exceed the resulting max. A right-hand series (`YAxis == YAxisRight`) is
+// resolved against `Y2Axis` with the same rules and drawn through `Y2ToY`.
 func buildScatter(s Spec) (any, error) {
+	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
+	logY2 := s.Y2Axis != nil && s.Y2Axis.Scale == ScaleLog
 	type styledPoint struct {
 		x, y  float64
+		right bool
 		style lipgloss.Style
 	}
-	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
 	var pts []styledPoint
 	minX, maxX := math.Inf(1), math.Inf(-1)
 	minY, maxY := math.Inf(1), math.Inf(-1)
+	minY2, maxY2 := math.Inf(1), math.Inf(-1)
 	for i, ser := range s.Data.Series {
 		st := seriesStyle(ser, i, s.Theme)
+		right := ser.YAxis == YAxisRight
+		axisName, logAxis := "y_axis", logY
+		if right {
+			axisName, logAxis = "y2_axis", logY2
+		}
 		for j, p := range ser.Values {
 			x := resolveXFloat(s, p, j)
 			if logX && !logOK(x) {
 				return nil, logValueError("x_axis", fmt.Sprintf("series %q point %d has x", ser.Name, j), x)
 			}
-			if logY && !logOK(p.Y) {
-				return nil, logValueError("y_axis", fmt.Sprintf("series %q point %d has y", ser.Name, j), p.Y)
+			if logAxis && !logOK(p.Y) {
+				return nil, logValueError(axisName, fmt.Sprintf("series %q point %d has y", ser.Name, j), p.Y)
 			}
-			pts = append(pts, styledPoint{x: x, y: p.Y, style: st})
+			pts = append(pts, styledPoint{x: x, y: p.Y, right: right, style: st})
 			minX, maxX = math.Min(minX, x), math.Max(maxX, x)
-			minY, maxY = math.Min(minY, p.Y), math.Max(maxY, p.Y)
+			if right {
+				minY2, maxY2 = math.Min(minY2, p.Y), math.Max(maxY2, p.Y)
+			} else {
+				minY, maxY = math.Min(minY, p.Y), math.Max(maxY, p.Y)
+			}
 		}
 	}
 	if len(pts) == 0 {
 		return nil, fmt.Errorf("spec: scatter requires at least one data point")
 	}
+	okY := !math.IsInf(minY, 1)
+	if !okY { // no left-hand points
+		minY, maxY = 0, 0
+	}
 	var err error
 	if logY {
-		minY, maxY, err = resolveLogYRange(s.YAxis, minY, maxY, true)
+		minY, maxY, err = resolveLogYRange(leftAxis(s), minY, maxY, okY)
 	} else {
-		minY, maxY, err = resolvePinnedYRange(s.YAxis, minY, maxY)
+		minY, maxY, err = resolvePinnedYRange(leftAxis(s), minY, maxY)
 	}
 	if err != nil {
 		return nil, err
+	}
+	var y2 *linechart.Axis
+	if s.Y2Axis != nil {
+		a := rightAxis(s)
+		ok := !math.IsInf(minY2, 1)
+		if !ok {
+			minY2, maxY2 = 0, 0
+		}
+		var e error
+		if logY2 {
+			minY2, maxY2, e = resolveLogYRange(a, minY2, maxY2, ok)
+		} else {
+			minY2, maxY2, e = resolvePinnedYRange(a, minY2, maxY2)
+		}
+		if e != nil {
+			return nil, e
+		}
+		axis := newY2Axis(s, a, minY2, maxY2)
+		y2 = &axis
 	}
 	if logX {
 		minX, maxX = logRange(minX, maxX, false, false)
@@ -342,13 +484,20 @@ func buildScatter(s Spec) (any, error) {
 	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
 		opts = append(opts, linechart.WithYLabelFormatter(yf))
 	}
+	if y2 != nil {
+		opts = append(opts, linechart.WithY2Axis(*y2))
+	}
 	m := linechart.New(s.Width, s.Height, minX, maxX, minY, maxY, opts...)
 	if err := checkGraphSize(m); err != nil {
 		return nil, err
 	}
 	m.DrawXYAxisAndLabel()
 	for _, p := range pts {
-		m.DrawRuneWithStyle(canvas.Float64Point{X: p.x, Y: p.y}, '•', p.style)
+		y := p.y
+		if p.right {
+			y = m.Y2ToY(y)
+		}
+		m.DrawRuneWithStyle(canvas.Float64Point{X: p.x, Y: y}, '•', p.style)
 	}
 	return &m, nil
 }
@@ -371,10 +520,13 @@ func buildScatter(s Spec) (any, error) {
 //     DateTimeLabelFormatter for X) are used.
 //  5. Per-series Color is applied via SetDataSetStyle using a lipgloss
 //     foreground. Background and gridlines are not rendered.
+//  6. Y2Axis adds a right Y axis with the same range rules; series with
+//     YAxis == YAxisRight are assigned to it with SetDataSetYAxis before
+//     their points are pushed, so their data auto-ranges the right axis.
 //
 // This implementation covers the common case: one or more time-indexed
-// series with a shared auto-ranged axis. Streamlined, stacked, and
-// multi-axis variants are left for future extensions.
+// series with a shared auto-ranged axis. Streamlined and stacked variants
+// are left for future extensions.
 func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	tMin, tMax, ok := timeBounds(s.Data)
 	if !ok {
@@ -387,18 +539,18 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	}
 	logY := s.YAxis.Scale == ScaleLog
 	if logY {
-		minY, maxY, ok, err := logYBounds(s.Data.Series)
+		minY, maxY, ok, err := logYBounds(leftAxis(s))
 		if err != nil {
 			return nil, err
 		}
-		if minY, maxY, err = resolveLogYRange(s.YAxis, minY, maxY, ok); err != nil {
+		if minY, maxY, err = resolveLogYRange(leftAxis(s), minY, maxY, ok); err != nil {
 			return nil, err
 		}
 		opts = append(opts,
 			timeserieslinechart.WithYScale(linechart.ScaleLog),
 			timeserieslinechart.WithYRange(minY, maxY))
 	} else if s.YAxis.Min != nil || s.YAxis.Max != nil {
-		minY, maxY, err := resolveYRange(s)
+		minY, maxY, err := resolveYRange(leftAxis(s))
 		if err != nil {
 			return nil, err
 		}
@@ -406,6 +558,29 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 	}
 	if yf := axisLabelFormatter(s.YAxis.Format, s.YAxis.Scale); yf != nil {
 		opts = append(opts, timeserieslinechart.WithYLabelFormatter(yf))
+	}
+	if s.Y2Axis != nil {
+		a := rightAxis(s)
+		logY2 := a.axis.Scale == ScaleLog
+		minY2, maxY2 := 0.0, 1.0 // the model's own default, widened by auto-ranging
+		if logY2 {
+			lo, hi, ok, err := logYBounds(a)
+			if err != nil {
+				return nil, err
+			}
+			if minY2, maxY2, err = resolveLogYRange(a, lo, hi, ok); err != nil {
+				return nil, err
+			}
+		} else if a.axis.Min != nil || a.axis.Max != nil {
+			var err error
+			if minY2, maxY2, err = resolveYRange(a); err != nil {
+				return nil, err
+			}
+		}
+		axis := newY2Axis(s, a, minY2, maxY2)
+		axis.AutoMin = !logY2 && a.axis.Min == nil
+		axis.AutoMax = !logY2 && a.axis.Max == nil
+		opts = append(opts, timeserieslinechart.WithY2Axis(axis))
 	}
 	// Only kind == "time" X formats apply to a timeseries X axis; other
 	// kinds (number/percent/currency/si) are intentionally ignored here
@@ -430,6 +605,9 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 
 	for i, ser := range s.Data.Series {
 		name := ser.Name
+		if ser.YAxis == YAxisRight {
+			m.SetDataSetYAxis(name, linechart.YAxisRight)
+		}
 		m.SetDataSetStyle(name, seriesStyle(ser, i, s.Theme))
 
 		for j, p := range ser.Values {
@@ -709,9 +887,9 @@ func buildOHLC(s Spec) (any, error) {
 	}
 	var err error
 	if logY {
-		minP, maxP, err = resolveLogYRange(s.YAxis, minP, maxP, true)
+		minP, maxP, err = resolveLogYRange(leftAxis(s), minP, maxP, true)
 	} else {
-		minP, maxP, err = resolvePinnedYRange(s.YAxis, minP, maxP)
+		minP, maxP, err = resolvePinnedYRange(leftAxis(s), minP, maxP)
 	}
 	if err != nil {
 		return nil, err

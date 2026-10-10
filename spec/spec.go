@@ -84,6 +84,15 @@ const (
 	ScaleLog = "log"
 )
 
+// Series.YAxis values: which Y axis a series is plotted against.
+const (
+	// YAxisLeft is the chart's main Y axis (Spec.YAxis). It is the default
+	// when Series.YAxis is empty.
+	YAxisLeft = "left"
+	// YAxisRight is the optional right-hand Y axis (Spec.Y2Axis).
+	YAxisRight = "right"
+)
+
 // Orientation constants for Options.Orientation.
 const (
 	OrientationVertical   = "vertical"
@@ -192,6 +201,11 @@ type Spec struct {
 	XAxis XAxis `json:"x_axis,omitzero"`
 	// YAxis describes the Y axis (title, min/max, format).
 	YAxis YAxis `json:"y_axis,omitzero"`
+	// Y2Axis describes the optional right-hand Y axis. Series select it
+	// with Series.YAxis = YAxisRight. Build supports it on line, scatter
+	// and timeseries charts; it has the same fields and rules as YAxis
+	// (Labels is ignored). Nil means the chart has one Y axis.
+	Y2Axis *YAxis `json:"y2_axis,omitempty"`
 
 	// Data holds the series data for the chart.
 	Data Data `json:"data"`
@@ -231,6 +245,10 @@ type Series struct {
 	// Color is an optional per-series colour (hex, "#rrggbb", or a named
 	// colour). If empty, the Theme palette or surface default is used.
 	Color string `json:"color,omitempty"`
+	// YAxis selects the Y axis the series is plotted against: "" or
+	// YAxisLeft for the main axis, or YAxisRight for the right-hand axis,
+	// which requires Spec.Y2Axis.
+	YAxis string `json:"y_axis,omitempty"`
 }
 
 // DataPoint is a single datum in a Series.
@@ -343,8 +361,8 @@ func validateScale(name, scale string) error {
 // Validate reports the first structural error in the Spec, if any.
 //
 // Validate is intentionally lightweight: it catches the obvious mistakes
-// (missing type, zero dimensions, empty series) without prejudging what the
-// target surface considers renderable.
+// (missing type, zero dimensions, empty series, a right-hand series without
+// y2_axis) without prejudging what the target surface considers renderable.
 func (s Spec) Validate() error {
 	if s.Type == "" {
 		return fmt.Errorf("spec: Type is required")
@@ -367,12 +385,34 @@ func (s Spec) Validate() error {
 		}
 	}
 
+	// Series that share a name share a data set on the terminal, so they
+	// must share a Y axis too.
+	type namedAxis struct {
+		index int
+		right bool
+	}
+	seen := make(map[string]namedAxis, len(s.Data.Series))
 	for i, ser := range s.Data.Series {
 		if ser.Name == "" {
 			return fmt.Errorf("spec: series[%d] Name is required", i)
 		}
 		if ser.Type != "" && !ChartType(ser.Type).IsKnown() {
 			return fmt.Errorf("spec: series[%d] type %q is not a known chart type", i, ser.Type)
+		}
+		switch ser.YAxis {
+		case "", YAxisLeft:
+		case YAxisRight:
+			if s.Y2Axis == nil {
+				return fmt.Errorf("spec: series[%d] y_axis %q requires y2_axis", i, YAxisRight)
+			}
+		default:
+			return fmt.Errorf("spec: series[%d] y_axis %q must be left or right", i, ser.YAxis)
+		}
+		right := ser.YAxis == YAxisRight
+		if prev, ok := seen[ser.Name]; ok && prev.right != right {
+			return fmt.Errorf("spec: series[%d] %q is also series[%d] but on a different y_axis", i, ser.Name, prev.index)
+		} else if !ok {
+			seen[ser.Name] = namedAxis{index: i, right: right}
 		}
 	}
 
@@ -412,6 +452,14 @@ func (s Spec) Validate() error {
 	}
 	if err := validateScale("y_axis", s.YAxis.Scale); err != nil {
 		return err
+	}
+	if s.Y2Axis != nil {
+		if err := validateFormat("y2_axis", s.Y2Axis.Format); err != nil {
+			return err
+		}
+		if err := validateScale("y2_axis", s.Y2Axis.Scale); err != nil {
+			return err
+		}
 	}
 
 	return nil
