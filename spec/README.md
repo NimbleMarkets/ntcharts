@@ -92,6 +92,8 @@ both:
 | `Options.Orientation` (bar) | honoured via `barchart.WithHorizontalBars()` | **ignored** — always renders vertical bars |
 | `XAxis.Scale` / `YAxis.Scale` = `"log"` | honoured — Y for line, scatter, timeseries, ohlc; X for line, scatter. A `Build` error for X on timeseries/ohlc (time axis), for either axis on bar, heatmap, sparkline, and for any value or pin `<= 0` — see "Logarithmic axes" below | **ignored** — `ToECharts()` does not read `scale` yet and draws a linear axis |
 | `YAxis.Min` / `YAxis.Max`, one-sided (line, scatter, timeseries, ohlc) | honoured — see "One-sided Y-axis pins" below | honoured — ECharts auto-scales the unset bound natively |
+| `Y2Axis` / `Series.YAxis = "right"` (line, scatter, timeseries) | honoured — a right-hand Y axis with the same pin, log and format rules as `YAxis`; its labels take the first right-hand series' colour; a `Build` error on bar, ohlc, heatmap, sparkline — see "Dual Y axes" below | honoured for timeseries — an extended ECharts axis (position right) with `Min`/`Max`/`Title`; `Format`/`Scale` ignored like the left axis's; line/scatter are scaffold-only; on bar charts `y2_axis` and `y_axis: "right"` are **ignored** (a single left axis) |
+| `Series.Type = "bar"` in a timeseries | drawn as a braille line like any series, on the axis its `y_axis` names | overlaid as real bars on the axis its `y_axis` names — **no longer given its own axis implicitly** (v2.8.0); set `y_axis: "right"` and a `y2_axis` for the old look |
 | `Theme.Palette[0]` / `[1]` (ohlc) | honoured — slot 0 = up candles, slot 1 = down candles; defaults `#26a69a` / `#ef5350` when unset | N/A — `ToECharts()` is scaffold-only |
 | `Options.CandleStyle` (ohlc) | honoured — `""` or `CandleStyleLine` renders box-drawing line runes, `CandleStyleBlock` renders solid block bodies; unknown values error | N/A — `ToECharts()` is scaffold-only |
 | `Series.OHLC` count vs. chart width (ohlc) | candles render at time-scaled X positions across the full graph width with an automatically chosen, density-based body width (odd, capped at 7, never overlapping); dense series overdraw rather than dropping points | N/A — `ToECharts()` is scaffold-only |
@@ -112,13 +114,13 @@ both:
 | `XAxis.Labels` | honoured for bar (categories) and heatmap (column names); **ignored** by other terminal builders | honoured for bar; **ignored** for timeseries |
 | `YAxis.Min` / `YAxis.Max` (heatmap) | **ignored** — use `Heat.MinValue` / `Heat.MaxValue` for the colour domain | N/A — heatmap is scaffold-only |
 | `DataPoint.Size` | **ignored** everywhere — accepted by the schema, drawn as fixed-size markers on every surface | **ignored** everywhere |
-| `XAxis.Title` / `YAxis.Title` | **ignored** — no current ntcharts terminal model surfaces an axis title | **ignored** — not wired into `ToECharts()` |
+| `XAxis.Title` / `YAxis.Title` / `Y2Axis.Title` | **ignored** — no current ntcharts terminal model surfaces an axis title | `YAxis.Title` / `Y2Axis.Title` honoured as the ECharts axis name (bar and timeseries); `XAxis.Title` **ignored** — not wired into `ToECharts()` |
 | `YAxis.Labels` (heatmap rows) | honoured — drawn left of the plot, first label on the top row; other chart types ignore it | **ignored** — not wired into `ToECharts()`; reserved for future grid-chart row labels |
 | `Title` / `Subtitle` | **ignored** — the terminal models draw no title; the host TUI is expected to place one (e.g. flint-tui's status line) | honoured — ECharts title/subtitle |
 | `Options.ShowLegend` / `Options.ShowGrid` | **ignored** — no terminal model draws a legend or background grid | honoured |
 | `Theme.Background` / `Theme.Foreground` | **ignored** — the terminal inherits the host's colours; only `Theme.Palette` (series colours) and `Theme.Gradient` (heatmap) are read | `Background` honoured as the canvas colour; `Foreground` ignored |
 | `XAxis.Type` | validated (`""`, `category`, `time`, `value`) but not consulted — each terminal builder infers the axis kind from the chart type (`timeseries`/`ohlc` are time-valued, `bar`/`heatmap` categorical, `line`/`scatter` numeric) | honoured for bar (category vs value); timeseries always `time` |
-| `Series.Type` | validated (empty or a known chart type), otherwise **ignored**; timeseries series all use braille lines | `"bar"` inside a `timeseries` spec overlays real bars on a secondary Y axis |
+| `Series.Type` | validated (empty or a known chart type), otherwise **ignored**; timeseries series all use braille lines | `"bar"` inside a `timeseries` spec overlays real bars (see the row above for which axis) |
 
 Fields belonging to another chart family are ignored: `Heat` outside heatmaps,
 `Series.OHLC` outside OHLC, `Series.Values` for OHLC, and `Data.Series` for
@@ -208,6 +210,36 @@ refuses rather than drawing a linear chart under a spec that asked for log.
 
 See `ExampleBuild_logScale` in [`example_test.go`](./example_test.go).
 
+#### Dual Y axes
+
+Line, scatter and timeseries charts can carry a second, right-hand Y axis.
+`y2_axis` describes it with the same fields and rules as `y_axis` (one-sided
+pins, log scale, label format, title; which surface honours each field is in
+the fidelity table above), and a series selects it with `y_axis: "right"`
+(`""` or `"left"` is the main axis). A right-hand series
+without `y2_axis` fails `Validate`; `y2_axis` on another chart type fails
+`Build`. The two axes may use different scales. On the terminal the right
+axis's view follows the left one when zooming or panning (it has no view of
+its own — see `linechart.Axis`), and its labels take the colour of the first
+right-hand series.
+
+```json
+{
+  "type": "timeseries", "width": 60, "height": 12,
+  "y_axis":  {"min": 0, "max": 1},
+  "y2_axis": {"min": 5, "max": 20, "title": "Temperature"},
+  "data": {"series": [
+    {"name": "load", "values": [{"x": "2026-01-01T00:00:00Z", "y": 0.2}, {"x": "2026-01-01T01:00:00Z", "y": 0.5}]},
+    {"name": "temp", "y_axis": "right",
+     "values": [{"x": "2026-01-01T00:00:00Z", "y": 8}, {"x": "2026-01-01T01:00:00Z", "y": 9}]}
+  ]}
+}
+```
+
+See `ExampleBuild_dualAxes` in [`example_test.go`](./example_test.go). On the
+web, `ToECharts` extends the chart with a right-positioned axis and puts
+right-hand series (lines or bars) on it.
+
 ## Layout
 
 ```
@@ -238,7 +270,9 @@ spec/
   `Min`/`Max` to pin the range: a lone `Min` or `Max` pins that bound while
   the other is data-derived, both pin an explicit range, and neither leaves
   the chart fully auto-scaled — see "One-sided Y-axis pins" above for the
-  full rule and its edge cases. `XAxis.Labels` and `YAxis.Labels` name the
+  full rule and its edge cases. `Y2Axis` (a pointer; nil means one axis)
+  describes an optional right-hand Y axis, and `Series.YAxis` (`""`,
+  `"left"`, `"right"`) selects it — see "Dual Y axes" above. `XAxis.Labels` and `YAxis.Labels` name the
   columns and rows of a heatmap; see the heatmap notes below.
 - **`Format`** describes how axis labels (and `FormatValue`) render a
   `float64`. `Kind` selects the family:
@@ -338,9 +372,10 @@ logarithmic axis see `ExampleBuild_logScale`.
 
 Time-series specs can also mix line and bar series by setting
 `spec.Series.Type` per series. In terminal rendering, bar series are drawn as
-braille lines just like the other series. In ECharts rendering, `Type: "bar"` series
-are overlaid as real bars on a secondary Y axis, while other series remain
-lines. See `examples/combo-timeseries-bar` for a complete example.
+braille lines just like the other series. In ECharts rendering, `Type: "bar"`
+series are overlaid as real bars. Either kind of series goes on the right-hand
+axis with `YAxis: spec.YAxisRight` and a `Y2Axis` (see "Dual Y axes" above).
+See `examples/combo-timeseries-bar` for a complete example.
 
 ## Running the tests
 
@@ -352,7 +387,7 @@ go build ./spec/
 
 # Vet + run the runnable examples (ExampleBuild_bar, ExampleBuild_line,
 # ExampleBuild_logScale, ExampleBuild_scatter, ExampleBuild_timeSeries,
-# ExampleBuild_heatmap, ExampleBuild_ohlc)
+# ExampleBuild_heatmap, ExampleBuild_ohlc, ExampleBuild_dualAxes)
 go vet ./spec/
 go test ./spec/
 

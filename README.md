@@ -75,7 +75,7 @@ chart specification. A single `spec.Spec` value can be rendered to the terminal
 (`echarts.ToECharts(s)` → a [go-echarts/v2](https://github.com/go-echarts/go-echarts)
 chart, from the optional `github.com/NimbleMarkets/ntcharts/spec/echarts/v2`
 module). See [`spec/README.md`](./spec/README.md) for details, the current
-chart-type support matrix, and how to run the tests.
+chart-type support matrix, and how to run the tests. A spec can carry a second, right-hand Y axis (`y2_axis`, `series[].y_axis: "right"`) that both surfaces honour — see the spec README's "Dual Y axes".
 
 ## BubbleTea Version Compatibility
 
