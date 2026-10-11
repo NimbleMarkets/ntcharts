@@ -22,7 +22,7 @@ import (
 //
 // The concrete return type depends on Spec.Type:
 //
-//   - ChartTypeBar         -> *barchart.Model
+//   - ChartTypeBar         -> *barchart.Model (categorical combo: *ComboModel)
 //   - ChartTypeLine        -> *linechart.Model
 //   - ChartTypeTimeSeries  -> *timeserieslinechart.Model
 //   - ChartTypeScatter     -> *linechart.Model
@@ -39,12 +39,21 @@ import (
 //
 // Spec.Y2Axis adds a right-hand Y axis to line, scatter and timeseries
 // charts; series with YAxis == YAxisRight are plotted against it. It obeys
-// the same pin, scale and format rules as YAxis. Other chart types reject it.
+// the same pin, scale and format rules as YAxis. A categorical bar/line combo
+// also supports Y2Axis; see ResolveCategoricalCombo. Other chart types reject it.
 //
 // Build does not mutate s.
 func Build(s Spec) (any, error) {
 	if err := s.Validate(); err != nil {
 		return nil, err
+	}
+	if IsCategoricalCombo(s) {
+		return buildCombo(s)
+	}
+	for i, ser := range s.Data.Series {
+		if ser.Type != "" && ser.Type != string(s.Type) && !(s.Type == ChartTypeTimeSeries && ser.Type == "line") {
+			return nil, fmt.Errorf("spec: series[%d] type %q is unsupported in terminal %q charts", i, ser.Type, s.Type)
+		}
 	}
 	if err := checkY2Support(s); err != nil {
 		return nil, err

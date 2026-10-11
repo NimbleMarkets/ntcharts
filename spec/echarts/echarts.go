@@ -28,6 +28,18 @@ func ToECharts(s spec.Spec) (any, error) {
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
+	if spec.IsCategoricalCombo(s) {
+		return toEChartsCombo(s)
+	}
+	for i, ser := range s.Data.Series {
+		// Preserve the adapter's existing time-series bar overlay support.
+		if ser.Type != "" && ser.Type != string(s.Type) && !(s.Type == spec.ChartTypeTimeSeries && (ser.Type == "bar" || ser.Type == "line")) {
+			return nil, fmt.Errorf("echarts: series[%d] type %q is unsupported in %q charts", i, ser.Type, s.Type)
+		}
+	}
+	if s.Type == spec.ChartTypeBar && s.Y2Axis != nil {
+		return nil, fmt.Errorf("echarts: bar y2_axis requires a categorical combo")
+	}
 	switch s.Type {
 	case spec.ChartTypeBar:
 		return toEChartsBar(s)

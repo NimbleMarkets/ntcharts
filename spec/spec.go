@@ -203,7 +203,8 @@ type Spec struct {
 	YAxis YAxis `json:"y_axis,omitzero"`
 	// Y2Axis describes the optional right-hand Y axis. Series select it
 	// with Series.YAxis = YAxisRight. Build supports it on line, scatter
-	// and timeseries charts; it has the same fields and rules as YAxis
+	// and timeseries charts, and categorical bar/line combos. Its fields
+	// match YAxis
 	// (Labels is ignored). Nil means the chart has one Y axis.
 	Y2Axis *YAxis `json:"y2_axis,omitempty"`
 
@@ -235,7 +236,9 @@ type Series struct {
 	// Name is the series name (shown in legends and tooltips). Required.
 	Name string `json:"name"`
 	// Type optionally overrides the parent Spec.Type for this series
-	// (e.g. mixing "line" into a "bar" chart).
+	// (e.g. mixing "line" into a "bar" chart). Build supports one left bar
+	// and one right line on a categorical bar spec; see ResolveCategoricalCombo.
+	// Unsupported mixtures return errors rather than substituting marks.
 	Type string `json:"type,omitempty"`
 	// Values is the ordered list of points in the series.
 	Values []DataPoint `json:"values"`

@@ -220,3 +220,11 @@ Composes sprites into a `picture.GridImage`, then renders that single bitmap wit
 The Perlin demo animates a 2D Perlin-noise field. `<space>` starts/stops the animation; `t` toggles Glyph ↔ Kitty; `F` cycles the sampling factor (1.0 → 0.5 → 0.25) to trade quality for animation smoothness on large terminals; `g`/`i` cycle/invert the gradient; `a`/`z`, `s`/`x`, `d`/`c`, `f`/`v` adjust α, β, n, and seed.  The info bar shows per-frame render time and frame/composite counters.
 
 `ntcharts-heatpicture-perlin` [(source)](./heatpicture/perlin/main.go)
+
+## Categorical combo
+
+[`combo-categorical`](combo-categorical/main.go) renders profit bars on the left
+axis and a margin line on the right, with negative values and a missing point.
+From the repository root, run `go run ./examples/combo-categorical`; optionally
+add `-html /tmp/combo.html` to render the same spec with ECharts. See the
+[combo spec contract](../spec/README.md#categorical-barline-combo).

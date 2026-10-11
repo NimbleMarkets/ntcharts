@@ -26,7 +26,7 @@ non-nil slice), including OHLC series whose points live in `ohlc`.
 
 | Chart type            | `Build()` (terminal)                                              | `echarts.ToECharts()` (web) |
 | ---------------------- | ------------------------------------------------------------------ | :------------------: |
-| `ChartTypeBar`         | full — stacked + horizontal; grouped (side-by-side) bars are **not** supported by the terminal surface | full |
+| `ChartTypeBar`         | full — stacked + horizontal; categorical bar/line combo; grouped bars unsupported | full |
 | `ChartTypeTimeSeries`  | full                                                                | full |
 | `ChartTypeLine`        | full — connected braille lines on `*linechart.Model`                  | scaffold |
 | `ChartTypeScatter`     | full                                                                | scaffold |
@@ -38,7 +38,7 @@ non-nil slice), including OHLC series whose points live in `ohlc`.
 
 Scaffolded chart types return a clear `not yet implemented` error today.
 
-`ChartTypeBar` is stacked-only in the terminal because `barchart.Model` has no
+Pure multi-series `ChartTypeBar` is stacked-only in the terminal because `barchart.Model` has no
 grouped/side-by-side rendering mode: a `Spec` with more than one `Series` must
 set `Options.Stacked = true`, or `Build` returns an error instead of silently
 stacking series a caller may have expected to be grouped side by side.
@@ -447,3 +447,82 @@ To add a new chart type:
 3. Add a `toECharts<Kind>` branch in `ToECharts()` (`echarts/echarts.go`).
 4. Add a runnable `Example` in `example_test.go` (and `echarts/example_test.go`).
 5. Update the status table above.
+
+## Categorical bar/line combo
+
+The canonical combo uses the existing `bar` family and per-series overrides;
+there is no new chart type. It has exactly one left-axis bar series and one
+right-axis line series, an explicit ordered category list, and `y2_axis`:
+
+```json
+{
+  "type": "bar", "width": 60, "height": 16,
+  "x_axis": {"type": "category", "labels": ["Jan", "Feb", "Mar"]},
+  "y_axis": {"format": {"kind": "currency"}},
+  "y2_axis": {"format": {"kind": "percent"}},
+  "data": {"series": [
+    {"name": "Profit", "type": "bar", "y_axis": "left",
+     "values": [{"y": 120}, {"y": -40}, {"y": 180}]},
+    {"name": "Margin", "type": "line", "y_axis": "right",
+     "values": [{"x": "Jan", "y": 0.12}, {"x": "Mar", "y": 0.18}]}
+  ]}
+}
+```
+
+`Build` returns `*spec.ComboModel`, which embeds the existing `linechart.Model`
+for axes, canvas, and `View()`. `Draw()` redraws the retained data; `Resize(w,h)`
+and `Update(tea.WindowSizeMsg)` recompute category slots and redraw. Too-small
+initial dimensions return an error; resizing below the axis margins clears the
+canvas until it is large enough again. Panning/zooming and editing the embedded
+model's ranges are not supported: rebuild the spec for new ranges or data.
+`ToECharts` returns `*charts.Bar` with a real line overlay on Y axis index 1.
+
+Category and missing-value rules are shared by both surfaces:
+
+- `XAxis.Labels` defines category order. If absent, `Data.XAxisData` must supply
+  unique string categories. Categories are never alphabetically sorted.
+- A point's explicit string `X` selects its category. Otherwise shared
+  `XAxisData[i]` selects it; otherwise the point uses `Labels[i]`.
+- For sparse data, omit the missing point and give **every remaining point an
+  explicit X**. Trailing positional omissions are also valid. Missing bars
+  draw nothing; missing line values break the line. A singleton draws a dot.
+  Zero is a real value. `DataPoint.Y` is a float, so JSON `null` is **not** a
+  missing-value sentinel; compilers must omit such points instead. NaN and
+  infinity are rejected. The web output uses null slots for omitted values.
+- Duplicate labels, duplicate points within a series/category, unknown
+  categories, and excess positional points return errors.
+
+The left range automatically includes zero and all bar values. Negative bars
+extend below the zero baseline. Each Y axis resolves its own range, pins, and
+format; left pins must include zero. Equal or inverted pinned ranges fail.
+Data outside pinned ranges is clipped. The line is drawn after the bars at the
+same category centers. Terminal bars use whole cells; dense categories may
+share cells, and labels are truncated or skipped to avoid overlap. Resize or
+aggregate upstream when there are more categories than available columns.
+
+Series colors prefer `Series.Color`, then `Theme.Palette` in input series order,
+then blue bars (`#63b3ed`) and orange lines (`#f6ad55`). Y labels use the
+corresponding series colors. Number, currency, percent and SI formats work on
+both surfaces. Time-valued Y formatting is unsupported by the web combo adapter
+and returns an error. Terminal titles, legend, background and grid options are
+not rendered; callers can add their own title/legend around `View()`.
+
+This first scope rejects stacking, horizontal bars, logarithmic scales, extra
+series, swapped axis assignments, and other series mixtures. Pure single-type
+charts retain their existing builders. The ECharts adapter retains its existing
+time-series bar-overlay support; the terminal explicitly rejects those mixed
+time-series specs instead of silently drawing bars as lines.
+
+Run the self-contained example from the repository root:
+
+```sh
+go run ./examples/combo-categorical -width 72 -height 18
+go run ./examples/combo-categorical -html /tmp/combo.html
+```
+
+For Flint's `Combo Chart`, the compiler should resolve the category field,
+bar measure and `chartProperties.lineField` into this explicit spec. Inferring
+a second numeric measure and falling back to an ordinary one-series bar spec
+when none exists belong in flint-ntcharts. Emit explicit X on sparse points,
+provide unique ordered categories (aggregate duplicate rows upstream), and
+handle `*spec.ComboModel` as the terminal result. No custom extension is needed.
