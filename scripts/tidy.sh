@@ -2,6 +2,13 @@
 # Tidy against sibling source, including versions that are not published yet.
 # Replacements exist only in temporary modfiles, never in published go.mod files.
 set -euo pipefail
+CHECK=false
+if [[ $# == 1 && "$1" == --check ]]; then
+	CHECK=true
+elif [[ $# != 0 ]]; then
+	echo "usage: $0 [--check]" >&2
+	exit 2
+fi
 cd "$(git rev-parse --show-toplevel)"
 ROOT=$PWD
 SCRATCH=$(mktemp -d "${TMPDIR:-/tmp}/ntcharts-tidy.XXXXXX")
@@ -37,8 +44,17 @@ for dir in . picture/chartpicture spec/echarts examples examples/shaders cmd; do
 		# Keep the go command's own ordering so go.sum does not churn between
 		# this script and go commands that rewrite the file.
 		go run "$ROOT/scripts/sortsum.go" "$SCRATCH/go.sum"
-		cp "$SCRATCH/go.mod" go.mod
-		cp "$SCRATCH/go.sum" go.sum
+		if [[ "$CHECK" == true ]]; then
+			if ! cmp -s go.mod "$SCRATCH/go.mod" || ! cmp -s go.sum "$SCRATCH/go.sum"; then
+				echo "module files in $dir need tidying; run task go-tidy" >&2
+				diff -u go.mod "$SCRATCH/go.mod" || true
+				diff -u go.sum "$SCRATCH/go.sum" || true
+				exit 1
+			fi
+		else
+			cp "$SCRATCH/go.mod" go.mod
+			cp "$SCRATCH/go.sum" go.sum
+		fi
 	)
 done
 # No `go work sync` here on purpose. Between releases the nested modules

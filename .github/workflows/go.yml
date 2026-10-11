@@ -26,14 +26,5 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v2
 
-      - name: Test the project
-        run: task test
-
-      - name: Build the project
-        run: task build
-
-      - name: Verify module publishing and consumer builds
-        run: task check-release
-
-      - name: Test release workflow regressions
-        run: ./scripts/test-release.sh
+      - name: Run CI checks
+        run: task ci

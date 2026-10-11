@@ -559,6 +559,12 @@ This example [(source)](./examples/heatmap/simple/main.go) produces the followin
 
 ## Open Collaboration
 
+Run `task ci` before submitting changes. It checks Go formatting and module
+consistency, runs vet and race-enabled tests across all six modules, builds
+commands and examples, and verifies release packaging in temporary clones.
+It requires Go, Task, and a C compiler for the race detector. GitHub CI runs
+the same task. Use `task test` for the regular test suite.
+
 We welcome contributions and feedback.  Please adhere to our [Code of Conduct](./CODE_OF_CONDUCT.md) when engaging our community.
 
  * [GitHub Issues](https://github.com/NimbleMarkets/ntcharts/issues)

@@ -27,6 +27,32 @@ tasks:
     cmds:
       - ./scripts/tidy.sh
 
+  ci:
+    desc: 'Run formatting, module, vet, race, build, and release checks'
+    cmds:
+      - task: check-format
+      - task: check-tidy
+      - task: vet
+      - task: test-race
+      - task: build
+      - task: check-release
+      - ./scripts/test-release.sh
+
+  check-format:
+    desc: 'Check Go formatting without changing files'
+    cmds:
+      - bash ./scripts/check-format.sh
+
+  check-tidy:
+    desc: 'Check module files without changing them'
+    cmds:
+      - ./scripts/tidy.sh --check
+
+  test-race:
+    desc: 'Run race-enabled tests across all six modules (requires CGO)'
+    cmds:
+      - go test -race ./... ./cmd/... ./examples/... ./examples/shaders/... ./picture/chartpicture/... ./spec/echarts/...
+
   check-release:
     desc: 'Verify consumer downloads and builds using temporary local tags (no publish)'
     cmds:
@@ -69,9 +95,9 @@ tasks:
       - cd spec/echarts && go test ./... -count=1
 
   vet:
-    desc: 'Vet the root module'
+    desc: 'Vet all six modules'
     cmds:
-      - go vet ./...
+      - go vet ./... ./cmd/... ./examples/... ./examples/shaders/... ./picture/chartpicture/... ./spec/echarts/...
 
   build:
     desc: 'Build all the things'

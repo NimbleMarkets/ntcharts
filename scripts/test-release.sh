@@ -148,6 +148,20 @@ git commit -qm "Open $NEXT, keep dependencies pinned to $RELEASE"
 check next.log ./scripts/check-release.sh
 echo 'PASS: tidy retains published sums; next changelog version resolves previous tags'
 
+check tidy-check.log ./scripts/tidy.sh --check
+cp examples/go.mod "$SCRATCH/examples.mod"
+printf '\n\n' >> examples/go.mod
+git diff --binary > "$SCRATCH/before-check.diff"
+if ./scripts/tidy.sh --check > "$SCRATCH/untidy.log" 2>&1; then
+	echo 'FAIL: tidy check accepted an untidy module' >&2
+	exit 1
+fi
+grep -q 'module files in examples need tidying' "$SCRATCH/untidy.log"
+git diff --binary > "$SCRATCH/after-check.diff"
+cmp "$SCRATCH/before-check.diff" "$SCRATCH/after-check.diff"
+cp "$SCRATCH/examples.mod" examples/go.mod
+echo 'PASS: tidy check rejects untidy modules without changing files'
+
 # A check must fail on missing historical sums, not silently repair them.
 awk -v prefix="$MODULE/" 'index($1, prefix) != 1' examples/go.sum > "$SCRATCH/missing.sum"
 cp "$SCRATCH/missing.sum" examples/go.sum
