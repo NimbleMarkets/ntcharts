@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.8.0 (unreleased)
+## v2.8.0 (2026-10-10)
 
  * fix(linechart): Reserve enough width for the top Y-axis tick label when it falls between the regular tick steps, preventing labels from overlapping the plot.
  * chore(ci): Add `task ci` as the shared local and GitHub check. It checks Go formatting and module consistency, runs vet and race-enabled tests across all six modules, builds commands and examples, and verifies release packaging and release-script regressions. `task check-tidy` reports untidy module files without changing them.
