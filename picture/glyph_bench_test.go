@@ -91,3 +91,16 @@ func BenchmarkGlyph_PictureView(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkGlyph_PictureView_240x68(b *testing.B) {
+	m := NewWithConfig(Config{Fit: FitFill})
+	m.SetSize(240, 68)
+	m.SetImage(benchImage(240, 135))
+	b.ReportAllocs()
+	for b.Loop() {
+		m.invalidateGlyph()
+		if got := m.View().Content; got == "" {
+			b.Fatal("empty View")
+		}
+	}
+}

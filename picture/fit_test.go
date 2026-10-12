@@ -166,7 +166,7 @@ func TestCoverToAnchorTopPreservesTopRow(t *testing.T) {
 	}
 
 	target := image.Rect(0, 0, 400, 100)
-	out := coverTo(src, src.Bounds(), target, color.Black, AnchorTop)
+	out := coverTo(src, src.Bounds(), target, color.Black, AnchorTop, nil)
 
 	got := out.At(target.Dx()/2, 0)
 	assertColorNear(t, got, topColor, 2)
@@ -180,7 +180,7 @@ func TestCoverToAnchorCenterIsDefault(t *testing.T) {
 	}
 
 	target := image.Rect(0, 0, 400, 100)
-	out := coverTo(src, src.Bounds(), target, color.Black, AnchorCenter)
+	out := coverTo(src, src.Bounds(), target, color.Black, AnchorCenter, nil)
 
 	got := out.At(target.Dx()/2, 0)
 	assertColorNear(t, got, color.RGBA{R: 0, G: 0, B: 255, A: 255}, 2)
