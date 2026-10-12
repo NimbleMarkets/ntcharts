@@ -143,7 +143,10 @@ type XAxis struct {
 	// XAxisValue. If empty, a sensible default is inferred from the chart type.
 	Type string `json:"type,omitempty"`
 	// Labels is the optional list of category labels, used when
-	// Type == XAxisCategory. For a heatmap, Labels[i] names the column of
+	// Type == XAxisCategory. Line/scatter charts preserve these ordered slots;
+	// an omitted line point breaks the connection across that slot. If Labels
+	// is absent, category order comes from XAxisData or string X values.
+	// For a heatmap, Labels[i] names the column of
 	// cells at X = i and is drawn under the plot.
 	Labels []string `json:"labels,omitempty"`
 	// Format describes how axis labels render.

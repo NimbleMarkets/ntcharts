@@ -11,7 +11,6 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/graph"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/v2/linechart"
-	"github.com/charmbracelet/x/ansi"
 )
 
 // ComboModel renders a resolved categorical bar/line combo. The embedded
@@ -72,7 +71,7 @@ func (m *ComboModel) Draw() {
 	m.DrawXYAxisAndLabel()
 	start := m.Origin().X + 1
 	n := len(m.data.Labels)
-	centers := make([]int, n)
+	centers := categoryCenters(w, n)
 	row := func(v float64) int {
 		return int(math.Round((m.data.Max - v) / (m.data.Max - m.data.Min) * float64(h)))
 	}
@@ -80,13 +79,12 @@ func (m *ComboModel) Draw() {
 	for x := 0; x < w; x++ {
 		m.Canvas.SetCell(canvas.Point{X: start + x, Y: baseline}, canvas.NewCellWithStyle('─', m.AxisStyle))
 	}
-	labelEnd := start - 1
-	for i, label := range m.data.Labels {
+	drawCategoryLabels(&m.Model, m.data.Labels, centers)
+	for i := range m.data.Labels {
 		// Partition the entire plot into slots; collisions in dense charts remain
 		// deterministic rather than dropping categories or shifting later points.
 		left, right := i*w/n, (i+1)*w/n
-		center := min(w-1, (left+max(left, right-1))/2)
-		centers[i] = center
+		center := centers[i]
 		width := max(1, (right-left)*3/4)
 		if width%2 == 0 {
 			width--
@@ -100,13 +98,7 @@ func (m *ComboModel) Draw() {
 				}
 			}
 		}
-		// Fit labels inside their slots; skip collisions without moving the marks.
-		text := ansi.Truncate(label, max(0, right-left), "")
-		x := start + center - ansi.StringWidth(text)/2
-		if text != "" && x > labelEnd && x >= start && x+ansi.StringWidth(text) <= start+w {
-			m.Canvas.SetStringWithStyle(canvas.Point{X: x, Y: m.Origin().Y + 1}, text, m.LabelStyle)
-			labelEnd = x + ansi.StringWidth(text)
-		}
+
 	}
 	// Work in braille-pixel coordinates, anchored to the exact bar centers.
 	g := graph.NewBrailleGrid(w, h, 0, float64(2*w-1), 0, float64(4*h-1))

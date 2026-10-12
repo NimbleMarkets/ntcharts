@@ -111,7 +111,7 @@ both:
 | `Data.Series` / `Series.Color` (ohlc) | exactly one series required; `Series.Color` ignored in favour of up/down palette slots | N/A — OHLC is scaffold-only |
 | `Theme.Palette` (bar, line, scatter, timeseries, sparkline) | fallback for series without `Series.Color` | honoured for bar and timeseries; other types are scaffold-only |
 | `XAxis.Format` / `YAxis.Format` (bar, heatmap, sparkline) | **ignored** | **ignored** for bar; other types are scaffold-only |
-| `XAxis.Labels` | honoured for bar (categories) and heatmap (column names); **ignored** by other terminal builders | honoured for bar; **ignored** for timeseries |
+| `XAxis.Labels` | honoured for bar, categorical line/scatter, Combo, and heatmap; **ignored** by numeric/time builders | honoured for bar; **ignored** for timeseries |
 | `YAxis.Min` / `YAxis.Max` (heatmap) | **ignored** — use `Heat.MinValue` / `Heat.MaxValue` for the colour domain | N/A — heatmap is scaffold-only |
 | `DataPoint.Size` | **ignored** everywhere — accepted by the schema, drawn as fixed-size markers on every surface | **ignored** everywhere |
 | `XAxis.Title` / `YAxis.Title` / `Y2Axis.Title` | **ignored** — no current ntcharts terminal model surfaces an axis title | `YAxis.Title` / `Y2Axis.Title` honoured as the ECharts axis name (bar and timeseries); `XAxis.Title` **ignored** — not wired into `ToECharts()` |
@@ -526,3 +526,38 @@ a second numeric measure and falling back to an ordinary one-series bar spec
 when none exists belong in flint-ntcharts. Emit explicit X on sparse points,
 provide unique ordered categories (aggregate duplicate rows upstream), and
 handle `*spec.ComboModel` as the terminal result. No custom extension is needed.
+
+
+## Categorical line and scatter axes
+
+Set `x_axis.type` to `"category"` to build a `*spec.CategoricalModel` for a line
+or scatter spec. It embeds `linechart.Model` and retains its data for redraws on
+`Resize` and `WindowSizeMsg`. Numeric chart return types are unchanged. Category
+pan/zoom is disabled; Y axes support existing ranges, formats, and log scales.
+Categorical X log scales return an error.
+
+```json
+{
+  "type": "line", "width": 60, "height": 16,
+  "x_axis": {"type": "category", "labels": ["Before", "Middle", "After"]},
+  "data": {"series": [{"name": "Score", "values": [
+    {"x": "Before", "y": 10}, {"x": "After", "y": 30}
+  ]}]}
+}
+```
+
+`XAxis.Labels` specifies slot order, including empty categories. If absent,
+`Data.XAxisData` supplies ordered string labels; otherwise string point X values
+are collected in first-appearance order across series. Without a point X, its
+index selects a declared category (or shared X data). Duplicate labels, unknown
+categories, nonstring category X, and nonfinite Y values are rejected.
+
+Line points are sorted into category order. Omit a point to represent missing
+data: its slot remains and the line does not connect across that slot. A line
+series accepts at most one observation per category; scatter accepts repeated
+observations. Labels truncate or skip when crowded without shifting marks.
+The slot and label helpers are shared with the categorical Combo renderer.
+
+Titles, legends, jitter, and point-size rendering are not added by this path.
+This change is in the terminal builder; the ECharts adapter's line/scatter
+support remains separate.

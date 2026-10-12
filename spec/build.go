@@ -23,9 +23,9 @@ import (
 // The concrete return type depends on Spec.Type:
 //
 //   - ChartTypeBar         -> *barchart.Model (categorical combo: *ComboModel)
-//   - ChartTypeLine        -> *linechart.Model
+//   - ChartTypeLine        -> *linechart.Model (categorical: *CategoricalModel)
 //   - ChartTypeTimeSeries  -> *timeserieslinechart.Model
-//   - ChartTypeScatter     -> *linechart.Model
+//   - ChartTypeScatter     -> *linechart.Model (categorical: *CategoricalModel)
 //   - ChartTypeHeatmap     -> *heatmap.Model
 //   - ChartTypeSparkline   -> *sparkline.Model
 //   - ChartTypeOHLC        -> *timeserieslinechart.Model
@@ -60,6 +60,9 @@ func Build(s Spec) (any, error) {
 	}
 	if err := checkScaleSupport(s); err != nil {
 		return nil, err
+	}
+	if s.XAxis.Type == XAxisCategory && (s.Type == ChartTypeLine || s.Type == ChartTypeScatter) {
+		return buildCategorical(s)
 	}
 	switch s.Type {
 	case ChartTypeBar:
