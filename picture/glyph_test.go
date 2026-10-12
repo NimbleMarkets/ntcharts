@@ -21,6 +21,22 @@ func referenceGlyph(t *testing.T, src image.Image, bg color.Color) string {
 	return strings.TrimRight(ai.RenderExt(false, false), "\n")
 }
 
+func TestAppendGlyphRejectsOddHeight(t *testing.T) {
+	// Check both encoders and non-zero bounds: it is the height, not the
+	// absolute last row coordinate, that must be even.
+	bounds := image.Rect(2, 3, 6, 6)
+	for _, src := range []image.Image{image.NewRGBA(bounds), image.NewNRGBA(bounds)} {
+		t.Run(fmt.Sprintf("%T", src), func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != "picture: appendGlyph requires an even-height prepared image" {
+					t.Fatalf("expected explicit height precondition panic, got %v", got)
+				}
+			}()
+			appendGlyph(nil, src)
+		})
+	}
+}
+
 // The golden covers both crop axes and every anchor. Generate the reference
 // with the shared fit implementation and pixterm, independently of appendGlyph.
 func TestGlyphGolden(t *testing.T) {

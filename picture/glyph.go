@@ -24,8 +24,13 @@ import (
 // like ansimage.NewFromImage. prepareSource has already composited Background.
 // Keeping this small encoder here lets Model reuse its output buffer without
 // exposing mutable storage through returned View strings.
+// It panics if the image height is odd; callers must prepare complete pairs
+// of pixel rows (View does this with a 1x2 cell size).
 func appendGlyph(buf []byte, src image.Image) []byte {
 	bounds := src.Bounds()
+	if bounds.Dy()%2 != 0 {
+		panic("picture: appendGlyph requires an even-height prepared image")
+	}
 	// Two true-color SGRs (19 bytes each) and a three-byte half block per cell.
 	size := bounds.Dx()*bounds.Dy()/2*41 + bounds.Dy()/2*5
 	if cap(buf) < size {
