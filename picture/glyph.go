@@ -18,10 +18,10 @@ import (
 	"strconv"
 )
 
-// appendGlyph encodes an already fitted, even-height image using pixterm's
-// NoDithering format: upper pixel as background, lower pixel as foreground,
-// and a reset at each row boundary. Pixel RGB is alpha-premultiplied, just
-// like ansimage.NewFromImage. prepareSource has already composited Background.
+// appendGlyph encodes an already fitted, even-height image as half-blocks:
+// upper pixel as background, lower pixel as foreground, and a reset at each
+// row boundary. Pixel RGB is alpha-premultiplied; prepareSource has already
+// composited Background.
 // Keeping this small encoder here lets Model reuse its output buffer without
 // exposing mutable storage through returned View strings.
 // It panics if the image height is odd; callers must prepare complete pairs

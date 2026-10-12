@@ -473,8 +473,7 @@ func (m *Model) View() tea.View {
 // for the current rendering mode:
 //
 //   - Glyph mode: sample at (cols, rows*2) — exactly one pixel per
-//     half-block, since ansimage will downscale anything larger to that
-//     anyway. Massive speedup at large terminal sizes (a 200×60 cell
+//     half-block, which is the Glyph renderer's maximum resolution. Massive speedup at large terminal sizes (a 200×60 cell
 //     terminal samples 24K pixels instead of 1.5M).
 //   - Kitty mode: sample at (cols*cellW, rows*cellH) — full terminal
 //     pixel resolution so the Kitty APC renders crisp 1:1 with no

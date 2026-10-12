@@ -5,13 +5,11 @@ import (
 	"image/color"
 	"math/rand/v2"
 	"testing"
-
-	"github.com/NimbleMarkets/pixterm/pkg/ansimage"
 )
 
 // benchImage builds a w×h *image.RGBA filled with a deterministic
 // pseudo-random color pattern. Fixed seed so the same bytes are scaled
-// across runs and across pixterm versions — only the implementation
+// across runs — only the implementation
 // changes, not the input.
 func benchImage(w, h int) *image.RGBA {
 	r := rand.New(rand.NewPCG(0xc0ffee, 0xfacade))
@@ -29,53 +27,22 @@ func benchImage(w, h int) *image.RGBA {
 	return img
 }
 
-// BenchmarkGlyph_AnsiImage_Direct isolates pixterm. No picture wrapper,
-// no prepareSource — the scaled image is fed straight to ansimage.
-// Use this to measure the delta from pixterm-internal changes alone.
-//
-// Render size 80 cols × 40 rows-of-half-blocks ≈ a typical demo pane.
-func BenchmarkGlyph_AnsiImage_Direct(b *testing.B) {
-	img := benchImage(800, 600)
+// BenchmarkGlyph_EncodeDirect isolates ANSI encoding of a prepared image,
+// reusing the output buffer as Model.View does between frames.
+func BenchmarkGlyph_EncodeDirect(b *testing.B) {
+	img := benchImage(80, 40)
+	var buf []byte
 	b.ReportAllocs()
 	for b.Loop() {
-		ai, err := ansimage.NewScaledFromImage(
-			img, 40, 80,
-			color.Transparent,
-			ansimage.ScaleModeFit,
-			ansimage.NoDithering,
-		)
-		if err != nil {
-			b.Fatal(err)
+		buf = appendGlyph(buf[:0], img)
+		if len(buf) == 0 {
+			b.Fatal("empty output")
 		}
-		_ = ai.RenderExt(false, false)
 	}
 }
 
-// BenchmarkGlyph_AnsiImage_DitherBlocks measures the dithered path.
-// Same input image; only the dither knob changes from NoDithering.
-// (See pixterm itself for finer-grained block-vs-char benchmarks.)
-func BenchmarkGlyph_AnsiImage_DitherBlocks(b *testing.B) {
-	img := benchImage(800, 600)
-	b.ReportAllocs()
-	for b.Loop() {
-		ai, err := ansimage.NewScaledFromImage(
-			img, 40, 80,
-			color.Transparent,
-			ansimage.ScaleModeFit,
-			ansimage.DitheringWithBlocks,
-		)
-		if err != nil {
-			b.Fatal(err)
-		}
-		_ = ai.RenderExt(false, false)
-	}
-}
-
-// BenchmarkGlyph_PictureView is the integrated path: View() runs
-// prepareSource (CatmullRom resample + bg composite) then hands the
-// result to ansimage. Use this to confirm picture-layer behavior
-// doesn't drown out pixterm-level wins, and to see the user-visible
-// delta a picture consumer will feel.
+// BenchmarkGlyph_PictureView measures fitting and ANSI half-block encoding
+// together, including per-model scratch reuse across frames.
 //
 // invalidateGlyph each iteration so the cache doesn't short-circuit
 // and we measure the full render every time.

@@ -118,8 +118,8 @@ func drainHeatRender(t *testing.T, m *Model, cmd tea.Cmd) {
 // Glyph mode the sampler is invoked at (cols, rows*2) pixels — one pixel
 // per half-block — rather than full cellW×cellH per cell. This is a
 // performance feature: at large terminal sizes a full-resolution sample
-// runs into the millions of pixels per frame even though ansimage
-// downscales it all back to cols × rows*2 anyway.
+// runs into the millions of pixels per frame even though Glyph output
+// can only display cols × rows*2 pixels.
 func TestSetSampler_GlyphMode_SamplesAtHalfBlockResolution(t *testing.T) {
 	m := New()
 	m.SetSize(40, 12) // cells; default Glyph mode

@@ -8,17 +8,21 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/NimbleMarkets/pixterm/pkg/ansimage"
 )
 
-func referenceGlyph(t *testing.T, src image.Image, bg color.Color) string {
+// These fixtures were captured from the previous reference renderer before
+// removing that dependency. Keep them fixed when changing the encoder.
+func loadGlyphGolden(t *testing.T, path string) map[string]string {
 	t.Helper()
-	ai, err := ansimage.NewFromImage(src, bg, ansimage.NoDithering)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return strings.TrimRight(ai.RenderExt(false, false), "\n")
+	var golden map[string]string
+	if err := json.Unmarshal(data, &golden); err != nil {
+		t.Fatal(err)
+	}
+	return golden
 }
 
 func TestAppendGlyphRejectsOddHeight(t *testing.T) {
@@ -37,17 +41,9 @@ func TestAppendGlyphRejectsOddHeight(t *testing.T) {
 	}
 }
 
-// The golden covers both crop axes and every anchor. Generate the reference
-// with the shared fit implementation and pixterm, independently of appendGlyph.
+// The golden covers both crop axes and every anchor.
 func TestGlyphGolden(t *testing.T) {
-	data, err := os.ReadFile("testdata/glyph.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var golden map[string]string
-	if err := json.Unmarshal(data, &golden); err != nil {
-		t.Fatal(err)
-	}
+	golden := loadGlyphGolden(t, "testdata/glyph.json")
 	for _, size := range []image.Point{{8, 4}, {4, 8}} {
 		for fit := FitContain; fit <= FitCover; fit++ {
 			for anchor := AnchorCenter; anchor <= AnchorRight; anchor++ {
@@ -55,13 +51,9 @@ func TestGlyphGolden(t *testing.T) {
 				t.Run(key, func(t *testing.T) {
 					src := benchImage(size.X, size.Y)
 					bg := color.RGBA{R: 20, G: 30, B: 40, A: 255}
-					prepared := prepareSource(src, fit, 4, 2, 1, 2, bg, anchor)
 					want, ok := golden[key]
 					if !ok {
 						t.Fatal("missing golden")
-					}
-					if referenceGlyph(t, prepared, bg) != want {
-						t.Fatal("reference differs from golden")
 					}
 					m := NewWithConfig(Config{Fit: fit, Anchor: anchor, Background: bg})
 					m.SetSize(4, 2)
@@ -75,7 +67,8 @@ func TestGlyphGolden(t *testing.T) {
 	}
 }
 
-func TestGlyphMatchesPixterm(t *testing.T) {
+func TestGlyphPixelFormats(t *testing.T) {
+	golden := loadGlyphGolden(t, "testdata/glyph_pixels.json")
 	rgba := benchImage(8, 8).SubImage(image.Rect(2, 2, 6, 6)).(*image.RGBA)
 	translucent := image.NewNRGBA(image.Rect(3, 5, 7, 9))
 	for y := 5; y < 9; y++ {
@@ -89,8 +82,10 @@ func TestGlyphMatchesPixterm(t *testing.T) {
 				m := NewWithConfig(Config{Fit: fit, Background: bg})
 				m.SetSize(4, 2)
 				m.SetImage(src)
-				prepared := prepareSource(src, fit, 4, 2, 1, 2, bg, AnchorCenter)
-				want := referenceGlyph(t, prepared, bg)
+				want, ok := golden[fmt.Sprintf("%T/%v/bg%v/fit%d", src, src.Bounds(), bg, fit)]
+				if !ok {
+					t.Fatal("missing golden")
+				}
 				if got := m.View().Content; got != want {
 					t.Fatalf("%T bg %v fit %v: got %q, want %q", src, bg, fit, got, want)
 				}
@@ -151,17 +146,16 @@ func TestGlyphExactSizeSkipsPreparation(t *testing.T) {
 // byte-for-byte. More detailed images are now sampled once at glyph resolution
 // rather than CatmullRom-upscaled and then box-downsampled.
 func TestGlyphLegacyUniform(t *testing.T) {
+	golden := loadGlyphGolden(t, "testdata/glyph_legacy_uniform.json")
 	for _, size := range []image.Point{{8, 4}, {4, 8}} {
 		for fit := FitContain; fit <= FitCover; fit++ {
 			for anchor := AnchorCenter; anchor <= AnchorRight; anchor++ {
 				bg := color.RGBA{R: 20, G: 30, B: 40, A: 255}
 				src := solidImage(size.X, size.Y, color.RGBA{R: 80, G: 120, B: 160, A: 255})
-				legacy := prepareSource(src, fit, 4, 2, 8, 16, bg, anchor)
-				ai, err := ansimage.NewScaledFromImage(legacy, 4, 4, bg, ansimage.ScaleModeResize, ansimage.NoDithering)
-				if err != nil {
-					t.Fatal(err)
+				want, ok := golden[fmt.Sprintf("%dx%d/fit%d/anchor%d", size.X, size.Y, fit, anchor)]
+				if !ok {
+					t.Fatal("missing golden")
 				}
-				want := strings.TrimRight(ai.RenderExt(false, false), "\n")
 				m := NewWithConfig(Config{Fit: fit, Anchor: anchor, Background: bg})
 				m.SetSize(4, 2)
 				m.SetImage(src)
