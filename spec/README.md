@@ -22,6 +22,57 @@ omitted; pointer fields preserve explicit zero pins and precision. A series'
 `values` field is always emitted (`null` for a nil slice, `[]` for an empty
 non-nil slice), including OHLC series whose points live in `ohlc`.
 
+## OHLC volume panel
+
+Set `Options.Volume = true` and supply `OHLCPoint.V` pointers:
+
+```go
+volume := 12300.0
+s := spec.Spec{
+    Type: spec.ChartTypeOHLC, Width: 80, Height: 24,
+    Options: spec.Options{Volume: true},
+    Data: spec.Data{Series: []spec.Series{{Name: "Price", OHLC: []spec.OHLCPoint{
+        {T: "2026-01-05", O: 100, H: 108, L: 97, C: 105, V: &volume},
+    }}}},
+}
+built, err := spec.Build(s)
+if err != nil { /* handle error */ }
+model := built.(*spec.OHLCModel)
+fmt.Println(model.View())
+model.Resize(100, 30) // redraws both panels
+```
+
+JSON uses `"v":12300` on a point and `"options":{"volume":true}`.
+`V == nil` means missing, while a pointer to zero means known zero; neither
+paints a terminal bar. Values must be finite and non-negative, even when the
+panel is disabled. `Volume` is valid only on OHLC specs. Both new fields are
+omitted at their zero values, preserving existing JSON.
+
+With the option off, or with every `V` nil, `Build` returns the original
+`*timeserieslinechart.Model` and preserves its rendering. Otherwise it returns
+`*spec.OHLCModel`, with `View`, `Draw`, `Resize(w, h)` and an `Update` method
+that handles `tea.WindowSizeMsg`. It retains the spec for redraw; independent
+panel pan/zoom is not supported. Initial builds require at least seven rows
+and sufficient width for the axes. Resizing too small blanks the canvas;
+resizing larger restores both panels.
+
+The terminal reserves roughly a quarter of the plot rows for volume. Both
+panels use the same time scale, Y-axis gutter, candle body width (1–7 columns),
+edge inset and up/down palette colours. Only the bottom panel has X labels.
+Volume has an independent linear scale from zero to the maximum observed V,
+with an SI maximum label (`12.3k`, `4.5M`); price retains its configured Y scale.
+
+`echarts.ToECharts` returns `*charts.Kline`. Web candles use ordered category
+slots labelled by UTC timestamps (so calendar gaps are compressed on web).
+With volume enabled it adds a lower grid, matching category axis and a volume
+bar series, preserves missing values as null, and links axis pointers and
+inside data zoom across both X axes. The default axis tooltip uses price-first
+series order followed by volume, without a JavaScript formatter. Any caller-added
+data zoom must also target `[]int{0, 1}`. Both grids share fixed margins.
+
+Run `go run ./examples/ohlc-volume -html /tmp/ohlc-volume.html` for a self-contained
+sample with weekend gaps, terminal rendering and optional HTML export.
+
 ## Status
 
 | Chart type            | `Build()` (terminal)                                              | `echarts.ToECharts()` (web) |
@@ -33,7 +84,7 @@ non-nil slice), including OHLC series whose points live in `ohlc`.
 | `ChartTypeHeatmap`     | full                                                                | scaffold |
 | `ChartTypeStreamline`  | scaffold                                                            | scaffold |
 | `ChartTypeSparkline`   | full                                                                | scaffold |
-| `ChartTypeOHLC`        | full — candlesticks on `*timeserieslinechart.Model`                 | scaffold |
+| `ChartTypeOHLC`        | full — candlesticks; optional volume panel on `*OHLCModel`          | full — candlesticks and optional volume grid |
 | `ChartTypeCanvas`      | scaffold                                                            | scaffold |
 
 Scaffolded chart types return a clear `not yet implemented` error today.
@@ -96,7 +147,7 @@ both:
 | `Series.Type = "bar"` in a timeseries | drawn as a braille line like any series, on the axis its `y_axis` names | overlaid as real bars on the axis its `y_axis` names — **no longer given its own axis implicitly** (v2.8.0); set `y_axis: "right"` and a `y2_axis` for the old look |
 | `Theme.Palette[0]` / `[1]` (ohlc) | honoured — slot 0 = up candles, slot 1 = down candles; defaults `#26a69a` / `#ef5350` when unset | N/A — `ToECharts()` is scaffold-only |
 | `Options.CandleStyle` (ohlc) | honoured — `""` or `CandleStyleLine` renders box-drawing line runes, `CandleStyleBlock` renders solid block bodies; unknown values error | N/A — `ToECharts()` is scaffold-only |
-| `Series.OHLC` count vs. chart width (ohlc) | candles render at time-scaled X positions across the full graph width with an automatically chosen, density-based body width (odd, capped at 7, never overlapping); dense series overdraw rather than dropping points | N/A — `ToECharts()` is scaffold-only |
+| `Series.OHLC` count vs. chart width (ohlc) | candles render at time-scaled X positions across the full graph width with an automatically chosen, density-based body width (odd, capped at 7); dense series overdraw rather than dropping points | ordered category slots; ECharts chooses candle widths |
 | `YAxis.Min` / `YAxis.Max` (bar) | forwarded to `barchart.WithMinValue()` / `WithMaxValue()`; positive minima clamp to zero; a lone pin leaves the other bound auto-scaled by the model; explicit `Min > Max` is a `Build` error | honoured (set directly on the ECharts Y axis) |
 | `YAxis.Min` (sparkline) | **ignored** — `sparkline.Model` has no Y-minimum concept, only `WithMaxValue` | N/A — `ToECharts()` is scaffold-only |
 | `YAxis.Max` (sparkline) | honoured via `sparkline.WithMaxValue()` when set; otherwise auto-scales | N/A — `ToECharts()` is scaffold-only |
@@ -108,7 +159,7 @@ both:
 | `Heat.MinValue` / `Heat.MaxValue` | honoured independently; an unset bound is derived from the selected cells/matrix; inverted effective ranges error | N/A — heatmap is scaffold-only |
 | `Heat.Matrix` / `Heat.Cells` | matrix rows are Y indices and columns are X indices; a nonempty matrix takes precedence over cells | N/A — heatmap is scaffold-only |
 | `Data.XAxisData` (bar, line, scatter, timeseries) | resolves omitted point X values; explicit point X takes precedence | honoured for bar and timeseries; line/scatter are scaffold-only |
-| `Data.Series` / `Series.Color` (ohlc) | exactly one series required; `Series.Color` ignored in favour of up/down palette slots | N/A — OHLC is scaffold-only |
+| `Data.Series` / `Series.Color` (ohlc) | exactly one series required; `Series.Color` ignored in favour of up/down palette slots | exactly one series; up/down palette slots match terminal |
 | `Theme.Palette` (bar, line, scatter, timeseries, sparkline) | fallback for series without `Series.Color` | honoured for bar and timeseries; other types are scaffold-only |
 | `XAxis.Format` / `YAxis.Format` (bar, heatmap, sparkline) | **ignored** | **ignored** for bar; other types are scaffold-only |
 | `XAxis.Labels` | honoured for bar, categorical line/scatter, Combo, and heatmap; **ignored** by numeric/time builders | honoured for bar; **ignored** for timeseries |
@@ -297,8 +348,7 @@ spec/
 - **`Series.OHLC`** ([]OHLCPoint) is required by `Validate()` for
   `ChartTypeOHLC`. `Build()` renders it as time-scaled candlesticks on a
   `*timeserieslinechart.Model` (see `buildOHLC` in `build.go` and the
-  `ChartTypeOHLC` notes above); `ToECharts()` support is not yet implemented
-  (scaffold error).
+  `ChartTypeOHLC` notes above); `ToECharts()` returns `*charts.Kline`.
 - **`Heat`** (`*HeatData`) holds heatmap data as either a sparse `Cells`
   list (`{X, Y, Z}` triples) or a dense row-major `Matrix`; `MinValue`/
   `MaxValue` independently pin the colour-scale domain (data-derived when nil).

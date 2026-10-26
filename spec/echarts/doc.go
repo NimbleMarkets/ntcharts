@@ -12,7 +12,7 @@
 // dependency is only pulled in by programs that render to the web. Terminal
 // consumers of github.com/NimbleMarkets/ntcharts/v2/spec are unaffected.
 //
-// Only spec.ChartTypeBar and spec.ChartTypeTimeSeries are implemented today;
+// Bar, TimeSeries and OHLC charts are implemented today;
 // every other chart type returns a "not yet implemented" error. See the
 // surface fidelity matrix in spec/README.md for which Spec options each
 // surface honours.

@@ -18,6 +18,7 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 )
 
 // ChartType identifies the kind of chart described by a Spec.
@@ -26,8 +27,8 @@ type ChartType string
 
 // ChartType constants. These mirror the ntcharts chart families. Build
 // renders every type except Streamline and Canvas, which are reserved for
-// future support; the web surface (spec/echarts) implements Bar and
-// TimeSeries only. See spec/README.md for the per-type status table.
+// future support; the web surface (spec/echarts) implements Bar, OHLC and
+// TimeSeries. See spec/README.md for the per-type status table.
 const (
 	// ChartTypeBar renders a bar chart (barchart package).
 	ChartTypeBar ChartType = "bar"
@@ -284,6 +285,8 @@ type OHLCPoint struct {
 	L float64 `json:"l"`
 	// C is the closing value.
 	C float64 `json:"c"`
+	// V is optional non-negative volume. Nil means missing; zero is a known zero.
+	V *float64 `json:"v,omitempty"`
 }
 
 // HeatCell is a single (x, y, z) datum in a HeatData.Cells list.
@@ -310,6 +313,9 @@ type HeatData struct {
 //
 // Surfaces are free to ignore options they do not support.
 type Options struct {
+	// Volume shows an OHLC volume panel below price when any point has V set.
+	// It is supported only for ChartTypeOHLC; missing volumes leave gaps.
+	Volume bool `json:"volume,omitempty"`
 	// ShowLegend toggles the legend.
 	ShowLegend bool `json:"show_legend,omitempty"`
 	// ShowGrid toggles the background grid.
@@ -391,6 +397,10 @@ func (s Spec) Validate() error {
 		}
 	}
 
+	if s.Options.Volume && s.Type != ChartTypeOHLC {
+		return fmt.Errorf("spec: volume requires an ohlc chart")
+	}
+
 	// Series that share a name share a data set on the terminal, so they
 	// must share a Y axis too.
 	type namedAxis struct {
@@ -399,6 +409,11 @@ func (s Spec) Validate() error {
 	}
 	seen := make(map[string]namedAxis, len(s.Data.Series))
 	for i, ser := range s.Data.Series {
+		for j, p := range ser.OHLC {
+			if p.V != nil && (math.IsNaN(*p.V) || math.IsInf(*p.V, 0) || *p.V < 0) {
+				return fmt.Errorf("spec: series[%d] ohlc point %d volume must be finite and non-negative", i, j)
+			}
+		}
 		if ser.Name == "" {
 			return fmt.Errorf("spec: series[%d] Name is required", i)
 		}
@@ -476,4 +491,19 @@ func (s Spec) Validate() error {
 func (s Spec) MarshalJSON() ([]byte, error) {
 	type alias Spec
 	return json.Marshal(alias(s))
+}
+
+// HasVolume reports whether the OHLC volume panel is enabled and has data.
+func (s Spec) HasVolume() bool {
+	if s.Type != ChartTypeOHLC || !s.Options.Volume {
+		return false
+	}
+	for _, ser := range s.Data.Series {
+		for _, p := range ser.OHLC {
+			if p.V != nil {
+				return true
+			}
+		}
+	}
+	return false
 }

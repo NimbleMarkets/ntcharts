@@ -28,7 +28,7 @@ import (
 //   - ChartTypeScatter     -> *linechart.Model (categorical: *CategoricalModel)
 //   - ChartTypeHeatmap     -> *heatmap.Model
 //   - ChartTypeSparkline   -> *sparkline.Model
-//   - ChartTypeOHLC        -> *timeserieslinechart.Model
+//   - ChartTypeOHLC        -> *timeserieslinechart.Model (volume: *OHLCModel)
 //
 // Callers should type-assert the result. Unsupported chart types return an
 // error rather than panicking, so future additions to ChartType do not break
@@ -845,6 +845,13 @@ const (
 // automatically from chart density (see autoCandleWidth); dense data
 // overdraws like any dense timeseries — no points are dropped.
 func buildOHLC(s Spec) (any, error) {
+	if s.HasVolume() {
+		return buildOHLCVolume(s)
+	}
+	return buildOHLCPrice(s, 0)
+}
+
+func buildOHLCPrice(s Spec, labelWidth int) (*timeserieslinechart.Model, error) {
 	if len(s.Data.Series) != 1 {
 		return nil, fmt.Errorf("spec: ohlc supports exactly one series; got %d", len(s.Data.Series))
 	}
@@ -925,6 +932,11 @@ func buildOHLC(s Spec) (any, error) {
 	}
 
 	m := timeserieslinechart.New(s.Width, s.Height, opts...)
+	if labelWidth > 0 {
+		original := m.YLabelFormatter
+		m.YLabelFormatter = func(i int, v float64) string { return fmt.Sprintf("%*s", labelWidth, original(i, v)) }
+		m.Resize(s.Width, s.Height)
+	}
 	m.AutoMinY = !logY && s.YAxis.Min == nil
 	m.AutoMaxY = !logY && s.YAxis.Max == nil
 	for i, p := range pts {
@@ -943,8 +955,9 @@ func buildOHLC(s Spec) (any, error) {
 	}
 	m.DrawCandleWithOpts("open", "high", "low", "close", up, down,
 		timeserieslinechart.DrawCandleOpts{
-			Width: autoCandleWidth(m.GraphWidth(), times, tMin, tMax),
-			Block: block,
+			Width:          autoCandleWidth(m.GraphWidth(), times, tMin, tMax),
+			Block:          block,
+			SnapTimeBounds: labelWidth > 0,
 		})
 	return &m, nil
 }

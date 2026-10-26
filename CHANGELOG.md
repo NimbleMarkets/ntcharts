@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+ * feat(spec): Add optional OHLC volume sub-panels through `OHLCPoint.V` (`v`) and `Options.Volume` (`volume`). Terminal `Build` returns `*spec.OHLCModel` when volume is enabled and present, with aligned candle/bar widths, matching up/down colours, an SI volume scale, bottom-only time labels, and resize redraws. Existing panel-off JSON and rendering are preserved.
+ * feat(echarts): Implement OHLC candlestick export with an optional second volume grid, linked category axes and data zoom, per-candle volume colours, and an axis tooltip. Add `examples/ohlc-volume` for terminal and HTML rendering.
+
 ## v2.8.0 (2026-10-10)
 
  * fix(linechart): Reserve enough width for the top Y-axis tick label when it falls between the regular tick steps, preventing labels from overlapping the plot.

@@ -477,6 +477,9 @@ type DrawCandleOpts struct {
 	Width int
 	// Block renders solid block bodies (█ ▄ ▀) instead of line runes.
 	Block bool
+	// SnapTimeBounds retains boundary candles displaced by floating-point
+	// rounding (within 1e-9 graph columns). The default preserves strict clipping.
+	SnapTimeBounds bool
 }
 
 // DrawCandleWithOpts draws candles with the given body width and style. The
@@ -539,7 +542,13 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 	for i := 0; i < limit; i++ {
 		// assuming all time values are the same, can just any of the values to check
 		// if data point is outside of the current graph view to ignore
-		if oData[i].X < 0 || oData[i].X > float64(m.GraphWidth()) {
+		// Floating-point scaling can place the final timestamp a fraction
+		// above GraphWidth; retain it for the right-edge clamp.
+		epsilon := 0.0
+		if opts.SnapTimeBounds {
+			epsilon = 1e-9
+		}
+		if oData[i].X < -epsilon || oData[i].X > float64(m.GraphWidth())+epsilon {
 			continue
 		}
 		// a candle with a value that has no place on a log Y axis is not drawn
@@ -566,49 +575,13 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 		}
 		low, high = max(0, min(low, ceiling)), max(0, min(high, ceiling))
 		bl, bh = max(0, min(bl, ceiling)), max(0, min(bh, ceiling))
-		drawX := int(oData[i].X) + m.Origin().X
-		if m.YStep() > 0 {
-			drawX += 1
-		}
-		// The time scale maps the viewport's final timestamp to X ==
-		// GraphWidth(), one column past the last drawable graph column, so
-		// without this clamp the newest candle's center column lands off
-		// canvas and never renders. Clamp it into the drawable area instead.
-		if last := m.GraphRight() - 1; drawX > last {
-			drawX = last
-		}
-
-		// Compute the candle's column span and only draw the
-		// columns inside the graph area, so wide candles never overdraw the
-		// y-axis (Origin().X when YStep()>0) or its tick label columns
-		// (which sit left of Origin().X, still inside the canvas). This
-		// mirrors graph.DrawCandlestickBottomToTopWide's own column loop
-		// (center column full candle, other columns body-only) but adds the
-		// boundary skip.
+		cw := max(1, opts.Width)
+		drawX := m.CandleColumn(oData[i].X, cw)
 		minCol := m.Origin().X
 		if m.YStep() > 0 {
-			minCol++ // Origin().X itself is the y-axis line column
+			minCol++
 		}
-		cw := opts.Width
-		if cw < 1 {
-			cw = 1
-		}
-		// Edge inset: clamp the candle's CENTER so its whole body fits in
-		// the drawable span — edge candles shift inward up to half a body
-		// from their true time position (plot-inset behavior) instead of
-		// rendering half-clipped. Skipped when the chart is narrower than
-		// one candle (interval empty); the per-column guards below remain
-		// the safety net for that and for dense overlapping data.
 		half := (cw - 1) / 2
-		right := cw - 1 - half
-		if minCtr, maxCtr := minCol+half, m.GraphRight()-1-right; minCtr <= maxCtr {
-			if drawX < minCtr {
-				drawX = minCtr
-			}
-			if drawX > maxCtr {
-				drawX = maxCtr
-			}
-		}
 		left := drawX - half
 		y := m.Origin().Y - 1
 		for x := left; x < left+cw; x++ {
@@ -781,4 +754,21 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	m.UpdateHandler(&m.Model, msg)
 	m.rescaleData()
 	return m, nil
+}
+
+// CandleColumn maps a scaled graph X coordinate to a candle center column.
+// It includes the Y-axis gutter, right-edge clamp and wide-body edge inset.
+// Companion panels should use this with the same width as DrawCandleWithOpts.
+func (m *Model) CandleColumn(x float64, width int) int {
+	start := m.Origin().X
+	if m.YStep() > 0 {
+		start++
+	}
+	col := min(int(x)+start, m.GraphRight()-1)
+	width = max(1, width)
+	half := (width - 1) / 2
+	if lo, hi := start+half, m.GraphRight()-1-(width-1-half); lo <= hi {
+		col = max(lo, min(hi, col))
+	}
+	return col
 }

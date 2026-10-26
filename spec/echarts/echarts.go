@@ -18,6 +18,7 @@ import (
 // The concrete return type depends on Spec.Type:
 //
 //   - spec.ChartTypeBar         -> *charts.Bar
+//   - spec.ChartTypeOHLC        -> *charts.Kline (optional volume grid)
 //   - spec.ChartTypeTimeSeries  -> *charts.Line (with "time" type X axis)
 //
 // Callers can render the result with its Render(io.Writer) method, embed it
@@ -45,11 +46,12 @@ func ToECharts(s spec.Spec) (any, error) {
 		return toEChartsBar(s)
 	case spec.ChartTypeTimeSeries:
 		return toEChartsTimeSeries(s)
+	case spec.ChartTypeOHLC:
+		return toEChartsOHLC(s)
 	case spec.ChartTypeLine,
 		spec.ChartTypeStreamline,
 		spec.ChartTypeSparkline,
 		spec.ChartTypeHeatmap,
-		spec.ChartTypeOHLC,
 		spec.ChartTypeScatter,
 		spec.ChartTypeCanvas:
 		return nil, fmt.Errorf("echarts: ToECharts for chart type %q is not yet implemented", s.Type)
