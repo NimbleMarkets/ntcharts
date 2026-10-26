@@ -172,7 +172,7 @@ func compileShader(dev *wgpu.Device, code string) (_ *gpuPipeline, err error) {
 	if err != nil {
 		return nil, err
 	}
-	p.bindings, err = dev.CreateBindGroupLayout(&wgpu.BindGroupLayoutDescriptor{Entries: []wgpu.BindGroupLayoutEntry{
+	p.bindings, err = dev.CreateBindGroupLayout(&wgpu.BindGroupLayoutDescriptor{Entries: []gputypes.BindGroupLayoutEntry{
 		{Binding: 0, Visibility: wgpu.ShaderStageCompute, Buffer: &gputypes.BufferBindingLayout{Type: gputypes.BufferBindingTypeUniform}},
 		{Binding: 1, Visibility: wgpu.ShaderStageCompute, Buffer: &gputypes.BufferBindingLayout{Type: gputypes.BufferBindingTypeStorage}},
 	}})
@@ -195,7 +195,7 @@ func compileShader(dev *wgpu.Device, code string) (_ *gpuPipeline, err error) {
 // browser's WebGPU API exposes no backend or device type at all, only a
 // name, so there the backend field carries no information and only an
 // explicit CPU device type is refused.
-func adapterUsable(info wgpu.AdapterInfo, browser bool) error {
+func adapterUsable(info gputypes.AdapterInfo, browser bool) error {
 	if info.DeviceType == gputypes.DeviceTypeCPU {
 		return errors.New("a hardware GPU is required for this example")
 	}

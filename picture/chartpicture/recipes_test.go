@@ -84,6 +84,21 @@ func TestEChartsJSONRecipeBadJSON(t *testing.T) {
 	}
 }
 
+func TestEChartsJSONRecipeUnsupportedStackGroups(t *testing.T) {
+	r := newEChartsJSONRecipe(`{"series": [
+		{"type": "bar", "stack": "a", "data": [1, 2]},
+		{"type": "bar", "stack": "b", "data": [3, 4]}
+	]}`)
+	buf, err := r(500, 300, "")
+	if err == nil || !strings.Contains(err.Error(), "convert ECharts JSON") ||
+		!strings.Contains(err.Error(), "single stack group") {
+		t.Fatalf("expected conversion error describing unsupported stack groups, got %v", err)
+	}
+	if len(buf) != 0 {
+		t.Fatal("invalid chart should not produce PNG output")
+	}
+}
+
 func TestPainterFuncRecipe(t *testing.T) {
 	called := false
 	r := newPainterFuncRecipe(func(p *charts.Painter) error {

@@ -63,7 +63,10 @@ func newEChartsJSONRecipe(jsonStr string) renderRecipe {
 		if err := json.Unmarshal([]byte(jsonStr), &eo); err != nil {
 			return nil, fmt.Errorf("chartpicture: parse ECharts JSON: %w", err)
 		}
-		opt := eo.ToOption()
+		opt, err := eo.ToOption()
+		if err != nil {
+			return nil, fmt.Errorf("chartpicture: convert ECharts JSON: %w", err)
+		}
 		funcs := []charts.OptionFunc{
 			charts.DimensionsOptionFunc(w, h),
 			charts.PNGOutputOptionFunc(),
