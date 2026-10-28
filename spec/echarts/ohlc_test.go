@@ -95,3 +95,35 @@ func TestOHLCVolumeExport(t *testing.T) {
 		t.Fatal("absent volume changed export")
 	}
 }
+
+func TestOHLCVolumeShowGrid(t *testing.T) {
+	for _, show := range []bool{false, true} {
+		v := 100.0
+		s := spec.Spec{Type: spec.ChartTypeOHLC, Width: 800, Height: 600, Options: spec.Options{Volume: true, ShowGrid: show}, Data: spec.Data{Series: []spec.Series{{Name: "Price", OHLC: []spec.OHLCPoint{{T: "2026-01-02", O: 1, H: 3, L: 1, C: 2, V: &v}}}}}}
+		result, err := echarts.ToECharts(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		k := result.(*charts.Kline)
+		raw, err := json.Marshal(k.JSON())
+		if err != nil {
+			t.Fatal(err)
+		}
+		var option struct {
+			Grids []struct {
+				Show *bool `json:"show"`
+			} `json:"grid"`
+		}
+		if err := json.Unmarshal(raw, &option); err != nil {
+			t.Fatal(err)
+		}
+		if len(option.Grids) != 2 {
+			t.Fatal("missing grids")
+		}
+		for i, g := range option.Grids {
+			if g.Show == nil || *g.Show != show {
+				t.Fatalf("grid %d does not preserve ShowGrid=%v: %s", i, show, raw)
+			}
+		}
+	}
+}

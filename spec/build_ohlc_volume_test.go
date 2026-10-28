@@ -3,6 +3,7 @@
 package spec
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"encoding/json"
 	"math"
 	"reflect"
@@ -241,6 +242,53 @@ func TestOHLCVolumeLabelsAndColours(t *testing.T) {
 		}
 		if index != 4 {
 			t.Fatalf("got %d volume runs", index)
+		}
+	}
+}
+
+func TestOHLCVolumeResizeViewport(t *testing.T) {
+	for _, viaUpdate := range []bool{false, true} {
+		s := ohlcSpec()
+		s.Width, s.Height = 40, 16
+		s.Options.Volume = true
+		s.XAxis.Format = Format{Kind: "time", Layout: "Jan 02"}
+		v := 12300.0
+		for i := range s.Data.Series[0].OHLC {
+			s.Data.Series[0].OHLC[i].V = &v
+		}
+		built, err := Build(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := built.(*OHLCModel)
+		for _, size := range [][2]int{{60, 30}, {32, 12}, {80, 24}} {
+			w, h := size[0], size[1]
+			if viaUpdate {
+				updated, _ := m.Update(tea.WindowSizeMsg{Width: w, Height: h})
+				m = &updated
+			} else {
+				m.Resize(w, h)
+			}
+			lines := strings.Split(stripAnsi(m.View()), "\n")
+			if len(lines) != h {
+				t.Fatalf("Update=%v: got %d rows, want %d", viaUpdate, len(lines), h)
+			}
+			for _, line := range lines {
+				if len([]rune(line)) != w {
+					t.Fatalf("Update=%v: got %d columns, want %d", viaUpdate, len([]rune(line)), w)
+				}
+			}
+			if !strings.Contains(lines[h-3], "█") || !strings.Contains(lines[h-1], "Jan") {
+				t.Fatal("resized view clips volume or time labels")
+			}
+			s.Width, s.Height = w, h
+			fresh, err := Build(s)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if m.View() != fresh.(*OHLCModel).View() {
+				t.Fatal("resized view differs from fresh build")
+			}
 		}
 	}
 }

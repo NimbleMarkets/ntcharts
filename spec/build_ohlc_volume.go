@@ -30,7 +30,9 @@ func buildOHLCVolume(s Spec) (*OHLCModel, error) {
 
 // Resize redraws both panels. Undersized windows are blank and recover on resize.
 func (m *OHLCModel) Resize(w, h int) {
-	m.Model.Resize(max(0, w), max(0, h))
+	w, h = max(0, w), max(0, h)
+	m.Model.Resize(w, h)
+	m.ViewWidth, m.ViewHeight = w, h
 	m.Draw()
 }
 

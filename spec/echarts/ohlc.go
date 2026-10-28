@@ -57,8 +57,8 @@ func toEChartsOHLC(s spec.Spec) (*charts.Kline, error) {
 	// Equal fixed margins keep the two category scales aligned even when their
 	// Y labels have different lengths. Category slots preserve missing volumes.
 	k.GridList = []opts.Grid{
-		{Left: "12%", Right: "8%", Top: "10%", Height: "52%"},
-		{Left: "12%", Right: "8%", Top: "68%", Height: "20%"},
+		{Show: opts.Bool(s.Options.ShowGrid), Left: "12%", Right: "8%", Top: "10%", Height: "52%"},
+		{Show: opts.Bool(s.Options.ShowGrid), Left: "12%", Right: "8%", Top: "68%", Height: "20%"},
 	}
 	k.XAxisList[0].AxisLabel = &opts.AxisLabel{Show: opts.Bool(false)}
 	k.XAxisList[0].Name = ""
