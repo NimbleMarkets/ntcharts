@@ -636,3 +636,49 @@ func (m Model) View() (r string) {
 	}
 	return
 }
+
+// SegmentAt resolves a local canvas cell to a bar and stacked segment.
+// Gaps, labels, axes and zero-length segments return ok=false. A cell shared
+// by fractional segments belongs to the inner segment, matching draw order.
+func (m *Model) SegmentAt(p canvas.Point) (bar, segment int, ok bool) {
+	if p.X < 0 || p.Y < 0 || p.X >= m.Width() || p.Y >= m.Height() {
+		return
+	}
+	cross, distance, negative := p.X, m.origin.Y-1-p.Y, false
+	if m.horizontal {
+		cross, distance = p.Y, p.X-m.origin.X-m.axisOffset()
+	}
+	if distance < 0 {
+		negative = true
+		if m.horizontal {
+			distance = m.origin.X - 1 - p.X
+		} else {
+			distance = p.Y - m.origin.Y - m.axisOffset()
+		}
+	}
+	if distance < 0 || cross < 0 || cross >= len(m.barIndices) {
+		return
+	}
+	limit := m.posCells
+	if negative {
+		limit = m.negCells
+	}
+	if distance >= limit {
+		return
+	}
+	bar = m.barIndices[cross]
+	if bar < 0 || bar >= len(m.data) {
+		return
+	}
+	sum := 0.0
+	for j, v := range m.data[bar].buf.ReadAll() {
+		if (v < 0) != negative || v == 0 {
+			continue
+		}
+		sum += math.Abs(v)
+		if float64(distance) < math.Ceil(math.Round(sum*8)/8) {
+			return bar, j, true
+		}
+	}
+	return bar, 0, false
+}

@@ -264,6 +264,9 @@ type Series struct {
 // (numeric value). When unmarshaled from JSON, time values are represented
 // as RFC 3339 strings and resolved by helpers in this package when needed.
 type DataPoint struct {
+	// Mark identifies this observation for interactive rendering.
+	Mark *MarkMetadata `json:"mark,omitempty"`
+
 	// X is the independent-axis coordinate.
 	X any `json:"x,omitempty"`
 	// Y is the dependent-axis value.
@@ -291,6 +294,9 @@ type OHLCPoint struct {
 
 // HeatCell is a single (x, y, z) datum in a HeatData.Cells list.
 type HeatCell struct {
+	// Mark identifies this cell for interactive rendering.
+	Mark *MarkMetadata `json:"mark,omitempty"`
+
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
 	Z float64 `json:"z"`

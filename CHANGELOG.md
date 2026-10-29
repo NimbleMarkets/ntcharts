@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## Unreleased
+
+ * Make interactive focus and selection visible on monochrome bars using ASCII badges and distinct focus/selection colors instead of underlining or reversing solid blocks.
+
+ * Add opt-in `spec.BuildInteractive` for bar, scatter and heatmap marks: keyboard inspection, click selection, highlight/clear operations, source-field events and selection-preserving resize. Existing `spec.Build` behavior is unchanged.
+
 ## v2.9.0 (2026-10-28)
 
  * feat(spec): Add categorical bar/line combo charts in terminal and ECharts output, with left-axis bars and a right-axis line, independent ranges and formats, negative bars, sparse values, and aligned category centers. Terminal `Build` returns `*spec.ComboModel`. Add `examples/combo-categorical` for terminal and HTML rendering. **Behaviour change (terminal):** unsupported mixed-series specs, including timeseries bar/line mixtures, now return an error instead of silently drawing bars as lines.

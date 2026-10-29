@@ -611,3 +611,46 @@ The slot and label helpers are shared with the categorical Combo renderer.
 Titles, legends, jitter, and point-size rendering are not added by this path.
 This change is in the terminal builder; the ECharts adapter's line/scatter
 support remains separate.
+
+## Selectable marks
+
+`BuildInteractive(s)` opts into interaction for bar, scatter (numeric or categorical),
+and heatmap specs. `Build(s)` keeps its existing return types and behavior. Combos
+and other chart families are not supported by the interactive model yet.
+
+Attach `mark: {"id":"observation-1","fields":{"Country":"Japan","Sales":42}}`
+to a `DataPoint` or `HeatCell`. IDs must be nonempty and unique within the chart.
+Fields are arbitrary JSON values supplied by the producer, copied into inspection
+and selection events. Aggregate marks should describe their aggregate. The model
+never guesses source field names. With no metadata it provides positional IDs and
+coordinate fields; these IDs are not stable across data reorderings. If any mark
+has metadata, points without it are treated as synthetic/noninteractive slots.
+
+The pointer model provides:
+
+- `Update(msg) tea.Cmd`: arrows/Tab inspect; Home/End jump; Enter/Space toggle
+  selection; Escape clears. Deliver the returned command's message to your host.
+- `InspectionMsg` and `SelectionMsg`: independent snapshots, carrying IDs and
+  field values. Selection messages contain the entire selection in chart order.
+- `Inspect(id)`, `Highlight(ids...)`, `Clear()`: direct host operations. Highlight
+  replaces selection atomically and rejects unknown IDs. Direct operations return
+  events; they do not dispatch messages or invoke callbacks themselves.
+- `Focused()`, `Marks()`, `Selection()`: independent state snapshots.
+- `HitTest(canvas.Point)`: all observations at a chart-local terminal cell;
+  repeated left clicks cycle overlapping observations. Hosts must subtract their
+  pane's screen offset before forwarding mouse messages.
+- `Resize(w,h) error`: recompute drawing/hit geometry, retain selection and focus.
+  A rejected size leaves the previous view intact.
+
+Selected marks use yellow and focused marks use cyan; other marks become faint.
+ASCII badges remain visible without color: `>` means focused, `*` means selected,
+and `@` means both. Badges occupy one painted cell per active mark. Clear restores authored styling without clearing keyboard focus.
+Selection is mark-level; a cell shared by several scatter marks is emphasized when
+any of its marks is selected. All observations remain keyboard-addressable, including
+zero-height bars and points clipped by axis limits, which have no mouse hit region.
+Terminal cells cannot distinguish sub-cell bar segment boundaries; picking follows
+paint order. JSON fields are data only, not executable interaction handlers.
+
+This is a terminal interaction API, not an implementation of Flint's full browser
+interaction language. Applications coordinate linked charts by reading field values
+from events and calling `Highlight` on matching IDs in another chart.

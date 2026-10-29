@@ -954,3 +954,20 @@ func (m Model) View() (r string) {
 	}
 	return
 }
+
+// PointCell returns the terminal cell used by DrawRune for a data point.
+// Points outside the current plot (including nonfinite or invalid log values)
+// have no cell. Coordinates are local to the chart canvas.
+func (m *Model) PointCell(f canvas.Float64Point) (canvas.Point, bool) {
+	if !m.drawable(f) {
+		return canvas.Point{}, false
+	}
+	p := canvas.CanvasPointFromFloat64Point(m.origin, m.ScaleFloat64Point(f))
+	if m.yStep > 0 {
+		p.X++
+	}
+	if m.xStep > 0 {
+		p.Y--
+	}
+	return p, m.inPlot(p)
+}

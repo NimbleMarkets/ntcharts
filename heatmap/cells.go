@@ -181,3 +181,20 @@ func (m *Model) XLabels() []string { return m.xLabels }
 
 // YLabels returns the cell row labels.
 func (m *Model) YLabels() []string { return m.yLabels }
+
+// CellPoints returns the canvas cells covered by a data cell, in draw order.
+// It uses the same clipping and rounding as DrawPoint.
+func (m *Model) CellPoints(pt HeatPoint) []canvas.Point {
+	if m.cellW <= 0 || m.cellH <= 0 {
+		return nil
+	}
+	left, bottom := m.graphBox()
+	c0, c1, r0, r1 := m.cellSpans(pt.X, pt.Y, m.cellW, m.cellH)
+	var points []canvas.Point
+	for r := r0; r < r1; r++ {
+		for c := c0; c < c1; c++ {
+			points = append(points, canvas.Point{X: left + c, Y: bottom - r})
+		}
+	}
+	return points
+}
