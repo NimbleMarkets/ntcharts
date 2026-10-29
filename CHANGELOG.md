@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v2.9.0 (unreleased)
+## v2.9.0 (2026-10-28)
 
  * feat(spec): Add categorical bar/line combo charts in terminal and ECharts output, with left-axis bars and a right-axis line, independent ranges and formats, negative bars, sparse values, and aligned category centers. Terminal `Build` returns `*spec.ComboModel`. Add `examples/combo-categorical` for terminal and HTML rendering. **Behaviour change (terminal):** unsupported mixed-series specs, including timeseries bar/line mixtures, now return an error instead of silently drawing bars as lines.
  * feat(spec): Render categorical line and scatter charts with ordered category labels, sparse line gaps, repeated scatter observations, dual Y axes, log Y scales, and resize redraws. With `x_axis.type: "category"`, terminal `Build` returns `*spec.CategoricalModel`; numeric chart return types are unchanged.
