@@ -1,9 +1,14 @@
 # CHANGELOG
 
-## Unreleased
+## v2.9.0 (unreleased)
 
+ * feat(spec): Add categorical bar/line combo charts in terminal and ECharts output, with left-axis bars and a right-axis line, independent ranges and formats, negative bars, sparse values, and aligned category centers. Terminal `Build` returns `*spec.ComboModel`. Add `examples/combo-categorical` for terminal and HTML rendering. **Behaviour change (terminal):** unsupported mixed-series specs, including timeseries bar/line mixtures, now return an error instead of silently drawing bars as lines.
+ * feat(spec): Render categorical line and scatter charts with ordered category labels, sparse line gaps, repeated scatter observations, dual Y axes, log Y scales, and resize redraws. With `x_axis.type: "category"`, terminal `Build` returns `*spec.CategoricalModel`; numeric chart return types are unchanged.
  * feat(spec): Add optional OHLC volume sub-panels through `OHLCPoint.V` (`v`) and `Options.Volume` (`volume`). Terminal `Build` returns `*spec.OHLCModel` when volume is enabled and present, with aligned candle/bar widths, matching up/down colours, an SI volume scale, bottom-only time labels, and resize redraws. Existing panel-off JSON and rendering are preserved.
- * feat(echarts): Implement OHLC candlestick export with an optional second volume grid, linked category axes and data zoom, per-candle volume colours, and an axis tooltip. Add `examples/ohlc-volume` for terminal and HTML rendering.
+ * feat(echarts): Implement OHLC candlestick export with an optional second volume grid, linked category axes and data zoom, per-candle volume colours, and an axis tooltip. `ShowGrid` is respected on both grids. Add `examples/ohlc-volume` for terminal and HTML rendering.
+ * perf(picture): Render Glyph frames directly at half-block resolution and reuse image, scaler, and ANSI buffers, reducing per-frame work and allocations. Previously returned views remain immutable. **Visual change:** single-pass resampling can produce different filtered colours from the previous two-stage pipeline. Remove the pixterm and disintegration/imaging module dependencies.
+ * fix(chartpicture): Report ECharts JSON conversion errors, including unsupported multiple stack groups, instead of proceeding with invalid chart options.
+ * chore(deps): Update dependencies across all six modules, including Bubble Tea v2.1.1, go-booba v0.10.7 (examples and asset tool), go-analyze/charts v0.6.4, go-echarts v2.7.3, and wgpu v0.34.5. Adapt shader examples to the updated GPU types API.
 
 ## v2.8.0 (2026-10-10)
 
