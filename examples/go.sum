@@ -1,11 +1,11 @@
 charm.land/bubbles/v2 v2.2.1 h1:Fq1+qm5hV6GkvzLQDhCBpXXE5tLgvh1PRriCLwSvIQU=
 charm.land/bubbles/v2 v2.2.1/go.mod h1:wdMgn+sje1KNXdwFizIWjbf328fIUBxqEmJ/vYPo8yc=
-charm.land/bubbletea/v2 v2.1.0 h1:A9fj9h5LFrvQhQHFNggp8K8rvY6CUfgn9dMbb6p2HIw=
-charm.land/bubbletea/v2 v2.1.0/go.mod h1:xWHeyxIX9/wiFU2kgPW04ojOZyTzrWf+8lGjUCaftiU=
+charm.land/bubbletea/v2 v2.1.1 h1:S1S9l37pCZGrj1JexBcr9x4Nr3MVeM42InqCYM/tDpU=
+charm.land/bubbletea/v2 v2.1.1/go.mod h1:xWHeyxIX9/wiFU2kgPW04ojOZyTzrWf+8lGjUCaftiU=
 charm.land/lipgloss/v2 v2.0.6 h1:EaGKeuA8FvF+v2BT5VmZd2LoYLaMZJXA5n34th8nCIQ=
 charm.land/lipgloss/v2 v2.0.6/go.mod h1:ipDDJNSGa1hlwDtSfW1s2/xR8Vdhbut4PXh2zEKZd0Q=
-github.com/NimbleMarkets/go-booba v0.10.4 h1:kX1GBMJsh+MzFiwPiflhc2YRvXhPzKXfKpOv7sVc6eo=
-github.com/NimbleMarkets/go-booba v0.10.4/go.mod h1:i/XjhpdZ8B+gXeaYLQ1HQLw0QOh9Cg/t2I2lNKDSynw=
+github.com/NimbleMarkets/go-booba v0.10.7 h1:Zvsiq41xKQK7FuTCk8NjvKNeE/rOkUq5gWxm012L37Q=
+github.com/NimbleMarkets/go-booba v0.10.7/go.mod h1:m7Zgc59llJ3vsay7dehtoPEXuNoy0DOP2ui3PaHoNsw=
 github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.8.0 h1:PG9117yBLWL6KUjljS9P6m33I1AlYqUAaqfPz1eQLIw=
 github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.8.0/go.mod h1:YcSS5OxlX/UDkygvGR0lwBnCyweOmAvAJI8Es7l3OFg=
 github.com/NimbleMarkets/ntcharts/spec/echarts/v2 v2.8.0 h1:djXvV8VOyBhTqwtCCmpKY+IWhs5TZOt1mfB9PZ/YQig=

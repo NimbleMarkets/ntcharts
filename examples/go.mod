@@ -4,9 +4,9 @@ go 1.26.8
 
 require (
 	charm.land/bubbles/v2 v2.2.1
-	charm.land/bubbletea/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.0.6
-	github.com/NimbleMarkets/go-booba v0.10.4
+	github.com/NimbleMarkets/go-booba v0.10.7
 	github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2 v2.8.0
 	github.com/NimbleMarkets/ntcharts/spec/echarts/v2 v2.8.0
 	github.com/NimbleMarkets/ntcharts/v2 v2.8.0

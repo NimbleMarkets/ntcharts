@@ -3,9 +3,9 @@ module github.com/NimbleMarkets/ntcharts/examples/shaders/v2
 go 1.26.8
 
 require (
-	charm.land/bubbletea/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.0.6
-	github.com/NimbleMarkets/go-booba v0.10.4
+	github.com/NimbleMarkets/go-booba v0.10.7
 	github.com/NimbleMarkets/ntcharts/v2 v2.8.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20261023060817-a45b7c86333f
 	github.com/charmbracelet/x/ansi v0.11.9

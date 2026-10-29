@@ -3,7 +3,7 @@ module github.com/NimbleMarkets/ntcharts/picture/chartpicture/v2
 go 1.26.8
 
 require (
-	charm.land/bubbletea/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.1.1
 	github.com/NimbleMarkets/ntcharts/v2 v2.8.0
 	github.com/go-analyze/charts v0.6.4
 )
