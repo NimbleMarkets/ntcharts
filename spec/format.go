@@ -15,7 +15,7 @@ import (
 func FormatValue(f Format, v float64) string {
 	prec := -1
 	if f.Precision != nil {
-		prec = *f.Precision
+		prec = min(*f.Precision, 64)
 	}
 	switch f.Kind {
 	case "percent":

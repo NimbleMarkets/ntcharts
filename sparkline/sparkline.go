@@ -41,7 +41,7 @@ func New(w, h int, opts ...Option) Model {
 		Style:        lipgloss.NewStyle(),
 		Canvas:       canvas.New(w, h),
 		max:          1,
-		buf:          buffer.NewFloat64ScaleRingBuffer(2*w, 0, float64(h)/1),
+		buf:          buffer.NewFloat64ScaleRingBuffer(max(2*w, 0), 0, float64(h)/1),
 	}
 	for _, opt := range opts {
 		opt(&m)
@@ -84,8 +84,9 @@ func (m *Model) Resize(w, h int) {
 	m.Canvas.Resize(w, h)
 	m.Canvas.ViewWidth = w
 	m.Canvas.ViewHeight = h
-	if m.buf.Size() != 2*w {
-		buf := buffer.NewFloat64ScaleRingBuffer(2*w, 0, float64(h)/m.max)
+	bufSize := max(2*w, 0)
+	if m.buf.Size() != bufSize {
+		buf := buffer.NewFloat64ScaleRingBuffer(bufSize, 0, float64(h)/m.max)
 		for _, f := range m.buf.ReadAllRaw() {
 			buf.Push(f)
 		}
@@ -105,7 +106,10 @@ func (m *Model) Clear() {
 // Negative values will be treated as the value 0.
 // Data will be scaled using expected max value and sparkline height.
 func (m *Model) Push(f float64) {
-	v := math.Max(f, 0)
+	var v float64
+	if f > 0 && !math.IsInf(f, 0) {
+		v = f
+	}
 	if m.AutoMaxValue && v > m.max {
 		m.SetMax(v)
 	}
@@ -123,6 +127,9 @@ func (m *Model) PushAll(f []float64) {
 
 // latest returns up to the n most recent scaled data values.
 func (m *Model) latest(n int) []float64 {
+	if n <= 0 {
+		return nil
+	}
 	d := m.buf.ReadAll()
 	if len(d) > n {
 		d = d[len(d)-n:]
@@ -197,6 +204,9 @@ func (m *Model) DrawQuadrants() {
 func (m *Model) DrawQuadrantsColumnsOnly() {
 	m.Canvas.Clear()
 	w, h := m.Width(), m.Height()
+	if w <= 0 || h <= 0 {
+		return
+	}
 	d := m.latest(2 * w)
 	// half rows filled by each half column, with the latest value on the right
 	n := make([]int, 2*w)

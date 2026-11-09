@@ -89,7 +89,7 @@ func New(w, h int, opts ...Option) Model {
 		origin:       canvas.Point{X: 0, Y: h - 2},
 		barWidth:     1,
 		barGap:       1,
-		barIndices:   make([]int, w),
+		barIndices:   make([]int, max(w, 0)),
 		max:          1,
 		sf:           1,
 		data:         []*dataSet{},
@@ -207,7 +207,7 @@ func (m *Model) resetBarWidth() {
 		gaps := (dLen - 1) * m.barGap // total space used by gaps
 		size := graphSize - gaps      // total available space for bars
 		if dLen > 0 {
-			m.barWidth = size / dLen // each bar width
+			m.barWidth = max(size/dLen, 0) // each bar width
 		}
 	}
 }
@@ -237,6 +237,9 @@ func (m *Model) resetBarIndices() {
 	barCount := len(m.data) // number of bars to display
 	end := len(m.barIndices)
 	for i := 0; i < end; i += m.barWidth {
+		if m.barWidth <= 0 {
+			break
+		}
 		j := i
 		jEnd := i + m.barWidth
 		for j < jEnd {

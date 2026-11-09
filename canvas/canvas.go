@@ -167,6 +167,12 @@ type Model struct {
 // New returns a canvas Model initialized with given width, height
 // and various options.
 func New(w, h int, opts ...Option) Model {
+	if w < 0 {
+		w = 0
+	}
+	if h < 0 {
+		h = 0
+	}
 	m := Model{
 		Style:         defaultStyle,
 		KeyMap:        DefaultKeyMap(),
@@ -205,15 +211,17 @@ func (m *Model) Cursor() Point {
 func (m *Model) SetCursor(p Point) {
 	m.cursor.X = p.X
 	m.cursor.Y = p.Y
+	if m.cursor.X >= m.area.Dx() {
+		m.cursor.X = m.area.Dx() - 1
+	}
 	if m.cursor.X < 0 {
 		m.cursor.X = 0
-	} else if m.cursor.X >= m.area.Dx() {
-		m.cursor.X = m.area.Dx() - 1
+	}
+	if m.cursor.Y >= m.area.Dy() {
+		m.cursor.Y = m.area.Dy() - 1
 	}
 	if m.cursor.Y < 0 {
 		m.cursor.Y = 0
-	} else if m.cursor.Y >= m.area.Dy() {
-		m.cursor.Y = m.area.Dy() - 1
 	}
 }
 
@@ -430,6 +438,9 @@ func (m *Model) ZoneID() string {
 // Last CellLine will be set to a new CellLine.
 func (m *Model) ShiftUp() {
 	c := m.content
+	if len(c) == 0 {
+		return
+	}
 	copy(c, c[1:])
 	c[len(c)-1] = make(CellLine, m.area.Dx())
 }
@@ -438,6 +449,9 @@ func (m *Model) ShiftUp() {
 // First CellLine will be set to a new CellLine.
 func (m *Model) ShiftDown() {
 	c := m.content
+	if len(c) == 0 {
+		return
+	}
 	copy(c[1:], c)
 	c[0] = make(CellLine, m.area.Dx())
 }
@@ -447,6 +461,9 @@ func (m *Model) ShiftDown() {
 func (m *Model) ShiftLeft() {
 	for i := range m.content {
 		cl := m.content[i]
+		if len(cl) == 0 {
+			continue
+		}
 		copy(cl, cl[1:])
 		cl[len(cl)-1] = Cell{}
 	}
@@ -457,6 +474,9 @@ func (m *Model) ShiftLeft() {
 func (m *Model) ShiftRight() {
 	for i := range m.content {
 		cl := m.content[i]
+		if len(cl) == 0 {
+			continue
+		}
 		copy(cl[1:], cl)
 		cl[0] = Cell{}
 	}

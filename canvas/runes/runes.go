@@ -135,8 +135,8 @@ type PatternDotsGrid struct {
 // NewPatternDotsGrid returns new initialized *PatternDotsGrid
 func NewPatternDotsGrid(w, h int) *PatternDotsGrid {
 	g := PatternDotsGrid{
-		w: w,
-		h: h,
+		w: max(w, 0),
+		h: max(h, 0),
 	}
 	g.Reset()
 	return &g
@@ -291,7 +291,7 @@ func IsLowerBlockElement(r rune) bool {
 func LowerBlockElementFromFloat64(f float64) rune {
 	if f >= 1 {
 		return lowerBlockElements[8]
-	} else if f <= 0 {
+	} else if !(f > 0) {
 		return lowerBlockElements[0]
 	}
 	e := int(f / .125) // number of 1/8s blocks to show
@@ -348,7 +348,7 @@ func IsLeftBlockElement(r rune) bool {
 func LeftBlockElementFromFloat64(f float64) rune {
 	if f >= 1 {
 		return leftBlockElements[8]
-	} else if f <= 0 {
+	} else if !(f > 0) {
 		return leftBlockElements[0]
 	}
 	e := int(f / .125) // number of 1/8s blocks to show

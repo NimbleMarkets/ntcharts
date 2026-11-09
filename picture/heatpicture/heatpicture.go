@@ -138,7 +138,7 @@ func NewWithConfig(cfg Config) Model {
 	if cfg.CellPixelHeight <= 0 {
 		cfg.CellPixelHeight = 16
 	}
-	if cfg.SamplingFactor <= 0 || cfg.SamplingFactor > 1 {
+	if !(cfg.SamplingFactor > 0 && cfg.SamplingFactor <= 1) {
 		cfg.SamplingFactor = 1.0
 	}
 	picCfg := picture.Config{
@@ -219,7 +219,7 @@ func (m *Model) SamplePixelSize() (w, h int) {
 // Kitty fidelity. Returns a render Cmd if the new value differs and a
 // render isn't already in flight; nil otherwise.
 func (m *Model) SetSamplingFactor(f float64) tea.Cmd {
-	if f <= 0 || f > 1 {
+	if !(f > 0 && f <= 1) {
 		f = 1.0
 	}
 	if f == m.samplingFactor {
@@ -552,7 +552,7 @@ func sampleField(
 		return nil, fmt.Errorf("heatpicture: zero pixel size (%dx%d)", pixelW, pixelH)
 	}
 	valSpan := maxV - minV
-	if valSpan == 0 {
+	if !(valSpan != 0) {
 		// Avoid div-by-zero; treat all samples as t=0.
 		valSpan = 1
 	}
@@ -579,7 +579,7 @@ func sampleField(
 			dx := minX + xSpan*tx
 			val := sampler(dx, dy)
 			t := (val - minV) * invValSpan
-			if t < 0 {
+			if !(t > 0) {
 				t = 0
 			} else if t > 1 {
 				t = 1

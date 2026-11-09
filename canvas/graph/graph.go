@@ -388,7 +388,7 @@ func DrawColumns(m *canvas.Model, p canvas.Point, seqLen []float64, s lipgloss.S
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawColumnBottomToTop(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
-	if v <= 0 {
+	if !(v > 0) || math.IsInf(v, 0) {
 		return
 	}
 	x := p.X
@@ -450,7 +450,7 @@ func DrawColumnBottomToTop(m *canvas.Model, p canvas.Point, v float64, s lipglos
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawColumnTopToBottom(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
-	if v <= 0 {
+	if !(v > 0) || math.IsInf(v, 0) {
 		return
 	}
 	n := math.Floor(v)
@@ -484,7 +484,7 @@ func DrawColumnTopToBottom(m *canvas.Model, p canvas.Point, v float64, s lipglos
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawRowRightToLeft(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
-	if v <= 0 {
+	if !(v > 0) || math.IsInf(v, 0) {
 		return
 	}
 	n := math.Floor(v)
@@ -614,7 +614,7 @@ func DrawRows(m *canvas.Model, p canvas.Point, seqLen []float64, s lipgloss.Styl
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawRowLeftToRight(m *canvas.Model, p canvas.Point, v float64, s lipgloss.Style) {
-	if v <= 0 {
+	if !(v > 0) || math.IsInf(v, 0) {
 		return
 	}
 	x := p.X
@@ -729,7 +729,7 @@ func GetFullCirclePointsWithLimit(c canvas.Point, r int, limit int) (p []canvas.
 
 	// Fast fail: area of a circle is approx pi * r^2.
 	// Using 3 * r^2 as a conservative lower bound for the check.
-	if 3*r*r > limit {
+	if r > limit/3/r {
 		return nil
 	}
 
@@ -791,7 +791,7 @@ func GetCirclePointsWithLimit(c canvas.Point, r int, limit int) (p []canvas.Poin
 	// (8 per iteration over ~r/sqrt(2) iterations). 4*r is a conservative
 	// lower bound on the actual count, so if it already exceeds the limit
 	// the real output certainly will.
-	if 4*r > limit {
+	if r > limit/4 {
 		return nil
 	}
 
@@ -843,11 +843,16 @@ func GetLinePointsWithLimit(p1 canvas.Point, p2 canvas.Point, limit int) []canva
 	// per unit of the longest axis.
 	dx := abs(p2.X - p1.X)
 	dy := abs(p2.Y - p1.Y)
+	if (p2.X > p1.X && p2.X-p1.X < 0) || (p1.X > p2.X && p1.X-p2.X < 0) ||
+		(p2.Y > p1.Y && p2.Y-p1.Y < 0) || (p1.Y > p2.Y && p1.Y-p2.Y < 0) ||
+		dx < 0 || dy < 0 {
+		return nil
+	}
 	count := dx
 	if dy > dx {
 		count = dy
 	}
-	if count+1 > limit {
+	if count >= limit {
 		return nil
 	}
 
@@ -940,6 +945,10 @@ func getLinePointsHigh(p1 canvas.Point, p2 canvas.Point) (r []canvas.Point) {
 // Applies style to all block runes.
 // Coordinates (0,0) is top left of canvas.
 func DrawCandlestickBottomToTop(m *canvas.Model, p canvas.Point, l, bl, bh, h float64, s lipgloss.Style) {
+	if math.IsNaN(l) || math.IsNaN(bl) || math.IsNaN(bh) || math.IsNaN(h) ||
+		math.IsInf(l, 0) || math.IsInf(bl, 0) || math.IsInf(bh, 0) || math.IsInf(h, 0) {
+		return
+	}
 	// bottom wick
 	lf := math.Floor(l)
 	lr := runes.LineUp
@@ -1038,6 +1047,10 @@ func DrawCandlestickBottomToTopWide(m *canvas.Model, p canvas.Point, width int, 
 // as one FullBlock. Value semantics of l, bl, bh, h match
 // DrawCandlestickBottomToTop; coordinates (0,0) is top left of canvas.
 func DrawCandlestickBlockBottomToTop(m *canvas.Model, p canvas.Point, l, bl, bh, h float64, s lipgloss.Style) {
+	if math.IsNaN(l) || math.IsNaN(bl) || math.IsNaN(bh) || math.IsNaN(h) ||
+		math.IsInf(l, 0) || math.IsInf(bl, 0) || math.IsInf(bh, 0) || math.IsInf(h, 0) {
+		return
+	}
 	set := func(row int, r rune) {
 		m.SetCell(canvas.Point{X: p.X, Y: p.Y - row}, canvas.NewCellWithStyle(r, s))
 	}

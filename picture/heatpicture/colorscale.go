@@ -18,7 +18,7 @@ func colorAt(scale []color.RGBA, t float64) color.RGBA {
 	if len(scale) == 1 {
 		return scale[0]
 	}
-	if t <= 0 {
+	if !(t > 0) {
 		return scale[0]
 	}
 	if t >= 1 {

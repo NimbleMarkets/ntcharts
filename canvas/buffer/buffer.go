@@ -138,6 +138,9 @@ type Float64ScaleRingBuffer struct {
 
 // NewFloat64ScaleRingBuffer returns *Float64ScaleRingBuffer initialized to default settings.
 func NewFloat64ScaleRingBuffer(s int, o, sc float64) *Float64ScaleRingBuffer {
+	if s < 0 {
+		s = 0
+	}
 	return &Float64ScaleRingBuffer{
 		buf:    make([]float64, s),
 		sbuf:   make([]float64, s),
@@ -199,6 +202,9 @@ func (b *Float64ScaleRingBuffer) SetOffset(o float64) {
 
 // Push adds float64 data to the back of the buffer.
 func (b *Float64ScaleRingBuffer) Push(f float64) {
+	if b.sz <= 0 {
+		return
+	}
 	b.buf[b.wIdx] = f
 	b.sbuf[b.wIdx] = b.ScaleDatum(f)
 	b.wIdx++
@@ -217,6 +223,9 @@ func (b *Float64ScaleRingBuffer) Push(f float64) {
 
 // Pop erases the oldest float64 from the buffer.
 func (b *Float64ScaleRingBuffer) Pop() {
+	if b.length <= 0 || b.sz <= 0 {
+		return
+	}
 	b.rIdx++
 	if b.rIdx >= b.sz {
 		b.rIdx = 0
