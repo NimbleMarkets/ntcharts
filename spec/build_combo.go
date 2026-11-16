@@ -41,6 +41,12 @@ func buildCombo(s Spec) (*ComboModel, error) {
 	if s.Theme.Foreground != "" {
 		m.AxisStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(s.Theme.Foreground))
 	}
+	if s.Options.NiceTicks {
+		m.SetNiceTicks(false, true)
+		m.data.Min, m.data.Max = linechart.NiceRange(c.Min, c.Max, m.GraphHeight(), m.YStep())
+		m.SetYRange(m.data.Min, m.data.Max)
+		m.SetViewYRange(m.data.Min, m.data.Max)
+	}
 	if err := checkGraphSize(m.Model); err != nil {
 		return nil, err
 	}

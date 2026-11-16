@@ -394,6 +394,17 @@ func niceYRange(s Spec, m *linechart.Model, logY bool, min, max float64) (float6
 	return lo, hi
 }
 
+// niceTimeY is niceYRange for a time-series model, once its data is pushed.
+func niceTimeY(s Spec, m *timeserieslinechart.Model, logY bool) {
+	if !s.Options.NiceTicks || logY {
+		return
+	}
+	m.Model.SetNiceTicks(false, true)
+	lo, hi := linechart.NiceRange(m.MinY(), m.MaxY(), m.GraphHeight(), m.YStep())
+	m.SetYRange(lo, hi)
+	m.SetViewYRange(lo, hi)
+}
+
 // buildLine joins each series' points in input order on a base linechart.
 // Numeric X comes from the point, shared X data, or the point's index.
 // Linear ranges retain the native defaults (0..1), expanded around the data;
@@ -744,6 +755,7 @@ func buildTimeSeries(s Spec) (*timeserieslinechart.Model, error) {
 		}
 	}
 
+	niceTimeY(s, &m, logY)
 	if err := checkGraphSize(m.Model); err != nil {
 		return nil, err
 	}
@@ -1060,6 +1072,7 @@ func buildOHLCPrice(s Spec, labelWidth int) (*timeserieslinechart.Model, error) 
 		m.PushDataSet("close", timeserieslinechart.TimePoint{Time: ts, Value: p.C})
 	}
 
+	niceTimeY(s, &m, logY)
 	up := candleStyle(s.Theme, 0, defaultUpColor)
 	down := candleStyle(s.Theme, 1, defaultDownColor)
 

@@ -364,8 +364,8 @@ type Options struct {
 	// times a power of ten, or 25 times one) where they fall, and widens the
 	// left Y range, pinned bounds included, to whole multiples of that
 	// stride so it starts and ends on a label, as Vega-Lite's nice scales
-	// do (line, scatter and categorical line/scatter charts; a categorical X
-	// axis keeps its category labels).
+	// do (line, scatter, timeseries, OHLC and combo charts; a categorical
+	// or time X axis keeps its own labels).
 	NiceTicks bool `json:"nice_ticks,omitempty"`
 	// LegendPosition says where a host that frames the chart should put its
 	// legend: LegendTop, LegendBottom or LegendNone; empty is the host's

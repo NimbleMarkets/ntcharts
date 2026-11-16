@@ -3,9 +3,11 @@
 package spec
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -154,7 +156,7 @@ func TestNiceTicksLabelRoundValuesAndWidenTheRange(t *testing.T) {
 	if got := strings.Join(yAxisLabels(view(t, s)), " "); got != "125 120 115 110 105 100" {
 		t.Fatalf("Y labels = %q, want 125 down to 100 in fives", got)
 	}
-	if got := strings.Join(strings.Fields(lastLine(view(t, s))), " "); got != "0 50 100 150 200 250 300 350" {
+	if got := strings.Join(strings.Fields(lastLine(view(t, s))), " "); got != "0 100 200 300" {
 		t.Fatalf("X labels = %q", got)
 	}
 	s.Options.NiceTicks = false
@@ -169,5 +171,22 @@ func TestNiceTicksNeverRepeatALabel(t *testing.T) {
 	labels := yAxisLabels(view(t, s))
 	if got := strings.Join(labels, " "); got != "3 2 1 0" {
 		t.Fatalf("Y labels = %q, want 3 2 1 0", got)
+	}
+}
+
+func TestNiceTicksOnATimeSeries(t *testing.T) {
+	var pts []DataPoint
+	for i, y := range []float64{315.9, 331.2, 349.4, 371.3, 396.8, 421.1} {
+		pts = append(pts, DataPoint{X: time.Date(1960+i*10, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339), Y: y})
+	}
+	s := Spec{Type: ChartTypeTimeSeries, Width: 50, Height: 12, Options: Options{NiceTicks: true},
+		Data: Data{Series: []Series{{Name: "co2", Values: pts}}}}
+	if n := len(yAxisLabels(view(t, s))); n < 3 {
+		t.Fatalf("only %d Y labels", n)
+	}
+	for _, l := range yAxisLabels(view(t, s)) {
+		if v, err := strconv.ParseFloat(l, 64); err != nil || math.Mod(v, 20) != 0 {
+			t.Fatalf("Y label %q is not a round value: %q", l, yAxisLabels(view(t, s)))
+		}
 	}
 }

@@ -263,9 +263,14 @@ func (a niceAxis) at(v float64) (t tick, ok bool) {
 	return tick{pos: p, value: v, label: a.format(p, v)}, true
 }
 
-// clear reports whether tick hi can be drawn after tick lo.
+// clear reports whether tick hi can be drawn after tick lo: Y labels at
+// least step rows apart, X labels with three blank columns and six columns
+// between their starts, so a run of round values still reads as a scale.
 func (a niceAxis) clear(lo, hi tick) bool {
-	return logAxis{step: a.step, labelCells: a.labelCells}.clear(lo, hi)
+	if a.labelCells {
+		return hi.pos-lo.pos >= max(a.step, len(lo.label)+3, 6)
+	}
+	return hi.pos-lo.pos >= max(a.step, 1)
 }
 
 // ticks returns the labels at the multiples of the smallest stride whose

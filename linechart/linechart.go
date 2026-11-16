@@ -285,7 +285,7 @@ func (m *Model) SetXStep(xStep int) {
 // multiples of 1, 2 or 5 times a power of ten, or of 25 times one — on the
 // row or column where each falls, using the smallest such stride whose
 // labels are clear of each other (Y labels at least yStep rows apart, X
-// labels a column apart). A log axis is unaffected. See NiceRange for a
+// labels three columns apart). A log axis is unaffected. See NiceRange for a
 // range that starts and ends on a label.
 func (m *Model) SetNiceTicks(x, y bool) {
 	m.xNice, m.yNice = x, y
