@@ -534,6 +534,7 @@ func (m *Model) Draw() {
 func (m *Model) drawValues() {
 	dLen := len(m.data)
 	lastIdx := -1
+	end := -1 // last column a vertical bar's value was printed in
 	for i, b := range m.barIndices {
 		if b < 0 || b >= dLen || b == lastIdx {
 			continue
@@ -550,6 +551,10 @@ func (m *Model) drawValues() {
 					posLen += scaled[j]
 				}
 			}
+		}
+		// A bar with no value and no name is a spacer (between groups).
+		if total == 0 && m.data[b].bd.Label == "" {
+			continue
 		}
 		text := m.valueLabel(total)
 		tw := ansi.StringWidth(text)
@@ -578,6 +583,9 @@ func (m *Model) drawValues() {
 			continue
 		}
 		x := i + (m.barWidth-tw)/2
+		if x <= end { // would run into the previous value
+			continue
+		}
 		var y int
 		if negative {
 			y = m.origin.Y + m.axisOffset() + int(math.Ceil(math.Min(negLen, float64(m.negCells))))
@@ -591,6 +599,7 @@ func (m *Model) drawValues() {
 			}
 		}
 		m.Canvas.SetStringWithStyle(canvas.Point{X: x, Y: y}, text, m.LabelStyle)
+		end = x + tw
 	}
 }
 

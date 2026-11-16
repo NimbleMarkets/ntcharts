@@ -118,3 +118,13 @@ func TestLegendPositionIsValidated(t *testing.T) {
 		t.Fatal("unknown legend position accepted")
 	}
 }
+
+func TestBarValuesSkipSpacersAndNeverRunTogether(t *testing.T) {
+	s := Spec{Type: ChartTypeBar, Width: 11, Height: 8, XAxis: XAxis{Labels: []string{"a", "b", "", "c"}},
+		Options: Options{ShowValues: true},
+		Data:    Data{Series: []Series{{Name: "v", Values: []DataPoint{{Y: 190}, {Y: 260}, {Y: 0}, {Y: 330}}}}}}
+	v := view(t, s)
+	if strings.Contains(v, "190260") || strings.Contains(v, " 0 ") {
+		t.Fatalf("values ran together or a spacer was labelled:\n%s", v)
+	}
+}
