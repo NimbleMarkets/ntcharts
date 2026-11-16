@@ -1,0 +1,228 @@
+// ntcharts - Copyright (c) 2026 Neomantra Corp.
+
+package spec
+
+import (
+	"math"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/charmbracelet/x/ansi"
+)
+
+func view(t *testing.T, s Spec) string {
+	t.Helper()
+	m, err := Build(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ansi.Strip(m.(interface{ View() string }).View())
+}
+
+func TestCategoryTickLabelsAreDrawnWholeAcrossEmptySlots(t *testing.T) {
+	var keys, ticks []string
+	var values []DataPoint
+	for i := 1; i <= 24; i++ {
+		key := "2026-W" + strconv.Itoa(i)
+		keys = append(keys, key)
+		tick := ""
+		if i == 1 || i%6 == 0 {
+			tick = "Week " + strconv.Itoa(i)
+		}
+		ticks = append(ticks, tick)
+		values = append(values, DataPoint{X: key, Y: float64(i % 5)})
+	}
+	s := Spec{Type: ChartTypeLine, Width: 64, Height: 10, XAxis: XAxis{Type: XAxisCategory, Labels: keys, TickLabels: ticks},
+		Data: Data{Series: []Series{{Name: "v", Values: values}}}}
+	row := lastLine(view(t, s))
+	for _, want := range []string{"Week 6", "Week 12", "Week 18", "Week 24"} {
+		if !strings.Contains(row, want) {
+			t.Fatalf("tick %q not drawn whole in %q", want, row)
+		}
+	}
+	if strings.Contains(row, "2026-W") {
+		t.Fatalf("category keys drawn instead of tick labels: %q", row)
+	}
+}
+
+func TestBarTickLabelsReplaceTheDrawnNames(t *testing.T) {
+	s := barsLabelledEvery(30, 1, 60)
+	s.XAxis.TickLabels = make([]string, 30)
+	for i := range s.XAxis.TickLabels {
+		if (i+1)%10 == 0 {
+			s.XAxis.TickLabels[i] = strconv.Itoa(i + 1)
+		}
+	}
+	row := lastLine(view(t, s))
+	if strings.Fields(row)[0] != "10" || !strings.Contains(row, "20") || !strings.Contains(row, "30") {
+		t.Fatalf("row = %q, want only 10, 20 and 30", row)
+	}
+}
+
+func TestBarValuesPrintAtTheEndOfEachBar(t *testing.T) {
+	vertical := Spec{Type: ChartTypeBar, Width: 30, Height: 10, XAxis: XAxis{Labels: []string{"a", "b", "c"}},
+		Options: Options{ShowValues: true},
+		Data:    Data{Series: []Series{{Name: "v", Values: []DataPoint{{Y: 120}, {Y: 1800}, {Y: -40}}}}}}
+	v := view(t, vertical)
+	for _, want := range []string{"120", "1.8k", "-40"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("value %q missing:\n%s", want, v)
+		}
+	}
+	if top := strings.Split(v, "\n")[0]; !strings.Contains(top, "1.8k") {
+		t.Fatalf("the tallest bar's value must sit on the top row, above the bar:\n%s", v)
+	}
+	horizontal := vertical
+	horizontal.Options.Orientation = OrientationHorizontal
+	horizontal.Data.Series[0].Values = []DataPoint{{Y: 120}, {Y: 1800}, {Y: 40}}
+	if h := view(t, horizontal); !strings.Contains(h, "1.8k") || !strings.Contains(h, "120") {
+		t.Fatalf("horizontal values missing:\n%s", h)
+	}
+}
+
+func TestScatterSeriesSymbols(t *testing.T) {
+	s := Spec{Type: ChartTypeScatter, Width: 30, Height: 10, Data: Data{Series: []Series{
+		{Name: "a", Symbol: "×", Values: []DataPoint{{X: 1.0, Y: 1}}},
+		{Name: "b", Values: []DataPoint{{X: 2.0, Y: 2}}},
+	}}}
+	v := view(t, s)
+	if !strings.Contains(v, "×") || !strings.Contains(v, "•") {
+		t.Fatalf("want × and the default •:\n%s", v)
+	}
+	s.Data.Series[0].Symbol = "ab"
+	if _, err := Build(s); err == nil {
+		t.Fatal("a two-rune symbol must be rejected")
+	}
+}
+
+func TestZeroLineWhenTheRangeCrossesZero(t *testing.T) {
+	s := Spec{Type: ChartTypeLine, Width: 30, Height: 10, Options: Options{ZeroLine: true},
+		Data: Data{Series: []Series{{Name: "v", Values: []DataPoint{{X: 0.0, Y: -5}, {X: 10.0, Y: 5}}}}}}
+	if !strings.Contains(view(t, s), "┄") {
+		t.Fatal("no zero line")
+	}
+	s.Data.Series[0].Values = []DataPoint{{X: 0.0, Y: 1}, {X: 10.0, Y: 5}}
+	if strings.Contains(view(t, s), "┄") {
+		t.Fatal("a zero line outside the range")
+	}
+}
+
+func TestLegendPositionIsValidated(t *testing.T) {
+	s := barSpec(1)
+	s.Options.LegendPosition = LegendBottom
+	if err := s.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	s.Options.LegendPosition = "left"
+	if err := s.Validate(); err == nil {
+		t.Fatal("unknown legend position accepted")
+	}
+}
+
+func TestBarValuesSkipSpacersAndNeverRunTogether(t *testing.T) {
+	s := Spec{Type: ChartTypeBar, Width: 11, Height: 8, XAxis: XAxis{Labels: []string{"a", "b", "", "c"}},
+		Options: Options{ShowValues: true},
+		Data:    Data{Series: []Series{{Name: "v", Values: []DataPoint{{Y: 190}, {Y: 260}, {Y: 0}, {Y: 330}}}}}}
+	v := view(t, s)
+	if strings.Contains(v, "190260") || strings.Contains(v, " 0 ") {
+		t.Fatalf("values ran together or a spacer was labelled:\n%s", v)
+	}
+}
+
+// yAxisLabels returns the labels left of a chart's Y axis, top to bottom.
+func yAxisLabels(v string) []string {
+	var out []string
+	for _, l := range strings.Split(v, "\n") {
+		if i := strings.IndexAny(l, "│└"); i > 0 {
+			if f := strings.TrimSpace(l[:i]); f != "" {
+				out = append(out, f)
+			}
+		}
+	}
+	return out
+}
+
+func TestNiceTicksLabelRoundValuesAndWidenTheRange(t *testing.T) {
+	ys := []float64{104.9, 106.2, 108.5, 104.1, 102.3, 115.8, 117.7, 119.3, 114.0, 112.6, 120.4}
+	var pts []DataPoint
+	for i, y := range ys {
+		pts = append(pts, DataPoint{X: float64(i * 37), Y: y})
+	}
+	lo, hi := 100.4, 122.5
+	s := Spec{Type: ChartTypeLine, Width: 44, Height: 12, YAxis: YAxis{Min: &lo, Max: &hi},
+		Options: Options{NiceTicks: true}, Data: Data{Series: []Series{{Name: "v", Values: pts}}}}
+	if got := strings.Join(yAxisLabels(view(t, s)), " "); got != "125 120 115 110 105 100" {
+		t.Fatalf("Y labels = %q, want 125 down to 100 in fives", got)
+	}
+	if got := strings.Join(strings.Fields(lastLine(view(t, s))), " "); got != "0 100 200 300" {
+		t.Fatalf("X labels = %q", got)
+	}
+	s.Options.NiceTicks = false
+	if strings.Contains(view(t, s), "125") {
+		t.Fatal("the range is widened only under nice_ticks")
+	}
+}
+
+func TestNiceTicksNeverRepeatALabel(t *testing.T) {
+	s := Spec{Type: ChartTypeScatter, Width: 30, Height: 14, Options: Options{NiceTicks: true},
+		Data: Data{Series: []Series{{Name: "v", Values: []DataPoint{{X: 0.0, Y: 0}, {X: 1.0, Y: 3}}}}}}
+	labels := yAxisLabels(view(t, s))
+	if got := strings.Join(labels, " "); got != "3 2 1 0" {
+		t.Fatalf("Y labels = %q, want 3 2 1 0", got)
+	}
+}
+
+func TestNiceTicksOnATimeSeries(t *testing.T) {
+	var pts []DataPoint
+	for i, y := range []float64{315.9, 331.2, 349.4, 371.3, 396.8, 421.1} {
+		pts = append(pts, DataPoint{X: time.Date(1960+i*10, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339), Y: y})
+	}
+	s := Spec{Type: ChartTypeTimeSeries, Width: 50, Height: 12, Options: Options{NiceTicks: true},
+		Data: Data{Series: []Series{{Name: "co2", Values: pts}}}}
+	if n := len(yAxisLabels(view(t, s))); n < 3 {
+		t.Fatalf("only %d Y labels", n)
+	}
+	for _, l := range yAxisLabels(view(t, s)) {
+		if v, err := strconv.ParseFloat(l, 64); err != nil || math.Mod(v, 20) != 0 {
+			t.Fatalf("Y label %q is not a round value: %q", l, yAxisLabels(view(t, s)))
+		}
+	}
+}
+
+func TestNiceTicksOnTheRightAxis(t *testing.T) {
+	two := 2
+	var left, right []DataPoint
+	for i := range 8 {
+		left = append(left, DataPoint{X: float64(i), Y: 101 + float64(i*i)})
+		right = append(right, DataPoint{X: float64(i), Y: 0.19 + 0.023*float64(i)})
+	}
+	s := Spec{Type: ChartTypeLine, Width: 50, Height: 14, Options: Options{NiceTicks: true}, Y2Axis: &YAxis{Format: Format{Kind: "number", Precision: &two}},
+		Data: Data{Series: []Series{{Name: "a", Values: left}, {Name: "b", YAxis: YAxisRight, Values: right}}}}
+	var labels []string
+	for _, l := range strings.Split(view(t, s), "\n") {
+		if i := strings.LastIndex(l, "│"); i >= 0 && strings.TrimSpace(l[i+len("│"):]) != "" {
+			labels = append(labels, strings.TrimSpace(l[i+len("│"):]))
+		}
+	}
+	if len(labels) < 3 {
+		t.Fatalf("right labels = %q", labels)
+	}
+	for _, l := range labels {
+		if v, err := strconv.ParseFloat(l, 64); err != nil || math.Abs(v*20-math.Round(v*20)) > 1e-9 {
+			t.Fatalf("right label %q is not a round value: %q", l, labels)
+		}
+	}
+}
+
+func TestHorizontalValuesFitBesideWideRuneNames(t *testing.T) {
+	// "…" and "ã" are one cell but several bytes; the label column is sized
+	// by cells, so the plot keeps the room show_values reserves.
+	s := Spec{Type: ChartTypeBar, Width: 40, Height: 9, Options: Options{Orientation: OrientationHorizontal, ShowValues: true},
+		XAxis: XAxis{Labels: []string{"São Paulo", "Jupyter ……………………", "Lima"}},
+		Data:  Data{Series: []Series{{Name: "v", Values: []DataPoint{{Y: 73.6}, {Y: 28.4}, {Y: 11.9}}}}}}
+	if v := view(t, s); !strings.Contains(v, "73.6") {
+		t.Fatalf("the longest bar lost its value:\n%s", v)
+	}
+}

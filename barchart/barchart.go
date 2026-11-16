@@ -13,6 +13,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	zone "github.com/lrstanley/bubblezone/v2"
 )
 
@@ -66,7 +67,9 @@ type Model struct {
 	data     []*dataSet // each index is a unique bar
 
 	zoneManager *zone.Manager // provides mouse functionality
-	zoneID      string
+
+	valueLabel func(float64) string // when set, each bar's value is printed at its end
+	zoneID     string
 }
 
 // New returns a barchart Model initialized with given width, height
@@ -188,7 +191,7 @@ func (m *Model) resetOrigin() {
 	m.labelWidth = 0
 	if m.showAxis && m.horizontal {
 		for _, ds := range m.data {
-			if lw := len(ds.bd.Label); lw > m.labelWidth {
+			if lw := ansi.StringWidth(ds.bd.Label); lw > m.labelWidth {
 				m.labelWidth = lw
 			}
 		}
@@ -519,6 +522,85 @@ func (m *Model) Draw() {
 	m.Canvas.Clear()
 	m.drawAxisAndLabels()
 	m.drawBars()
+	if m.valueLabel != nil {
+		m.drawValues()
+	}
+}
+
+// drawValues prints each bar's value just past the end of the bar: above a
+// vertical bar (below, for one that only goes negative), right of a
+// horizontal bar (left, for a negative one). A value that does not fit there
+// is left out.
+func (m *Model) drawValues() {
+	dLen := len(m.data)
+	lastIdx := -1
+	end := -1 // last column a vertical bar's value was printed in
+	for i, b := range m.barIndices {
+		if b < 0 || b >= dLen || b == lastIdx {
+			continue
+		}
+		lastIdx = b
+		var total, posLen, negLen float64
+		scaled := m.data[b].buf.ReadAll()
+		for j, v := range m.data[b].bd.Values {
+			total += v.Value
+			if j < len(scaled) {
+				if scaled[j] < 0 {
+					negLen -= scaled[j]
+				} else {
+					posLen += scaled[j]
+				}
+			}
+		}
+		// A bar with no value and no name is a spacer (between groups).
+		if total == 0 && m.data[b].bd.Label == "" {
+			continue
+		}
+		text := m.valueLabel(total)
+		tw := ansi.StringWidth(text)
+		if tw == 0 {
+			continue
+		}
+		negative := total < 0
+		if m.horizontal {
+			y := i
+			var x int
+			if negative {
+				x = m.origin.X - 1 - int(math.Ceil(math.Min(negLen, float64(m.negCells)))) - tw
+				if x < m.labelWidth {
+					continue
+				}
+			} else {
+				x = m.origin.X + m.axisOffset() + int(math.Ceil(math.Min(posLen, float64(m.posCells)))) + 1
+				if x+tw > m.Canvas.Width() {
+					continue
+				}
+			}
+			m.Canvas.SetStringWithStyle(canvas.Point{X: x, Y: y}, text, m.LabelStyle)
+			continue
+		}
+		if tw > m.barWidth+m.barGap {
+			continue
+		}
+		x := i + (m.barWidth-tw)/2
+		if x <= end { // would run into the previous value
+			continue
+		}
+		var y int
+		if negative {
+			y = m.origin.Y + m.axisOffset() + int(math.Ceil(math.Min(negLen, float64(m.negCells))))
+			if y >= m.Canvas.Height()-1 {
+				continue
+			}
+		} else {
+			y = m.origin.Y - 1 - int(math.Ceil(math.Min(posLen, float64(m.posCells))))
+			if y < 0 {
+				continue
+			}
+		}
+		m.Canvas.SetStringWithStyle(canvas.Point{X: x, Y: y}, text, m.LabelStyle)
+		end = x + tw
+	}
 }
 
 // drawBars draws each bar's positive segments away from the axis in one
@@ -561,12 +643,18 @@ func (m *Model) drawStack(i int, idx []int, v []float64, s []BarValue, negative 
 	last := len(idx) - 1
 	for k := last; k >= 0; k-- {
 		j := idx[k]
-		style := s[j].Style.Copy()
-		if !negative && k+1 < last {
-			// in case of edge cases where column top runes
-			// are replaced, use the previous style's colors
-			// as the background to avoid a gap in the column
-			style.Background(s[idx[k+1]].Style.GetForeground())
+		style := s[j].Style
+		if !negative {
+			// The segment's end cell is a partial block over the segment
+			// beyond it; its background takes that segment's colour, so
+			// no terminal background shows between the two. (A negative
+			// end blends with the cell under it; see drawInverseEndRune.)
+			for _, o := range idx[k+1:] {
+				if v[o] != 0 {
+					style = style.Background(s[o].Style.GetForeground())
+					break
+				}
+			}
 		}
 		length := math.Min(sum, limit)
 		switch {
@@ -594,29 +682,44 @@ func (m *Model) drawAxisAndLabels() {
 	} else {
 		graph.DrawHorizonalLineRight(&m.Canvas, m.origin, m.AxisStyle)
 	}
-	// attempt to draw the label under the axis for each bar
-	// the label string width will be bound by the bar width
+	// Draw each bar's label under the axis (or beside it, for horizontal
+	// bars). A vertical bar's label is bound by its bar's width, but it may
+	// run on under the following bars while their labels are empty, stopping
+	// a column short of the next label: a caller can label every few bars of
+	// an ordered axis ("0", "", "", "", "20", ...) and keep each label whole.
+	type start struct {
+		col, bar int
+	}
+	var starts []start
 	lastIdx := -1
 	dLen := len(m.data)
 	for i, b := range m.barIndices {
-		if b >= 0 && b < dLen {
-			if b != lastIdx {
-				l := m.data[b].bd.Label
-				p := canvas.Point{X: i, Y: m.Canvas.Height() - 1} // labels sit on the bottom row
-				if m.horizontal {
-					if len(l) > m.labelWidth {
-						l = l[:m.labelWidth]
-					}
-					p = canvas.Point{X: 0, Y: i}
-				} else {
-					if len(l) > m.barWidth {
-						l = l[:m.barWidth]
-					}
-				}
-				m.Canvas.SetStringWithStyle(p, l, m.LabelStyle)
-				lastIdx = b
-			}
+		if b >= 0 && b < dLen && b != lastIdx {
+			starts = append(starts, start{i, b})
+			lastIdx = b
 		}
+	}
+	for k, s := range starts {
+		l := m.data[s.bar].bd.Label
+		if l == "" {
+			continue
+		}
+		if m.horizontal {
+			m.Canvas.SetStringWithStyle(canvas.Point{X: 0, Y: s.col}, ansi.Truncate(l, m.labelWidth, ""), m.LabelStyle)
+			continue
+		}
+		room := m.barWidth
+		if k+1 == len(starts) || m.data[starts[k+1].bar].bd.Label == "" {
+			end := m.Canvas.Width()
+			for _, next := range starts[k+1:] {
+				if m.data[next.bar].bd.Label != "" {
+					end = next.col - 1
+					break
+				}
+			}
+			room = max(room, end-s.col)
+		}
+		m.Canvas.SetStringWithStyle(canvas.Point{X: s.col, Y: m.Canvas.Height() - 1}, ansi.Truncate(l, room, ""), m.LabelStyle)
 	}
 }
 

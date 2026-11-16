@@ -19,6 +19,45 @@ func categoryCenters(width, count int) []int {
 	return centers
 }
 
+// drawTickLabels draws sparse category labels: ticks[i] under category i, an
+// empty entry drawing nothing. Each label is centred on its category where
+// it can be and may use the columns up to halfway to the next labelled
+// categories, so a label of an ordered axis labelled every few categories is
+// drawn whole.
+func drawTickLabels(m *linechart.Model, ticks []string, centers []int) {
+	w := m.GraphWidth()
+	start := m.Origin().X + 1
+	var at []int
+	for i, t := range ticks {
+		if i < len(centers) && t != "" {
+			at = append(at, i)
+		}
+	}
+	end := -1 // last column drawn, relative to start
+	for k, i := range at {
+		c := centers[i]
+		lo, hi := 0, w-1
+		if k > 0 {
+			lo = (centers[at[k-1]]+c)/2 + 1
+		}
+		if k+1 < len(at) {
+			hi = (c+centers[at[k+1]]+1)/2 - 1
+		}
+		lo = max(lo, end+2)
+		if hi < lo {
+			continue
+		}
+		text := ansi.Truncate(ticks[i], hi-lo+1, "")
+		tw := ansi.StringWidth(text)
+		if tw == 0 {
+			continue
+		}
+		x := min(max(c-tw/2, lo), hi-tw+1)
+		m.Canvas.SetStringWithStyle(canvas.Point{X: start + x, Y: m.Origin().Y + 1}, text, m.LabelStyle)
+		end = x + tw - 1
+	}
+}
+
 func drawCategoryLabels(m *linechart.Model, labels []string, centers []int) {
 	w := m.GraphWidth()
 	start := m.Origin().X + 1

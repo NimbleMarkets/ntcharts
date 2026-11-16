@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+ * feat(spec): Styling a host can ask for, all opt-in and off by default:
+   * `x_axis.tick_labels` replaces the text drawn under each category of a bar chart or categorical line/scatter chart, without changing the categories; empty entries draw nothing, and a label may use the empty slots beside it.
+   * `options.show_values` prints each bar's value at its end (`barchart.WithValueLabels`), widening an unpinned range so the labels fit.
+   * `series[].symbol` sets the rune a scatter series draws with (default `•`).
+   * `options.zero_line` draws a dashed line at Y = 0 when the range crosses zero, on line, scatter and categorical charts.
+   * `options.nice_ticks` labels linear value axes with round values (1, 2 or 5 × 10^k, or 25 × 10^k) where they fall, and widens the Y range to whole ticks, as Vega-Lite's nice scales do, on line, scatter, timeseries, OHLC and combo charts and their right Y axis (`linechart.WithNiceTicks`, `linechart.NiceRange`). The labels are never crowded or repeated.
+   * Block candles: a body edge with a wick beyond it is a full cell or wick, never a half block, so wicks always meet their bodies; the automatic body width leaves the inset first and last candles a column clear of their neighbours.
+   * Stacked bars: a segment ending inside a cell now fills the rest of that cell with the next segment's colour. The background was set on a discarded copy of the style (lipgloss styles are values), so a sliver of terminal background showed between segments wherever a boundary fell mid-cell.
+   * Horizontal bars size the label column by display width, not bytes, so a name with `…` or accented letters no longer steals plot cells (and the value label of the longest bar).
+   * `options.legend_position` (`top`, `bottom`, `none`) tells a host that frames the chart where to put its legend.
+ * fix(barchart): A vertical bar's label may run on under the following bars while their labels are empty, stopping a column short of the next label, so a caller can label every few bars of an ordered axis (`"0"`, `""`, `""`, `"20"`, …) and keep each label whole. When every bar is labelled, labels are bound by their bar as before. Labels are cut by display width instead of bytes, so a multibyte label (`1951–1980`) is no longer cut mid-rune.
+
  * Make interactive focus and selection visible on monochrome bars using ASCII badges and distinct focus/selection colors instead of underlining or reversing solid blocks.
 
  * Add opt-in `spec.BuildInteractive` for bar, scatter and heatmap marks: keyboard inspection, click selection, highlight/clear operations, source-field events and selection-preserving resize. Existing `spec.Build` behavior is unchanged.

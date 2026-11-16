@@ -300,3 +300,34 @@ func TestBidirectionalHitRoundedEndpoints(t *testing.T) {
 		}
 	}
 }
+
+func TestStackedSegmentsLeaveNoGap(t *testing.T) {
+	a := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+	b := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
+	c := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+	for _, horizontal := range []bool{false, true} {
+		bc := New(10, 10)
+		if horizontal {
+			bc = New(10, 10, WithHorizontalBars())
+		}
+		bc.SetMax(10)
+		// segment ends fall inside cells: 1.3, 3.7 (1.3 + 2.4), then 5.4
+		bc.Push(BarData{Label: "A", Values: []BarValue{{Value: 1.3, Style: a}, {Value: 2.4, Style: b}, {Value: 1.7, Style: c}}})
+		bc.Draw()
+		for y := 0; y < bc.Canvas.Height(); y++ {
+			for x := 0; x < bc.Canvas.Width(); x++ {
+				cell := bc.Canvas.Cell(canvas.Point{X: x, Y: y})
+				partial := runes.IsLowerBlockElement(cell.Rune) || runes.IsLeftBlockElement(cell.Rune)
+				if !partial || cell.Rune == runes.FullBlock {
+					continue
+				}
+				// only the outermost segment (c) may end on the terminal background
+				if cell.Style.GetForeground() != c.GetForeground() {
+					if _, none := cell.Style.GetBackground().(lipgloss.NoColor); none {
+						t.Errorf("horizontal=%v: segment end %q at (%d,%d) shows the terminal background", horizontal, cell.Rune, x, y)
+					}
+				}
+			}
+		}
+	}
+}

@@ -29,6 +29,14 @@ func WithStyles(as lipgloss.Style, ls lipgloss.Style) Option {
 }
 
 // WithNoAxis disables drawing axis and labels on to the barchart.
+// WithValueLabels prints each bar's value, formatted by f, just past the end
+// of the bar. A value that does not fit there is left out.
+func WithValueLabels(f func(float64) string) Option {
+	return func(m *Model) {
+		m.valueLabel = f
+	}
+}
+
 func WithNoAxis() Option {
 	return func(m *Model) {
 		m.SetShowAxis(false)

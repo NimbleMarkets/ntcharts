@@ -575,6 +575,9 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 		}
 		low, high = max(0, min(low, ceiling)), max(0, min(high, ceiling))
 		bl, bh = max(0, min(bl, ceiling)), max(0, min(bh, ceiling))
+		if opts.Block {
+			bl, bh = snapBlockBody(low, bl, bh, high)
+		}
 		cw := max(1, opts.Width)
 		drawX := m.CandleColumn(oData[i].X, cw)
 		minCol := m.Origin().X
@@ -606,6 +609,44 @@ func (m *Model) DrawCandleWithOpts(openName, highName, lowName, closeName string
 			}
 		}
 	}
+}
+
+// snapBlockBody moves a block body's edges onto cell boundaries where a
+// wick continues past them. A half block there would leave its empty half
+// between the wick and the body, so the edge cell becomes either body or
+// wick, whichever is nearer the true edge, for every column of the candle.
+// Values are in rows from the bottom, as DrawCandlestickBlockBottomToTop
+// takes them. The body keeps at least one cell.
+func snapBlockBody(l, bl, bh, h float64) (float64, float64) {
+	const inside = 1e-6 // just below a boundary: a full cell under it
+	blf, bhf := math.Floor(bl), math.Floor(bh)
+	if blf == bhf {
+		return bl, bh
+	}
+	nl, nh := bl, bh
+	if math.Floor(l) < blf { // a wick below
+		if bl-blf > 0.5 {
+			nl = blf + 1
+		} else {
+			nl = blf
+		}
+	}
+	if bhf < math.Floor(h) { // a wick above
+		if bh-bhf < 0.5 {
+			nh = bhf - inside
+		} else {
+			nh = bhf + 1 - inside
+		}
+	}
+	if math.Floor(nh) < math.Floor(nl) { // both edges rounded away: keep one cell
+		if 1-(bl-blf) >= bh-bhf {
+			nh = blf + 1 - inside
+			nl = blf
+		} else {
+			nl, nh = bhf, bhf+1-inside
+		}
+	}
+	return nl, nh
 }
 
 // DrawCandle draws single-column line-style candles. See DrawCandleWithOpts.
