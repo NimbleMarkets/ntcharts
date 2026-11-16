@@ -144,7 +144,14 @@ func (m *CategoricalModel) Draw() {
 	}
 	m.DrawXYAxisAndLabel()
 	centers := categoryCenters(w, len(m.labels))
-	drawCategoryLabels(&m.Model, m.labels, centers)
+	if ticks := m.data.XAxis.TickLabels; len(ticks) > 0 {
+		drawTickLabels(&m.Model, ticks, centers)
+	} else {
+		drawCategoryLabels(&m.Model, m.labels, centers)
+	}
+	if m.data.Options.ZeroLine && m.ViewMinY() < 0 && m.ViewMaxY() > 0 {
+		drawZeroLine(&m.Model, 0, float64(len(m.labels)))
+	}
 	for i, ser := range m.data.Data.Series {
 		style := seriesStyle(ser, i, m.data.Theme)
 		y := func(v float64) float64 {
@@ -157,7 +164,7 @@ func (m *CategoricalModel) Draw() {
 			for _, p := range ser.Values {
 				center := centers[int(p.X.(float64))]
 				x := float64(len(m.labels)) * float64(center) / float64(max(1, w-1))
-				m.DrawRuneWithStyle(canvas.Float64Point{X: x, Y: y(p.Y)}, '•', style)
+				m.DrawRuneWithStyle(canvas.Float64Point{X: x, Y: y(p.Y)}, seriesSymbol(ser), style)
 			}
 			continue
 		}

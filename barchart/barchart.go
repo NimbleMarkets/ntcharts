@@ -67,7 +67,9 @@ type Model struct {
 	data     []*dataSet // each index is a unique bar
 
 	zoneManager *zone.Manager // provides mouse functionality
-	zoneID      string
+
+	valueLabel func(float64) string // when set, each bar's value is printed at its end
+	zoneID     string
 }
 
 // New returns a barchart Model initialized with given width, height
@@ -520,6 +522,76 @@ func (m *Model) Draw() {
 	m.Canvas.Clear()
 	m.drawAxisAndLabels()
 	m.drawBars()
+	if m.valueLabel != nil {
+		m.drawValues()
+	}
+}
+
+// drawValues prints each bar's value just past the end of the bar: above a
+// vertical bar (below, for one that only goes negative), right of a
+// horizontal bar (left, for a negative one). A value that does not fit there
+// is left out.
+func (m *Model) drawValues() {
+	dLen := len(m.data)
+	lastIdx := -1
+	for i, b := range m.barIndices {
+		if b < 0 || b >= dLen || b == lastIdx {
+			continue
+		}
+		lastIdx = b
+		var total, posLen, negLen float64
+		scaled := m.data[b].buf.ReadAll()
+		for j, v := range m.data[b].bd.Values {
+			total += v.Value
+			if j < len(scaled) {
+				if scaled[j] < 0 {
+					negLen -= scaled[j]
+				} else {
+					posLen += scaled[j]
+				}
+			}
+		}
+		text := m.valueLabel(total)
+		tw := ansi.StringWidth(text)
+		if tw == 0 {
+			continue
+		}
+		negative := total < 0
+		if m.horizontal {
+			y := i
+			var x int
+			if negative {
+				x = m.origin.X - 1 - int(math.Ceil(math.Min(negLen, float64(m.negCells)))) - tw
+				if x < m.labelWidth {
+					continue
+				}
+			} else {
+				x = m.origin.X + m.axisOffset() + int(math.Ceil(math.Min(posLen, float64(m.posCells)))) + 1
+				if x+tw > m.Canvas.Width() {
+					continue
+				}
+			}
+			m.Canvas.SetStringWithStyle(canvas.Point{X: x, Y: y}, text, m.LabelStyle)
+			continue
+		}
+		if tw > m.barWidth+m.barGap {
+			continue
+		}
+		x := i + (m.barWidth-tw)/2
+		var y int
+		if negative {
+			y = m.origin.Y + m.axisOffset() + int(math.Ceil(math.Min(negLen, float64(m.negCells))))
+			if y >= m.Canvas.Height()-1 {
+				continue
+			}
+		} else {
+			y = m.origin.Y - 1 - int(math.Ceil(math.Min(posLen, float64(m.posCells))))
+			if y < 0 {
+				continue
+			}
+		}
+		m.Canvas.SetStringWithStyle(canvas.Point{X: x, Y: y}, text, m.LabelStyle)
+	}
 }
 
 // drawBars draws each bar's positive segments away from the axis in one

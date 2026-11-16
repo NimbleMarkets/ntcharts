@@ -19,6 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"unicode/utf8"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // ChartType identifies the kind of chart described by a Spec.
@@ -100,6 +103,13 @@ const (
 	OrientationHorizontal = "horizontal"
 )
 
+// Legend positions for Options.LegendPosition.
+const (
+	LegendTop    = "top"
+	LegendBottom = "bottom"
+	LegendNone   = "none"
+)
+
 // CandleStyle constants for Options.CandleStyle.
 const (
 	CandleStyleLine  = "line"
@@ -150,6 +160,13 @@ type XAxis struct {
 	// For a heatmap, Labels[i] names the column of
 	// cells at X = i and is drawn under the plot.
 	Labels []string `json:"labels,omitempty"`
+	// TickLabels optionally replaces the text drawn under each category of a
+	// bar chart or a categorical line/scatter chart, without changing the
+	// categories themselves: TickLabels[i] is drawn for Labels[i]. An empty
+	// entry draws nothing there, and a label may then run on across the empty
+	// slots beside it, so a caller can label every few categories of an
+	// ordered axis and keep each label whole. Missing entries are empty.
+	TickLabels []string `json:"tick_labels,omitempty"`
 	// Format describes how axis labels render.
 	Format Format `json:"format,omitzero"`
 	// Scale is "" or ScaleLinear for a linear axis, or ScaleLog for a
@@ -252,6 +269,9 @@ type Series struct {
 	// Color is an optional per-series colour (hex, "#rrggbb", or a named
 	// colour). If empty, the Theme palette or surface default is used.
 	Color string `json:"color,omitempty"`
+	// Symbol is the one-cell rune a scatter series draws its points with,
+	// so series stay apart without colour. Empty means "•".
+	Symbol string `json:"symbol,omitempty"`
 	// YAxis selects the Y axis the series is plotted against: "" or
 	// YAxisLeft for the main axis, or YAxisRight for the right-hand axis,
 	// which requires Spec.Y2Axis.
@@ -335,6 +355,15 @@ type Options struct {
 	// CandleStyleLine for box-drawing line runes, CandleStyleBlock for
 	// solid block bodies. Unknown values are a Build error.
 	CandleStyle string `json:"candle_style,omitempty"`
+	// ShowValues prints each bar's value at its end (bar charts).
+	ShowValues bool `json:"show_values,omitempty"`
+	// ZeroLine draws a dashed reference line at Y = 0 when the Y range
+	// crosses zero (line, scatter and categorical line/scatter charts).
+	ZeroLine bool `json:"zero_line,omitempty"`
+	// LegendPosition says where a host that frames the chart should put its
+	// legend: LegendTop, LegendBottom or LegendNone; empty is the host's
+	// choice. Build itself draws no legend.
+	LegendPosition string `json:"legend_position,omitempty"`
 }
 
 // Theme describes surface-agnostic colours. Individual surfaces map these
@@ -466,6 +495,16 @@ func (s Spec) Validate() error {
 	case "", OrientationVertical, OrientationHorizontal:
 	default:
 		return fmt.Errorf("spec: orientation %q must be vertical or horizontal", s.Options.Orientation)
+	}
+	switch s.Options.LegendPosition {
+	case "", LegendTop, LegendBottom, LegendNone:
+	default:
+		return fmt.Errorf("spec: legend_position %q must be top, bottom or none", s.Options.LegendPosition)
+	}
+	for i, ser := range s.Data.Series {
+		if ser.Symbol != "" && (utf8.RuneCountInString(ser.Symbol) != 1 || ansi.StringWidth(ser.Symbol) != 1) {
+			return fmt.Errorf("spec: series[%d] symbol %q must be one single-width rune", i, ser.Symbol)
+		}
 	}
 
 	if err := validateFormat("x_axis", s.XAxis.Format); err != nil {

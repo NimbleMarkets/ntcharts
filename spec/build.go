@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/NimbleMarkets/ntcharts/v2/barchart"
 	"github.com/NimbleMarkets/ntcharts/v2/canvas"
@@ -16,6 +19,7 @@ import (
 	"github.com/NimbleMarkets/ntcharts/v2/sparkline"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // Build converts a Spec into the appropriate ntcharts terminal model.
@@ -133,7 +137,14 @@ func buildBar(s Spec) (*barchart.Model, error) {
 				Style: seriesStyle(ser, j, s.Theme),
 			})
 		}
-		data[i] = barchart.BarData{Label: label, Values: values}
+		display := label
+		if len(s.XAxis.TickLabels) > 0 {
+			display = ""
+			if i < len(s.XAxis.TickLabels) {
+				display = s.XAxis.TickLabels[i]
+			}
+		}
+		data[i] = barchart.BarData{Label: display, Values: values}
 	}
 
 	if s.YAxis.Min != nil && s.YAxis.Max != nil && *s.YAxis.Min > *s.YAxis.Max {
@@ -148,13 +159,85 @@ func buildBar(s Spec) (*barchart.Model, error) {
 	if s.YAxis.Max != nil {
 		opts = append(opts, barchart.WithMaxValue(*s.YAxis.Max))
 	}
-	if s.Options.Orientation == OrientationHorizontal {
+	horizontal := s.Options.Orientation == OrientationHorizontal
+	if horizontal {
 		opts = append(opts, barchart.WithHorizontalBars())
+	}
+	if s.Options.ShowValues {
+		format := func(v float64) string { return FormatValue(s.YAxis.Format, v) }
+		if s.YAxis.Format.IsZero() {
+			format = compactValue
+		}
+		opts = append(opts, barchart.WithValueLabels(format))
+		opts = append(opts, valueRoom(s, data, horizontal, format)...)
 	}
 
 	m := barchart.New(s.Width, s.Height, opts...)
 	m.Draw()
 	return &m, nil
+}
+
+// compactValue prints a value in at most about four characters: three
+// significant figures, with k/M/G/T past a thousand.
+func compactValue(v float64) string {
+	if math.Abs(v) >= 1000 {
+		s := formatSI(v, 1)
+		return strings.Replace(s, ".0", "", 1)
+	}
+	return strconv.FormatFloat(v, 'g', 3, 64)
+}
+
+// valueRoom widens the value range beyond the longest bars, when it is not
+// pinned, so their value labels have a cell to print in: one row above (or
+// below) a vertical bar, the label's width beside a horizontal one.
+func valueRoom(s Spec, data []barchart.BarData, horizontal bool, format func(float64) string) []barchart.Option {
+	var hi, lo float64
+	textW, labelW := 0, 0
+	for _, d := range data {
+		var pos, neg, total float64
+		for _, v := range d.Values {
+			total += v.Value
+			if v.Value < 0 {
+				neg += v.Value
+			} else {
+				pos += v.Value
+			}
+		}
+		hi, lo = math.Max(hi, pos), math.Min(lo, neg)
+		textW = max(textW, ansi.StringWidth(format(total)))
+		labelW = max(labelW, ansi.StringWidth(d.Label))
+	}
+	// Cells along the value direction, and the cells a label needs past a
+	// bar end: a row, or the label's width and a gap.
+	length, reserve := s.Height-2, 1
+	if horizontal {
+		length, reserve = s.Width-labelW-1, textW+1
+	}
+	sides := 0
+	if hi > 0 {
+		sides++
+	}
+	if lo < 0 {
+		sides++
+	}
+	// Each side loses up to one cell to a partly filled bar end.
+	room := length - sides*(reserve+1)
+	if sides == 0 || room < 2 || (s.YAxis.Max != nil && s.YAxis.Min != nil) {
+		return nil
+	}
+	sf := float64(room) / (hi - lo) // cells per unit
+	posCells := 0
+	if hi > 0 {
+		posCells = int(math.Ceil(hi*sf)) + reserve
+	}
+	var opts []barchart.Option
+	if s.YAxis.Max == nil && hi > 0 {
+		opts = append(opts, barchart.WithMaxValue(float64(posCells)/sf))
+	}
+	if s.YAxis.Min == nil && lo < 0 {
+		opts = append(opts, barchart.WithMinValue(-float64(length-posCells)/sf))
+	}
+	return opts
 }
 
 // resolveXFloat resolves a point's numeric X: the point's own X, else the
@@ -381,6 +464,9 @@ func buildLine(s Spec) (*linechart.Model, error) {
 		return nil, err
 	}
 	m.DrawXYAxisAndLabel()
+	if s.Options.ZeroLine && !logY && minY < 0 && maxY > 0 {
+		drawZeroLine(&m, minX, maxX)
+	}
 	for i, ser := range s.Data.Series {
 		style := seriesStyle(ser, i, s.Theme)
 		y := func(v float64) float64 { return v }
@@ -411,9 +497,10 @@ func buildScatter(s Spec) (any, error) {
 	logX, logY := s.XAxis.Scale == ScaleLog, s.YAxis.Scale == ScaleLog
 	logY2 := s.Y2Axis != nil && s.Y2Axis.Scale == ScaleLog
 	type styledPoint struct {
-		x, y  float64
-		right bool
-		style lipgloss.Style
+		x, y   float64
+		right  bool
+		style  lipgloss.Style
+		symbol rune
 	}
 	var pts []styledPoint
 	minX, maxX := math.Inf(1), math.Inf(-1)
@@ -434,7 +521,7 @@ func buildScatter(s Spec) (any, error) {
 			if logAxis && !logOK(p.Y) {
 				return nil, logValueError(axisName, fmt.Sprintf("series %q point %d has y", ser.Name, j), p.Y)
 			}
-			pts = append(pts, styledPoint{x: x, y: p.Y, right: right, style: st})
+			pts = append(pts, styledPoint{x: x, y: p.Y, right: right, style: st, symbol: seriesSymbol(ser)})
 			minX, maxX = math.Min(minX, x), math.Max(maxX, x)
 			if right {
 				minY2, maxY2 = math.Min(minY2, p.Y), math.Max(maxY2, p.Y)
@@ -504,12 +591,15 @@ func buildScatter(s Spec) (any, error) {
 		return nil, err
 	}
 	m.DrawXYAxisAndLabel()
+	if s.Options.ZeroLine && !logY && minY < 0 && maxY > 0 {
+		drawZeroLine(&m, minX, maxX)
+	}
 	for _, p := range pts {
 		y := p.y
 		if p.right {
 			y = m.Y2ToY(y)
 		}
-		m.DrawRuneWithStyle(canvas.Float64Point{X: p.x, Y: y}, '•', p.style)
+		m.DrawRuneWithStyle(canvas.Float64Point{X: p.x, Y: y}, p.symbol, p.style)
 	}
 	return &m, nil
 }
@@ -1019,6 +1109,23 @@ func candleStyle(t Theme, slot int, fallback string) lipgloss.Style {
 
 // seriesStyle returns the lipgloss.Style for a Series, preferring the
 // series' own Color, then the Theme palette (by index), then the default.
+// seriesSymbol is the rune a scatter series draws its points with.
+func seriesSymbol(ser Series) rune {
+	if r, _ := utf8.DecodeRuneInString(ser.Symbol); ser.Symbol != "" && r != utf8.RuneError {
+		return r
+	}
+	return '•'
+}
+
+// drawZeroLine draws a dashed line at Y = 0 across the plot, beneath the data.
+func drawZeroLine(m *linechart.Model, minX, maxX float64) {
+	w := m.GraphWidth()
+	for col := 0; col < w; col++ {
+		x := minX + (maxX-minX)*float64(col)/float64(max(1, w-1))
+		m.DrawRuneWithStyle(canvas.Float64Point{X: x, Y: 0}, '┄', m.AxisStyle)
+	}
+}
+
 func seriesStyle(ser Series, index int, theme Theme) lipgloss.Style {
 	colour := ser.Color
 	if colour == "" && index < len(theme.Palette) {

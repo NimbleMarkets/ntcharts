@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+ * feat(spec): Styling a host can ask for, all opt-in and off by default:
+   * `x_axis.tick_labels` replaces the text drawn under each category of a bar chart or categorical line/scatter chart, without changing the categories; empty entries draw nothing, and a label may use the empty slots beside it.
+   * `options.show_values` prints each bar's value at its end (`barchart.WithValueLabels`), widening an unpinned range so the labels fit.
+   * `series[].symbol` sets the rune a scatter series draws with (default `•`).
+   * `options.zero_line` draws a dashed line at Y = 0 when the range crosses zero, on line, scatter and categorical charts.
+   * `options.legend_position` (`top`, `bottom`, `none`) tells a host that frames the chart where to put its legend.
  * fix(barchart): A vertical bar's label may run on under the following bars while their labels are empty, stopping a column short of the next label, so a caller can label every few bars of an ordered axis (`"0"`, `""`, `""`, `"20"`, …) and keep each label whole. When every bar is labelled, labels are bound by their bar as before. Labels are cut by display width instead of bytes, so a multibyte label (`1951–1980`) is no longer cut mid-rune.
 
  * Make interactive focus and selection visible on monochrome bars using ASCII badges and distinct focus/selection colors instead of underlining or reversing solid blocks.
