@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * fix(barchart): A vertical bar's label may run on under the following bars while their labels are empty, stopping a column short of the next label, so a caller can label every few bars of an ordered axis (`"0"`, `""`, `""`, `"20"`, …) and keep each label whole. When every bar is labelled, labels are bound by their bar as before. Labels are cut by display width instead of bytes, so a multibyte label (`1951–1980`) is no longer cut mid-rune.
+
  * Make interactive focus and selection visible on monochrome bars using ASCII badges and distinct focus/selection colors instead of underlining or reversing solid blocks.
 
  * Add opt-in `spec.BuildInteractive` for bar, scatter and heatmap marks: keyboard inspection, click selection, highlight/clear operations, source-field events and selection-preserving resize. Existing `spec.Build` behavior is unchanged.
