@@ -4,6 +4,7 @@ package timeserieslinechart
 
 import (
 	"flag"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -125,5 +126,22 @@ func TestGoldenOneAxis(t *testing.T) {
 			m := build(t)
 			golden(t, "oneaxis_"+name, m.View())
 		})
+	}
+}
+
+func TestSnapBlockBodyMeetsTheWicks(t *testing.T) {
+	for _, c := range []struct{ l, bl, bh, h, wantLo, wantHi float64 }{
+		{0.2, 2.7, 5.3, 8.1, 3, 5},     // both edges' wick-side halves become wick
+		{0.2, 2.3, 5.7, 8.1, 2, 6},     // both edges become full body cells
+		{2.5, 2.7, 5.3, 5.4, 2.7, 5.3}, // no wicks: half blocks stay
+		{0.2, 2.8, 3.1, 8.1, 2, 3},     // both would round away: one cell kept
+	} {
+		lo, hi := snapBlockBody(c.l, c.bl, c.bh, c.h)
+		if math.Floor(lo) != math.Floor(c.wantLo) || math.Ceil(hi) != math.Ceil(c.wantHi) {
+			t.Errorf("snapBlockBody(%v, %v, %v, %v) = %v, %v; want cells %v..%v", c.l, c.bl, c.bh, c.h, lo, hi, c.wantLo, c.wantHi)
+		}
+		if math.Floor(hi) < math.Floor(lo) {
+			t.Errorf("snapBlockBody(%v, %v, %v, %v) left no body", c.l, c.bl, c.bh, c.h)
+		}
 	}
 }

@@ -1137,6 +1137,24 @@ func autoCandleWidth(graphWidth int, times []time.Time, tMin, tMax time.Time) in
 	if w%2 == 0 {
 		w--
 	}
+	// The first and last candles are drawn inset by half a body so they
+	// stay clear of the axes (CandleColumn); narrow the bodies until the
+	// inset ones also keep a column clear of their neighbours.
+	if n > 1 && tMax.After(tMin) {
+		span := float64(tMax.Sub(tMin))
+		cols := make([]int, n)
+		for i, t := range times {
+			cols[i] = min(int(float64(t.Sub(tMin))/span*float64(graphWidth)), graphWidth-1)
+		}
+		sort.Ints(cols)
+		for ; w > 1; w -= 2 {
+			half := w / 2
+			first, last := max(cols[0], half), min(cols[n-1], graphWidth-1-half)
+			if cols[1]-half-(first+half) >= 2 && last-half-(cols[n-2]+half) >= 2 {
+				break
+			}
+		}
+	}
 	if w < 1 {
 		w = 1
 	}

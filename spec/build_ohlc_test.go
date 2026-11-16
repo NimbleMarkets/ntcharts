@@ -170,7 +170,16 @@ func TestAutoCandleWidth(t *testing.T) {
 			name:       "gap-clamped: one close pair narrows the estimate",
 			graphWidth: 100,
 			times:      []time.Time{base, base.Add(6 * time.Hour), base.Add(100 * time.Hour)},
-			want:       5,
+			// 5 would fit the 6-column gap, but the first candle is inset
+			// to column 2 and would then share column 4 with the second.
+			want: 3,
+		},
+		{
+			name:       "inset edge candles keep a column from their neighbours",
+			graphWidth: 68,
+			times: []time.Time{base, base.Add(24 * time.Hour), base.Add(48 * time.Hour), base.Add(72 * time.Hour),
+				base.Add(96 * time.Hour), base.Add(168 * time.Hour), base.Add(192 * time.Hour)},
+			want: 5,
 		},
 		{
 			name:       "even share forced odd",
