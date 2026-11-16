@@ -13,6 +13,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	zone "github.com/lrstanley/bubblezone/v2"
 )
 
@@ -594,29 +595,44 @@ func (m *Model) drawAxisAndLabels() {
 	} else {
 		graph.DrawHorizonalLineRight(&m.Canvas, m.origin, m.AxisStyle)
 	}
-	// attempt to draw the label under the axis for each bar
-	// the label string width will be bound by the bar width
+	// Draw each bar's label under the axis (or beside it, for horizontal
+	// bars). A vertical bar's label is bound by its bar's width, but it may
+	// run on under the following bars while their labels are empty, stopping
+	// a column short of the next label: a caller can label every few bars of
+	// an ordered axis ("0", "", "", "", "20", ...) and keep each label whole.
+	type start struct {
+		col, bar int
+	}
+	var starts []start
 	lastIdx := -1
 	dLen := len(m.data)
 	for i, b := range m.barIndices {
-		if b >= 0 && b < dLen {
-			if b != lastIdx {
-				l := m.data[b].bd.Label
-				p := canvas.Point{X: i, Y: m.Canvas.Height() - 1} // labels sit on the bottom row
-				if m.horizontal {
-					if len(l) > m.labelWidth {
-						l = l[:m.labelWidth]
-					}
-					p = canvas.Point{X: 0, Y: i}
-				} else {
-					if len(l) > m.barWidth {
-						l = l[:m.barWidth]
-					}
-				}
-				m.Canvas.SetStringWithStyle(p, l, m.LabelStyle)
-				lastIdx = b
-			}
+		if b >= 0 && b < dLen && b != lastIdx {
+			starts = append(starts, start{i, b})
+			lastIdx = b
 		}
+	}
+	for k, s := range starts {
+		l := m.data[s.bar].bd.Label
+		if l == "" {
+			continue
+		}
+		if m.horizontal {
+			m.Canvas.SetStringWithStyle(canvas.Point{X: 0, Y: s.col}, ansi.Truncate(l, m.labelWidth, ""), m.LabelStyle)
+			continue
+		}
+		room := m.barWidth
+		if k+1 == len(starts) || m.data[starts[k+1].bar].bd.Label == "" {
+			end := m.Canvas.Width()
+			for _, next := range starts[k+1:] {
+				if m.data[next.bar].bd.Label != "" {
+					end = next.col - 1
+					break
+				}
+			}
+			room = max(room, end-s.col)
+		}
+		m.Canvas.SetStringWithStyle(canvas.Point{X: s.col, Y: m.Canvas.Height() - 1}, ansi.Truncate(l, room, ""), m.LabelStyle)
 	}
 }
 
