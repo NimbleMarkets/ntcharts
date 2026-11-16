@@ -643,12 +643,18 @@ func (m *Model) drawStack(i int, idx []int, v []float64, s []BarValue, negative 
 	last := len(idx) - 1
 	for k := last; k >= 0; k-- {
 		j := idx[k]
-		style := s[j].Style.Copy()
-		if !negative && k+1 < last {
-			// in case of edge cases where column top runes
-			// are replaced, use the previous style's colors
-			// as the background to avoid a gap in the column
-			style.Background(s[idx[k+1]].Style.GetForeground())
+		style := s[j].Style
+		if !negative {
+			// The segment's end cell is a partial block over the segment
+			// beyond it; its background takes that segment's colour, so
+			// no terminal background shows between the two. (A negative
+			// end blends with the cell under it; see drawInverseEndRune.)
+			for _, o := range idx[k+1:] {
+				if v[o] != 0 {
+					style = style.Background(s[o].Style.GetForeground())
+					break
+				}
+			}
 		}
 		length := math.Min(sum, limit)
 		switch {
