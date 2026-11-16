@@ -391,7 +391,17 @@ func niceYRange(s Spec, m *linechart.Model, logY bool, min, max float64) (float6
 		m.SetYRange(lo, hi)
 		m.SetViewYRange(lo, hi)
 	}
+	niceY2Range(m)
 	return lo, hi
+}
+
+// niceY2Range widens a linear right Y axis to whole ticks, as niceYRange
+// does the left one.
+func niceY2Range(m *linechart.Model) {
+	if a, ok := m.Y2Axis(); ok && a.Scale != linechart.ScaleLog {
+		a.Min, a.Max = linechart.NiceRange(a.Min, a.Max, m.GraphHeight(), m.YStep())
+		m.SetY2Axis(a)
+	}
 }
 
 // niceTimeY is niceYRange for a time-series model, once its data is pushed.
@@ -400,6 +410,7 @@ func niceTimeY(s Spec, m *timeserieslinechart.Model, logY bool) {
 		return
 	}
 	m.Model.SetNiceTicks(false, true)
+	niceY2Range(&m.Model) // before SetYRange, which rescales the data
 	lo, hi := linechart.NiceRange(m.MinY(), m.MaxY(), m.GraphHeight(), m.YStep())
 	m.SetYRange(lo, hi)
 	m.SetViewYRange(lo, hi)

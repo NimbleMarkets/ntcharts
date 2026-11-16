@@ -190,3 +190,28 @@ func TestNiceTicksOnATimeSeries(t *testing.T) {
 		}
 	}
 }
+
+func TestNiceTicksOnTheRightAxis(t *testing.T) {
+	two := 2
+	var left, right []DataPoint
+	for i := range 8 {
+		left = append(left, DataPoint{X: float64(i), Y: 101 + float64(i*i)})
+		right = append(right, DataPoint{X: float64(i), Y: 0.19 + 0.023*float64(i)})
+	}
+	s := Spec{Type: ChartTypeLine, Width: 50, Height: 14, Options: Options{NiceTicks: true}, Y2Axis: &YAxis{Format: Format{Kind: "number", Precision: &two}},
+		Data: Data{Series: []Series{{Name: "a", Values: left}, {Name: "b", YAxis: YAxisRight, Values: right}}}}
+	var labels []string
+	for _, l := range strings.Split(view(t, s), "\n") {
+		if i := strings.LastIndex(l, "│"); i >= 0 && strings.TrimSpace(l[i+len("│"):]) != "" {
+			labels = append(labels, strings.TrimSpace(l[i+len("│"):]))
+		}
+	}
+	if len(labels) < 3 {
+		t.Fatalf("right labels = %q", labels)
+	}
+	for _, l := range labels {
+		if v, err := strconv.ParseFloat(l, 64); err != nil || math.Abs(v*20-math.Round(v*20)) > 1e-9 {
+			t.Fatalf("right label %q is not a round value: %q", l, labels)
+		}
+	}
+}

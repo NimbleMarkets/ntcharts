@@ -242,6 +242,9 @@ func (m *Model) y2Ticks(graphHeight int) []tick {
 	if m.y2.Scale == ScaleLog {
 		return yTicks(lo, hi, graphHeight, m.yStep, m.y2.LabelFormatter)
 	}
+	if m.yNice {
+		return niceAxis{min: lo, max: hi, size: graphHeight, last: graphHeight, step: m.yStep, format: m.y2.LabelFormatter}.ticks()
+	}
 	return linearYTicks(lo, hi, graphHeight, m.yStep, m.y2.LabelFormatter)
 }
 

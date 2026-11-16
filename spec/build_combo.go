@@ -46,6 +46,9 @@ func buildCombo(s Spec) (*ComboModel, error) {
 		m.data.Min, m.data.Max = linechart.NiceRange(c.Min, c.Max, m.GraphHeight(), m.YStep())
 		m.SetYRange(m.data.Min, m.data.Max)
 		m.SetViewYRange(m.data.Min, m.data.Max)
+		niceY2Range(&m.Model)
+		a, _ := m.Y2Axis()
+		m.data.Min2, m.data.Max2 = a.Min, a.Max
 	}
 	if err := checkGraphSize(m.Model); err != nil {
 		return nil, err

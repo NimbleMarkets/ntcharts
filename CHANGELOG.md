@@ -7,7 +7,7 @@
    * `options.show_values` prints each bar's value at its end (`barchart.WithValueLabels`), widening an unpinned range so the labels fit.
    * `series[].symbol` sets the rune a scatter series draws with (default `•`).
    * `options.zero_line` draws a dashed line at Y = 0 when the range crosses zero, on line, scatter and categorical charts.
-   * `options.nice_ticks` labels linear value axes with round values (1, 2 or 5 × 10^k, or 25 × 10^k) where they fall, and widens the Y range to whole ticks, as Vega-Lite's nice scales do, on line, scatter, timeseries, OHLC and combo charts (`linechart.WithNiceTicks`, `linechart.NiceRange`). The labels are never crowded or repeated.
+   * `options.nice_ticks` labels linear value axes with round values (1, 2 or 5 × 10^k, or 25 × 10^k) where they fall, and widens the Y range to whole ticks, as Vega-Lite's nice scales do, on line, scatter, timeseries, OHLC and combo charts and their right Y axis (`linechart.WithNiceTicks`, `linechart.NiceRange`). The labels are never crowded or repeated.
    * `options.legend_position` (`top`, `bottom`, `none`) tells a host that frames the chart where to put its legend.
  * fix(barchart): A vertical bar's label may run on under the following bars while their labels are empty, stopping a column short of the next label, so a caller can label every few bars of an ordered axis (`"0"`, `""`, `""`, `"20"`, …) and keep each label whole. When every bar is labelled, labels are bound by their bar as before. Labels are cut by display width instead of bytes, so a multibyte label (`1951–1980`) is no longer cut mid-rune.
 
