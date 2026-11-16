@@ -191,7 +191,7 @@ func (m *Model) resetOrigin() {
 	m.labelWidth = 0
 	if m.showAxis && m.horizontal {
 		for _, ds := range m.data {
-			if lw := len(ds.bd.Label); lw > m.labelWidth {
+			if lw := ansi.StringWidth(ds.bd.Label); lw > m.labelWidth {
 				m.labelWidth = lw
 			}
 		}

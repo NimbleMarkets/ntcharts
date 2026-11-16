@@ -215,3 +215,14 @@ func TestNiceTicksOnTheRightAxis(t *testing.T) {
 		}
 	}
 }
+
+func TestHorizontalValuesFitBesideWideRuneNames(t *testing.T) {
+	// "…" and "ã" are one cell but several bytes; the label column is sized
+	// by cells, so the plot keeps the room show_values reserves.
+	s := Spec{Type: ChartTypeBar, Width: 40, Height: 9, Options: Options{Orientation: OrientationHorizontal, ShowValues: true},
+		XAxis: XAxis{Labels: []string{"São Paulo", "Jupyter ……………………", "Lima"}},
+		Data:  Data{Series: []Series{{Name: "v", Values: []DataPoint{{Y: 73.6}, {Y: 28.4}, {Y: 11.9}}}}}}
+	if v := view(t, s); !strings.Contains(v, "73.6") {
+		t.Fatalf("the longest bar lost its value:\n%s", v)
+	}
+}
