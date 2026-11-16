@@ -51,6 +51,7 @@ type Model struct {
 	yStep           int            // number of steps when displaying Y axis values
 	xScale          Scale          // how X values are spaced along the X axis
 	yScale          Scale          // how Y values are spaced along the Y axis
+	xNice, yNice    bool           // label round values on a linear axis (WithNiceTicks)
 	focus           bool
 
 	// the expected min and max values
@@ -116,7 +117,7 @@ func New(w, h int, minX, maxX, minY, maxY float64, opts ...Option) Model {
 }
 
 // getGraphSizeAndOrigin calculates and returns the linechart origin and graph width and height
-func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int, yScale Scale, yFmter LabelFormatter) (canvas.Point, int, int) {
+func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int, yScale Scale, yNice bool, yFmter LabelFormatter) (canvas.Point, int, int) {
 	// graph width and height exclude area used by axes
 	// origin point is canvas coordinates of where axes are drawn
 	origin := canvas.Point{X: 0, Y: h - 1}
@@ -133,10 +134,10 @@ func getGraphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int, yScal
 		// of all values to be displayed
 		var lastVal string
 		valueLen := 0
-		if yScale == ScaleLog {
-			// a log axis labels round values where they fall,
+		if yScale == ScaleLog || yNice {
+			// a log or nice axis labels round values where they fall,
 			// so measure the labels that will be drawn
-			for _, t := range yTicks(minY, maxY, gHeight, yStep, yFmter) {
+			for _, t := range yAxisTicks(minY, maxY, gHeight, yStep, yScale, yFmter) {
 				if len(t.label) > valueLen {
 					valueLen = len(t.label)
 				}
@@ -177,6 +178,7 @@ func (m *Model) UpdateGraphSizes() {
 		m.xStep,
 		m.yStep,
 		m.yScale,
+		m.yNice && m.yScale != ScaleLog,
 		m.YLabelFormatter,
 	)
 	if m.y2Drawn() {
@@ -276,6 +278,17 @@ func (m *Model) Clear() {
 // SetXStep updates the number of steps when displaying X axis values.
 func (m *Model) SetXStep(xStep int) {
 	m.xStep = xStep
+	m.UpdateGraphSizes()
+}
+
+// SetNiceTicks sets whether a linear X or Y axis labels round values —
+// multiples of 1, 2 or 5 times a power of ten, or of 25 times one — on the
+// row or column where each falls, using the smallest such stride whose
+// labels are clear of each other (Y labels at least yStep rows apart, X
+// labels a column apart). A log axis is unaffected. See NiceRange for a
+// range that starts and ends on a label.
+func (m *Model) SetNiceTicks(x, y bool) {
+	m.xNice, m.yNice = x, y
 	m.UpdateGraphSizes()
 }
 
@@ -461,8 +474,8 @@ func (m *Model) drawYLabel(n int) {
 	if n <= 0 {
 		return
 	}
-	if m.yScale == ScaleLog {
-		for _, t := range yTicks(m.viewMinY, m.viewMaxY, m.graphHeight, n, m.YLabelFormatter) {
+	if m.yScale == ScaleLog || m.yNice {
+		for _, t := range yAxisTicks(m.viewMinY, m.viewMaxY, m.graphHeight, n, m.yScale, m.YLabelFormatter) {
 			m.Canvas.SetStringWithStyle(canvas.Point{X: m.origin.X - len(t.label), Y: m.origin.Y - t.pos}, t.label, m.LabelStyle)
 		}
 		return
@@ -493,7 +506,13 @@ func (m *Model) drawXLabel(n int) {
 		return
 	}
 	if m.xScale == ScaleLog {
-		m.drawXTicks(n)
+		last := m.graphWidth - 1
+		m.drawXTicks(logAxis{min: m.viewMinX, max: m.viewMaxX, size: m.graphWidth, last: last, step: n, format: m.XLabelFormatter, labelCells: true}.ticks())
+		return
+	}
+	if m.xNice {
+		last := m.graphWidth - 1
+		m.drawXTicks(niceAxis{min: m.viewMinX, max: m.viewMaxX, size: last, last: last, step: n, format: m.XLabelFormatter, labelCells: true}.ticks())
 		return
 	}
 	var lastVal string
@@ -548,6 +567,15 @@ func (m *Model) drawXLabel(n int) {
 	}
 }
 
+// yAxisTicks returns the labels of a log Y axis, or else of a linear one
+// with nice ticks, over graphHeight rows at least n rows apart.
+func yAxisTicks(min, max float64, graphHeight, n int, scale Scale, fmter LabelFormatter) []tick {
+	if scale == ScaleLog {
+		return yTicks(min, max, graphHeight, n, fmter)
+	}
+	return niceAxis{min: min, max: max, size: graphHeight, last: graphHeight, step: n, format: fmter}.ticks()
+}
+
 // yTicks returns the labels of a log Y axis showing min..max over
 // graphHeight rows, at least n rows apart.
 func yTicks(min, max float64, graphHeight, n int, fmter LabelFormatter) []tick {
@@ -555,14 +583,13 @@ func yTicks(min, max float64, graphHeight, n int, fmter LabelFormatter) []tick {
 	return logAxis{min: min, max: max, size: graphHeight, last: graphHeight, step: n, format: fmter}.ticks()
 }
 
-// drawXTicks draws the labels of a log X axis below it, at least n columns
-// apart, each on the column where its value falls. The collision and
-// final-label rules are those of drawXLabel.
-func (m *Model) drawXTicks(n int) {
+// drawXTicks draws the labels of a log or nice X axis below it, each on the
+// column where its value falls. The collision and final-label rules are
+// those of drawXLabel.
+func (m *Model) drawXTicks(ticks []tick) {
 	var lastVal string
 	last := m.graphWidth - 1
-	axis := logAxis{min: m.viewMinX, max: m.viewMaxX, size: m.graphWidth, last: last, step: n, format: m.XLabelFormatter, labelCells: true}
-	for _, t := range axis.ticks() {
+	for _, t := range ticks {
 		i, s := t.pos, t.label
 		// can only set if rune to the left of target coordinates is empty
 		if c := m.Canvas.Cell(canvas.Point{X: m.origin.X + i - 1, Y: m.origin.Y + 1}); c.Rune != runes.Null {

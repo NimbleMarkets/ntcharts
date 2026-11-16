@@ -379,6 +379,21 @@ func newY2Axis(s Spec, a yAxisRef, min, max float64) linechart.Axis {
 	return axis
 }
 
+// niceYRange widens the left Y range of a line or scatter model to whole
+// ticks under Options.NiceTicks (see linechart.NiceRange) and returns it;
+// otherwise, or on a log axis, it returns min and max unchanged.
+func niceYRange(s Spec, m *linechart.Model, logY bool, min, max float64) (float64, float64) {
+	if !s.Options.NiceTicks || logY {
+		return min, max
+	}
+	lo, hi := linechart.NiceRange(min, max, m.GraphHeight(), m.YStep())
+	if lo != min || hi != max {
+		m.SetYRange(lo, hi)
+		m.SetViewYRange(lo, hi)
+	}
+	return lo, hi
+}
+
 // buildLine joins each series' points in input order on a base linechart.
 // Numeric X comes from the point, shared X data, or the point's index.
 // Linear ranges retain the native defaults (0..1), expanded around the data;
@@ -459,10 +474,14 @@ func buildLine(s Spec) (*linechart.Model, error) {
 	if y2 != nil {
 		opts = append(opts, linechart.WithY2Axis(*y2))
 	}
+	if s.Options.NiceTicks {
+		opts = append(opts, linechart.WithNiceTicks(!logX, !logY))
+	}
 	m := linechart.New(s.Width, s.Height, minX, maxX, minY, maxY, opts...)
 	if err := checkGraphSize(m); err != nil {
 		return nil, err
 	}
+	minY, maxY = niceYRange(s, &m, logY, minY, maxY)
 	m.DrawXYAxisAndLabel()
 	if s.Options.ZeroLine && !logY && minY < 0 && maxY > 0 {
 		drawZeroLine(&m, minX, maxX)
@@ -586,10 +605,14 @@ func buildScatter(s Spec) (any, error) {
 	if y2 != nil {
 		opts = append(opts, linechart.WithY2Axis(*y2))
 	}
+	if s.Options.NiceTicks {
+		opts = append(opts, linechart.WithNiceTicks(!logX, !logY))
+	}
 	m := linechart.New(s.Width, s.Height, minX, maxX, minY, maxY, opts...)
 	if err := checkGraphSize(m); err != nil {
 		return nil, err
 	}
+	minY, maxY = niceYRange(s, &m, logY, minY, maxY)
 	m.DrawXYAxisAndLabel()
 	if s.Options.ZeroLine && !logY && minY < 0 && maxY > 0 {
 		drawZeroLine(&m, minX, maxX)

@@ -360,6 +360,13 @@ type Options struct {
 	// ZeroLine draws a dashed reference line at Y = 0 when the Y range
 	// crosses zero (line, scatter and categorical line/scatter charts).
 	ZeroLine bool `json:"zero_line,omitempty"`
+	// NiceTicks labels a linear value axis with round values (1, 2 or 5
+	// times a power of ten, or 25 times one) where they fall, and widens the
+	// left Y range, pinned bounds included, to whole multiples of that
+	// stride so it starts and ends on a label, as Vega-Lite's nice scales
+	// do (line, scatter and categorical line/scatter charts; a categorical X
+	// axis keeps its category labels).
+	NiceTicks bool `json:"nice_ticks,omitempty"`
 	// LegendPosition says where a host that frames the chart should put its
 	// legend: LegendTop, LegendBottom or LegendNone; empty is the host's
 	// choice. Build itself draws no legend.

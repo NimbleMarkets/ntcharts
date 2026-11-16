@@ -128,3 +128,46 @@ func TestBarValuesSkipSpacersAndNeverRunTogether(t *testing.T) {
 		t.Fatalf("values ran together or a spacer was labelled:\n%s", v)
 	}
 }
+
+// yAxisLabels returns the labels left of a chart's Y axis, top to bottom.
+func yAxisLabels(v string) []string {
+	var out []string
+	for _, l := range strings.Split(v, "\n") {
+		if i := strings.IndexAny(l, "│└"); i > 0 {
+			if f := strings.TrimSpace(l[:i]); f != "" {
+				out = append(out, f)
+			}
+		}
+	}
+	return out
+}
+
+func TestNiceTicksLabelRoundValuesAndWidenTheRange(t *testing.T) {
+	ys := []float64{104.9, 106.2, 108.5, 104.1, 102.3, 115.8, 117.7, 119.3, 114.0, 112.6, 120.4}
+	var pts []DataPoint
+	for i, y := range ys {
+		pts = append(pts, DataPoint{X: float64(i * 37), Y: y})
+	}
+	lo, hi := 100.4, 122.5
+	s := Spec{Type: ChartTypeLine, Width: 44, Height: 12, YAxis: YAxis{Min: &lo, Max: &hi},
+		Options: Options{NiceTicks: true}, Data: Data{Series: []Series{{Name: "v", Values: pts}}}}
+	if got := strings.Join(yAxisLabels(view(t, s)), " "); got != "125 120 115 110 105 100" {
+		t.Fatalf("Y labels = %q, want 125 down to 100 in fives", got)
+	}
+	if got := strings.Join(strings.Fields(lastLine(view(t, s))), " "); got != "0 50 100 150 200 250 300 350" {
+		t.Fatalf("X labels = %q", got)
+	}
+	s.Options.NiceTicks = false
+	if strings.Contains(view(t, s), "125") {
+		t.Fatal("the range is widened only under nice_ticks")
+	}
+}
+
+func TestNiceTicksNeverRepeatALabel(t *testing.T) {
+	s := Spec{Type: ChartTypeScatter, Width: 30, Height: 14, Options: Options{NiceTicks: true},
+		Data: Data{Series: []Series{{Name: "v", Values: []DataPoint{{X: 0.0, Y: 0}, {X: 1.0, Y: 3}}}}}}
+	labels := yAxisLabels(view(t, s))
+	if got := strings.Join(labels, " "); got != "3 2 1 0" {
+		t.Fatalf("Y labels = %q, want 3 2 1 0", got)
+	}
+}

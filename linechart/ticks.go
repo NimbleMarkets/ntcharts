@@ -2,8 +2,8 @@
 
 package linechart
 
-// File contains the tick generator for log axes. Linear axes label every
-// xStep / yStep cells and do not use it.
+// File contains the tick generators for log axes and for linear axes with
+// nice ticks. Other linear axes label every xStep / yStep cells.
 
 import (
 	"math"
@@ -218,4 +218,117 @@ func (a logAxis) evenTicks() []tick {
 		}
 	}
 	return ticks
+}
+
+// niceAxis places the labels of a linear axis with nice ticks (see
+// WithNiceTicks): multiples of a round stride, each on the cell its value
+// falls on, as for a log axis.
+type niceAxis struct {
+	min, max   float64
+	size, last int
+	step       int
+	format     LabelFormatter
+	labelCells bool
+}
+
+// niceStrides returns the candidate strides for a span, smallest first:
+// 1, 2 and 5 times a power of ten, and 25 times one (never 2.5, whose
+// labels a whole-number format would round).
+func niceStrides(span float64, cells int) []float64 {
+	if !(span > 0) || cells <= 0 {
+		return nil
+	}
+	var out []float64
+	for k := int(math.Floor(math.Log10(span/float64(cells)))) - 1; ; k++ {
+		for _, m := range []float64{1, 2, 2.5, 5} {
+			if m == 2.5 && k < 1 {
+				continue
+			}
+			out = append(out, m*math.Pow(10, float64(k)))
+		}
+		if math.Pow(10, float64(k)) > span {
+			return out
+		}
+	}
+}
+
+// at returns the tick for value v, on the cell it falls on; ok is false
+// if that would put it on an end cell without being at that end.
+func (a niceAxis) at(v float64) (t tick, ok bool) {
+	exact := (v - a.min) / (a.max - a.min) * float64(a.size)
+	p := max(0, min(int(math.Round(exact)), a.last))
+	if (p == 0 && exact > endSlack) || (p == a.last && exact < float64(a.size)-endSlack) {
+		return tick{}, false
+	}
+	return tick{pos: p, value: v, label: a.format(p, v)}, true
+}
+
+// clear reports whether tick hi can be drawn after tick lo.
+func (a niceAxis) clear(lo, hi tick) bool {
+	return logAxis{step: a.step, labelCells: a.labelCells}.clear(lo, hi)
+}
+
+// ticks returns the labels at the multiples of the smallest stride whose
+// labels are distinct and clear of each other, with at least two of them;
+// or, if none has two, the two ends of the axis when they are clear.
+func (a niceAxis) ticks() []tick {
+	if a.step <= 0 || a.size <= 0 || a.last < 0 || !(a.max > a.min) {
+		return nil
+	}
+	for _, stride := range niceStrides(a.max-a.min, a.size) {
+		var ticks []tick
+		ok := true
+		for k := math.Ceil(a.min/stride - 1e-9); k*stride <= a.max+stride*1e-9; k++ {
+			v := k * stride
+			if math.Abs(v) < stride*1e-9 {
+				v = 0
+			}
+			t, drawn := a.at(v)
+			if !drawn || (a.labelCells && t.pos+len(t.label) > a.size+1) {
+				continue
+			}
+			if n := len(ticks); n > 0 && (!a.clear(ticks[n-1], t) || ticks[n-1].label == t.label) {
+				ok = false
+				break
+			}
+			ticks = append(ticks, t)
+		}
+		if ok && len(ticks) >= 2 {
+			return ticks
+		}
+	}
+	lo, hi := tick{pos: 0, value: a.min, label: a.format(0, a.min)}, tick{pos: a.last, value: a.max, label: a.format(a.last, a.max)}
+	if a.clear(lo, hi) && lo.label != hi.label && !(a.labelCells && hi.pos+len(hi.label) > a.size+1) {
+		return []tick{lo, hi}
+	}
+	return []tick{lo}
+}
+
+// NiceRange returns min and max widened to whole multiples of the stride
+// that nice ticks (see WithNiceTicks) over size rows at least step rows
+// apart would use, so the axis starts and ends on a label. A bound already
+// on a multiple stays.
+func NiceRange(min, max float64, size, step int) (float64, float64) {
+	if !(max > min) || size <= 0 || step <= 0 {
+		return min, max
+	}
+	for range 4 {
+		var stride float64
+		for _, s := range niceStrides(max-min, size) {
+			if s/(max-min)*float64(size) >= float64(step) {
+				stride = s
+				break
+			}
+		}
+		if stride == 0 {
+			return min, max
+		}
+		lo := math.Floor(min/stride+1e-9) * stride
+		hi := math.Ceil(max/stride-1e-9) * stride
+		if lo == min && hi == max {
+			break
+		}
+		min, max = lo, hi
+	}
+	return min, max
 }

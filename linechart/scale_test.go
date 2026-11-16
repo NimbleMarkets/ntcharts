@@ -607,3 +607,19 @@ func TestExplicitLinearScaleIsIdentical(t *testing.T) {
 		t.Fatal("explicit linear zooms differently")
 	}
 }
+
+func TestNiceRange(t *testing.T) {
+	for _, c := range []struct {
+		min, max, wantMin, wantMax float64
+		size, step                 int
+	}{
+		{100.4, 122.5, 100, 125, 10, 2},
+		{0, 9.3, 0, 10, 10, 2},
+		{-3.2, 7.9, -4, 8, 12, 2},
+		{5, 5, 5, 5, 10, 2},
+	} {
+		if lo, hi := NiceRange(c.min, c.max, c.size, c.step); lo != c.wantMin || hi != c.wantMax {
+			t.Errorf("NiceRange(%v, %v, %d, %d) = %v, %v; want %v, %v", c.min, c.max, c.size, c.step, lo, hi, c.wantMin, c.wantMax)
+		}
+	}
+}

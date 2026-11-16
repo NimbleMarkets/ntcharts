@@ -116,6 +116,7 @@ func buildCategorical(s Spec) (*CategoricalModel, error) {
 		return nil, err
 	}
 	base.XLabelFormatter = func(int, float64) string { return "" }
+	base.SetNiceTicks(false, s.Options.NiceTicks)
 	base.SetXRange(0, float64(len(labels)))
 	base.SetViewXRange(0, float64(len(labels)))
 	m := &CategoricalModel{Model: *base, labels: labels, data: data}

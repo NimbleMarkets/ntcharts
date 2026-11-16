@@ -73,6 +73,14 @@ func WithXYSteps(x, y int) Option {
 	}
 }
 
+// WithNiceTicks sets whether a linear X or Y axis labels round values
+// where they fall, rather than every xStep / yStep cells. See SetNiceTicks.
+func WithNiceTicks(x, y bool) Option {
+	return func(m *Model) {
+		m.xNice, m.yNice = x, y
+	}
+}
+
 // WithXScale sets the scale of the X axis. See SetXScale.
 func WithXScale(s Scale) Option {
 	return func(m *Model) {
